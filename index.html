@@ -1,0 +1,274 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Mihwa · 미화</title>
+  <meta name="description" content="An ink-painted album for Mihwa: her portraits, her words, her memories, her path and her style.">
+  <meta name="theme-color" content="#f1ebe0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Gowun+Batang:wght@400;700&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Serif+KR:wght@600;900&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <defs>
+      <filter id="seal-rough" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" seed="3" result="n1"/>
+        <feDisplacementMap in="SourceGraphic" in2="n1" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="d"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.42" numOctaves="3" seed="11" result="n2"/>
+        <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  3.2 0 0 0 -0.95" result="speck"/>
+        <feComposite in="d" in2="speck" operator="in"/>
+      </filter>
+      <!-- ink soaking into paper, for brush lettering -->
+      <filter id="bleed" x="-8%" y="-8%" width="116%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="7" result="t"/>
+        <feDisplacementMap in="SourceGraphic" in2="t" scale="2.2" xChannelSelector="R" yChannelSelector="G" result="d"/>
+        <feGaussianBlur in="d" stdDeviation="1.6" result="b"/>
+        <feComponentTransfer in="b" result="halo"><feFuncA type="linear" slope="0.28"/></feComponentTransfer>
+        <feMerge><feMergeNode in="halo"/><feMergeNode in="d"/></feMerge>
+      </filter>
+      <!-- a fan-shaped window (선면), used as a mask for memory paintings -->
+      <clipPath id="fan" clipPathUnits="objectBoundingBox">
+        <path d="M0.02 0.36 A0.66 0.66 0 0 1 0.98 0.36 L0.73 0.98 A0.3 0.3 0 0 0 0.27 0.98 Z"/>
+      </clipPath>
+    </defs>
+  </svg>
+
+  <!-- ink drop loader -->
+  <div id="loader" aria-live="polite">
+    <div class="loader-drop" aria-hidden="true"><span class="ripple"></span><span class="ripple"></span><span class="ripple"></span><span class="drop"></span></div>
+    <p class="loader-text" data-i18n="loader">Grinding the ink…</p>
+  </div>
+
+  <canvas id="ink-field" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#hero" aria-label="Mihwa, back to top">
+      <span class="seal seal--sm" aria-hidden="true"><span>美</span><span>花</span></span>
+      <span class="brand-text"><span class="ko">미화</span><span class="dot">·</span><em>Mihwa</em></span>
+    </a>
+    <div class="controls">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="fr" aria-pressed="false">FR</button>
+        <button type="button" data-lang="ko" aria-pressed="false">한</button>
+      </div>
+      <button type="button" class="sound" aria-pressed="false" data-i18n-title="sound" aria-label="Sound">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><path class="string" d="M4 10 Q16 6 28 10"/><path class="string" d="M4 16 Q16 12 28 16"/><path class="string" d="M4 22 Q16 18 28 22"/><circle cx="11" cy="9" r="1.6"/><circle cx="19" cy="15" r="1.6"/><circle cx="14" cy="21" r="1.6"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Sections">
+    <ol>
+      <li><a href="#hero"><span class="rail-label" data-i18n="nav.hero">Mihwa</span><span class="rail-dot"></span></a></li>
+      <li><a href="#screen"><span class="rail-label" data-i18n="nav.screen">Portraits</span><span class="rail-dot"></span></a></li>
+      <li><a href="#thoughts"><span class="rail-label" data-i18n="nav.thoughts">Her words</span><span class="rail-dot"></span></a></li>
+      <li><a href="#memories"><span class="rail-label" data-i18n="nav.memories">Memories</span><span class="rail-dot"></span></a></li>
+      <li><a href="#path"><span class="rail-label" data-i18n="nav.path">Her path</span><span class="rail-dot"></span></a></li>
+      <li><a href="#style"><span class="rail-label" data-i18n="nav.style">Her style</span><span class="rail-dot"></span></a></li>
+      <li><a href="#homes"><span class="rail-label" data-i18n="nav.homes">Two homes</span><span class="rail-dot"></span></a></li>
+      <li><a href="#letter"><span class="rail-label" data-i18n="nav.letter">Letter</span><span class="rail-dot"></span></a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <!-- ─────────── 미화: her portrait, in ink ─────────── -->
+    <section id="hero" class="hero">
+      <canvas id="ink-gl" aria-hidden="true"></canvas>
+      <img class="hero-fallback" id="hero-fallback" alt="" hidden>
+      <div class="hero-text">
+        <div class="hero-vertical">
+          <h1 class="hero-ko" aria-label="Mihwa">미화</h1>
+          <p class="hero-inscription"><span class="hanja">美花</span><span class="ins" data-i18n="hero.inscription">Beautiful flower</span></p>
+        </div>
+        <div class="hero-latin-block">
+          <p class="hero-latin" aria-hidden="true">Mihwa</p>
+          <p class="hero-sub" data-i18n="hero.sub">An album of ink and paper, and one very photogenic friend.</p>
+          <a class="ig-chip" id="hero-ig" target="_blank" rel="noopener"></a>
+        </div>
+      </div>
+      <p class="hero-hint" data-i18n="hero.hint">Move to stir the ink</p>
+    </section>
+
+    <!-- ─────────── 초상: the folding screen ─────────── -->
+    <section id="screen" class="screen-sec">
+      <div class="sticky">
+        <header class="sec-head sec-head--over">
+          <i class="ink" data-ink="bloom" data-dark="0.32" data-seed="3.1" style="left:-6%;top:-10%;width:62%;height:70%"></i>
+          <span class="seal seal--md" aria-hidden="true">像</span>
+          <h2><span class="sec-ko">초상</span><span class="sec-latin" data-i18n="screen.title">Her portraits</span></h2>
+          <p class="lede" data-i18n="screen.sub">Her photos, repainted in ink.</p>
+        </header>
+        <canvas id="screen-gl"></canvas>
+        <i class="ink" data-ink="range" data-dark="0.4" data-seed="5.2" data-h="0.9" style="left:-2%;bottom:0;width:104%;height:34%"></i>
+      </div>
+    </section>
+
+    <!-- ─────────── 생각: her words ─────────── -->
+    <section id="thoughts" class="block">
+      <header class="sec-head">
+        <i class="ink" data-ink="arc" data-dark="0.9" data-seed="2.2" data-a0="140" data-span="262" data-w="0.09" data-dry="0.9" style="left:-1.5em;top:-0.4em;width:4.4em;height:4.4em;font-size:clamp(2.6rem,5vw,4.2rem)"></i>
+        <span class="seal seal--md" aria-hidden="true">思</span>
+        <h2><span class="sec-ko">생각</span><span class="sec-latin" data-i18n="thoughts.title">In her words</span></h2>
+        <p class="lede" data-i18n="thoughts.sub">Things she says, written with a brush.</p>
+      </header>
+      <div class="quotes" id="quotes"></div>
+    </section>
+
+    <!-- ─────────── 추억: memories on a handscroll ─────────── -->
+    <section id="memories" class="memories">
+      <div class="sticky">
+        <header class="sec-head sec-head--compact">
+          <span class="seal seal--md" aria-hidden="true">憶</span>
+          <h2><span class="sec-ko">추억</span><span class="sec-latin" data-i18n="memories.title">Best memories</span></h2>
+          <p class="lede" data-i18n="memories.sub">Unroll the handscroll.</p>
+        </header>
+        <div class="handscroll">
+          <div class="roller roller--left" aria-hidden="true"></div>
+          <div class="scroll-window">
+            <i class="ink" data-ink="range" data-dark="0.3" data-seed="4.8" data-h="0.8" style="left:0;bottom:0;width:100%;height:24%"></i>
+            <div class="scroll-track" id="mem-track"></div>
+          </div>
+          <div class="roller roller--right" aria-hidden="true"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────── 길: her path ─────────── -->
+    <section id="path" class="block path-sec">
+      <header class="sec-head">
+        <i class="ink" data-ink="bloom" data-dark="0.3" data-seed="8.4" style="left:-10%;top:-20%;width:70%;height:80%"></i>
+        <span class="seal seal--md" aria-hidden="true">道</span>
+        <h2><span class="sec-ko">길</span><span class="sec-latin" data-i18n="path.title">Her path</span></h2>
+        <p class="lede" data-i18n="path.sub">From the lecture hall to wherever the world needs her.</p>
+      </header>
+      <div class="path" id="path-list"></div>
+    </section>
+
+    <!-- ─────────── 멋: her style ─────────── -->
+    <section id="style" class="block">
+      <header class="sec-head">
+        <i class="ink" data-ink="line" data-dark="0.9" data-seed="4.4" data-w="1" data-dry="1" data-bow="0.4" style="left:0;bottom:-38px;width:min(26rem,80%);height:20px"></i>
+        <span class="seal seal--md" aria-hidden="true">美</span>
+        <h2><span class="sec-ko">멋</span><span class="sec-latin" data-i18n="style.title">Her style</span></h2>
+        <p class="lede" data-i18n="style.sub">Her colours, ground from her photos.</p>
+      </header>
+      <div class="style-grid">
+        <div class="dishes" id="dishes"></div>
+        <aside class="about">
+          <h3 data-i18n="style.notes">About her</h3>
+          <dl id="notes"></dl>
+          <span class="seal seal--sm about-seal" aria-hidden="true"><span>美</span><span>花</span></span>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ─────────── 두 집: two homes, on a live globe ─────────── -->
+    <section id="homes" class="homes-sec">
+      <div class="sticky">
+        <canvas id="globe-gl" aria-label="A live globe: day and night right now, with Seoul and Paris joined by a red thread"></canvas>
+        <svg class="leaders" id="leaders" aria-hidden="true"><path id="lead-seoul"/><circle id="lead-seoul-dot" r="3"/><path id="lead-paris"/><circle id="lead-paris-dot" r="3"/></svg>
+        <header class="sec-head sec-head--over sec-head--homes">
+          <span class="seal seal--md" aria-hidden="true">家</span>
+          <h2><span class="sec-ko">두 집</span><span class="sec-latin" data-i18n="homes.title">Between Seoul and Paris</span></h2>
+          <p class="lede" data-i18n="homes.sub">Half of her heart wakes up while the other half falls asleep.</p>
+        </header>
+        <div class="cities">
+          <article class="city" id="city-seoul" data-city="seoul">
+            <span class="seal seal--sm city-seal" aria-hidden="true"><span>首</span><span>爾</span></span>
+            <div class="city-body">
+              <h3><span class="city-ko">서울</span><span class="city-name" data-i18n="homes.seoul">Seoul</span></h3>
+              <p class="city-time"><span class="hm">--:--</span><span class="sec">:--</span></p>
+              <p class="city-date"></p>
+              <p class="city-sky"><i class="sky-ico" aria-hidden="true"></i><span class="sky-text"></span></p>
+              <p class="city-wx" hidden></p>
+            </div>
+          </article>
+          <article class="city" id="city-paris" data-city="paris">
+            <span class="seal seal--sm city-seal" aria-hidden="true"><span>巴</span><span>里</span></span>
+            <div class="city-body">
+              <h3><span class="city-ko">파리</span><span class="city-name" data-i18n="homes.paris">Paris</span></h3>
+              <p class="city-time"><span class="hm">--:--</span><span class="sec">:--</span></p>
+              <p class="city-date"></p>
+              <p class="city-sky"><i class="sky-ico" aria-hidden="true"></i><span class="sky-text"></span></p>
+              <p class="city-wx" hidden></p>
+            </div>
+          </article>
+        </div>
+        <div class="homes-foot">
+          <p class="homes-facts" id="homes-facts"></p>
+          <div class="scrub">
+            <label class="scrub-label" for="scrub" data-i18n="homes.scrub">Move through the day</label>
+            <div class="scrub-row">
+              <input type="range" id="scrub" min="-720" max="720" step="10" value="0">
+              <output id="scrub-out" for="scrub"></output>
+              <button type="button" class="scrub-now" id="scrub-now" data-i18n="homes.now" hidden>now</button>
+            </div>
+          </div>
+        </div>
+        <p class="globe-hint" data-i18n="homes.hint">drag to turn the globe</p>
+      </div>
+    </section>
+
+    <!-- ─────────── Instagram ─────────── -->
+    <section id="ig" class="block ig-sec">
+      <div class="ig-card">
+        <div class="ig-top">
+          <a class="ig-avatar" id="ig-avatar" target="_blank" rel="noopener" aria-label="Instagram">
+            <i class="ink" data-ink="arc" data-dark="0.95" data-seed="9.9" data-a0="-120" data-span="340" data-w="0.1" data-dry="1" style="left:-6%;top:-6%;width:112%;height:112%"></i>
+            <img id="ig-avatar-img" alt="">
+          </a>
+          <div class="ig-meta">
+            <p class="kicker" data-i18n="ig.kicker">Find her</p>
+            <h2 class="ig-handle" id="ig-handle">@mulnaengmyeonn</h2>
+            <ul class="ig-bio" id="ig-bio"></ul>
+            <a class="ig-follow" id="ig-follow" target="_blank" rel="noopener"><span data-i18n="ig.follow">Follow on Instagram</span> <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="ig-grid" id="ig-grid"></div>
+      </div>
+    </section>
+
+    <!-- ─────────── 편지 ─────────── -->
+    <section id="letter" class="block letter-sec">
+      <i class="ink" data-ink="bloom" data-dark="0.3" data-seed="12.3" style="left:50%;top:6%;width:min(70rem,96vw);height:88%;transform:translateX(-50%)"></i>
+      <article class="letter">
+        <span class="seal seal--md" aria-hidden="true">書</span>
+        <h2><span class="sec-ko">편지</span><span class="sec-latin" data-i18n="letter.title">For Mihwa</span></h2>
+        <div class="letter-body" data-i18n-html="letter.body"></div>
+        <p class="letter-sign" data-i18n="letter.sign">— your friend</p>
+        <div class="letter-seal seal seal--lg" id="letter-seal" aria-hidden="true"><span>美</span><span>花</span></div>
+      </article>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <i class="ink" data-ink="line" data-dark="0.85" data-seed="7.7" data-w="1" data-dry="1" data-bow="-0.3" style="left:50%;top:0;width:min(34rem,80vw);height:18px;transform:translateX(-50%)"></i>
+    <p class="footer-main" data-i18n="footer.main">Painted with ink and a lot of love, for Mihwa · 2026</p>
+    <button type="button" class="noodle" id="noodle" aria-expanded="false">
+      <svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 12 H37 C36 21 29 26 20 26 C11 26 4 21 3 12 Z"/><path class="n" d="M10 12 C12 6 15 14 17 7 C19 13 22 5 24 11 C26 6 28 12 30 8"/><path class="n" d="M26 4 L33 11 M30 3 L36 9"/></svg>
+      <span data-i18n="footer.q">Mul or bibim?</span>
+    </button>
+    <p class="noodle-a" id="noodle-a" data-i18n="footer.a" hidden>Mul-naengmyeon. Obviously.</p>
+  </footer>
+
+  <div class="lb" id="lightbox" role="dialog" aria-modal="true" hidden>
+    <div class="lb-stage">
+      <figure class="lb-fig">
+        <div class="lb-frame"><img class="lb-img lb-img--ink" alt=""><img class="lb-img lb-img--col" alt=""></div>
+        <figcaption><span class="lb-num"></span><span class="lb-cap"></span></figcaption>
+      </figure>
+      <div class="lb-toggle" role="group">
+        <button type="button" data-view="ink" data-i18n="lb.ink" aria-pressed="false">Ink</button>
+        <button type="button" data-view="col" data-i18n="lb.colour" aria-pressed="true">Colour</button>
+      </div>
+    </div>
+    <button type="button" class="lb-btn lb-prev" data-i18n-label="lb.prev" aria-label="Previous photo">‹</button>
+    <button type="button" class="lb-btn lb-next" data-i18n-label="lb.next" aria-label="Next photo">›</button>
+    <button type="button" class="lb-btn lb-close" data-i18n-label="lb.close" aria-label="Close">×</button>
+  </div>
+
+  <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
+  <p class="webgl-fallback" hidden data-i18n="fallback">Your browser could not start WebGL.</p>
+
+  <script type="module" src="js/main.js"></script>
+
+</body></html>
