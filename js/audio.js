@@ -122,3 +122,84 @@ export function shutter({ gain = 0.35 } = {}) {
     src.start(now + off);
   });
 }
+
+function noiseBuffer(seconds, shape = 4) {
+  const len = Math.floor(ctx.sampleRate * seconds);
+  const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, shape);
+  return buf;
+}
+
+/** A rifle shot heard from behind the scope: a sharp crack, then the boom rolling off the hills. */
+export function shot({ gain = 0.5, pan = 0 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  const out = ctx.createGain();
+  out.gain.value = gain;
+  let node = out;
+  if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; out.connect(p); node = p; }
+  node.connect(master);
+  // the crack
+  const crack = ctx.createBufferSource();
+  crack.buffer = noiseBuffer(0.12, 7);
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
+  const cg = ctx.createGain(); cg.gain.value = 0.9;
+  crack.connect(hp).connect(cg).connect(out);
+  crack.start(now);
+  // the body of the shot
+  const thump = ctx.createOscillator();
+  thump.type = 'sine';
+  thump.frequency.setValueAtTime(110, now);
+  thump.frequency.exponentialRampToValueAtTime(38, now + 0.25);
+  const tg = ctx.createGain();
+  tg.gain.setValueAtTime(0.9, now);
+  tg.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+  thump.connect(tg).connect(out);
+  thump.start(now); thump.stop(now + 0.4);
+  // the echo off distant hills
+  const roll = ctx.createBufferSource();
+  roll.buffer = noiseBuffer(1.6, 2.2);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
+  const rg = ctx.createGain();
+  rg.gain.setValueAtTime(0.0001, now);
+  rg.gain.exponentialRampToValueAtTime(0.5, now + 0.09);
+  rg.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+  roll.connect(lp).connect(rg).connect(out);
+  roll.start(now + 0.03);
+}
+
+/** A bullet ringing a steel plate far away. */
+export function ping({ gain = 0.22, delay = 0 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime + delay;
+  [1, 2.76, 5.4].forEach((m, k) => {
+    const o = ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = 820 * m;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(gain / (k + 1), now + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 1.4 / (k + 1));
+    o.connect(g).connect(master);
+    o.start(now); o.stop(now + 1.5);
+  });
+}
+
+/** A glass bottle breaking, far off. */
+export function glass({ gain = 0.25, delay = 0 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime + delay;
+  for (let k = 0; k < 7; k++) {
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(0.05 + Math.random() * 0.08, 5);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 2600 + Math.random() * 4200;
+    bp.Q.value = 8;
+    const g = ctx.createGain();
+    g.gain.value = gain * (0.5 + Math.random() * 0.5);
+    src.connect(bp).connect(g).connect(master);
+    src.start(now + k * 0.018 + Math.random() * 0.03);
+  }
+}

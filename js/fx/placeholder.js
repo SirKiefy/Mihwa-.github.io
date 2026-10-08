@@ -107,18 +107,29 @@ function hexA(hex, a) {
 
 /**
  * Resolve every photo to something drawable: a loaded <img> for real files,
- * or a painted placeholder. Missing files fall back to placeholders.
+ * or a painted placeholder. An entry with no `src` also looks for
+ * photos/01.jpg, photos/02.jpg … (or .jpeg / .png / .webp), so photos can
+ * simply be dropped into the folder with those names.
  */
-export async function loadPhotos(list, label) {
-  return Promise.all(list.map((p, i) => new Promise((resolve) => {
-    const fallback = () => resolve({ ...makePlaceholder(i, p.aspect || 4 / 5, label), meta: p, index: i });
-    if (!p.src) return fallback();
+const EXT = ['jpg', 'jpeg', 'png', 'webp'];
+function loadImage(src) {
+  return new Promise((resolve) => {
     const img = new Image();
     img.decoding = 'async';
-    img.onload = () => resolve({ image: img, url: p.src, width: img.naturalWidth, height: img.naturalHeight, placeholder: false, meta: p, index: i });
-    img.onerror = fallback;
-    img.src = p.src;
-  })));
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+export async function loadPhotos(list, label) {
+  return Promise.all(list.map(async (p, i) => {
+    const tries = p.src ? [p.src] : EXT.map((e) => `photos/${String(i + 1).padStart(2, '0')}.${e}`);
+    for (const src of tries) {
+      const img = await loadImage(src);
+      if (img) return { image: img, url: src, width: img.naturalWidth, height: img.naturalHeight, placeholder: false, meta: p, index: i };
+    }
+    return { ...makePlaceholder(i, p.aspect || 4 / 5, label), meta: p, index: i };
+  }));
 }
 
 const lerp = (a, b, t) => a + (b - a) * t;
