@@ -183,7 +183,7 @@ function paintBud(g, r, { seed = 1, tint = ROSE, dir = -Math.PI / 2 } = {}) {
   fineLine(g, pts.slice(0, 7), Math.max(0.8, r * 0.11), INKC, 0.62, seed * 3);
   fineLine(g, pts.slice(6).reverse(), Math.max(0.75, r * 0.1), INKC, 0.55, seed * 5);
   // where the petals fold over each other
-  fineLine(g, [at(r * 0.95, -r * 0.15), at(r * 0.45, r * 0.12), at(-r * 0.1, r * 0.42)], Math.max(0.6, r * 0.075), INKC, 0.32, seed * 7);
+  fineLine(g, [at(r * 0.9, -r * 0.1), at(r * 0.55, r * 0.2), at(r * 0.15, r * 0.4)], Math.max(0.5, r * 0.06), INKC, 0.2, seed * 7);
   // calyx: dark sepals cupping the bud where it meets the twig
   for (const k of [-1, 1]) {
     const p0 = at(-r * 1.02, k * r * 0.18), p1 = at(-r * 0.78, k * r * 0.62);
@@ -322,8 +322,9 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
       x = nx; y = ny;
     }
     if (nodes.length < 2) return null;
-    const w0 = Math.min(p.w * 0.6, depth >= 3 ? S * 0.0075 : S * 0.012);
-    return finish(nodes, Math.max(1.4, w0), Math.max(0.7, w0 * 0.22), depth, 'twig', parent, ni);
+    // fine, firm twigs: thin where they leave the limb and only slowly finer
+    const w0 = Math.min(p.w * 0.5, depth >= 3 ? S * 0.0058 : S * 0.0088);
+    return finish(nodes, Math.max(1.3, w0), Math.max(0.8, w0 * 0.42), depth, 'twig', parent, ni);
   }
   function sprout(parent, density, len, depth, hang = parent.hang || 0) {
     let side = rand() < 0.5 ? 1 : -1;
@@ -348,16 +349,20 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     const end = trunk.nodes.length - 1;
     const A = tone(limb([nodeAt(trunk, end), jit([X(0.24), Y(0.32)]), jit([X(0.34), Y(0.27)]), jit([X(0.45), Y(0.23)]), [X(0.55), Y(0.19)]], S * 0.058, S * 0.024, 1, 'limb', trunk, end), 0.93);
     const A1 = tone(limb([nodeAt(A, A.nodes.length - 1), jit([X(0.63), Y(0.12)]), jit([X(0.74), Y(0.085)]), [X(0.86), Y(0.05)]], S * 0.023, S * 0.004, 1, 'limb', A, A.nodes.length - 1), 0.9);
+    // the second limb reaches right above the card; on a short stage, where the card
+    // stands nearly as tall as the painting, there is no room for it there, so it rises instead
     const dy = Math.min(0.36, ay - 0.15);
-    const A2 = tone(limb([nodeAt(A, A.nodes.length - 1), jit([X(0.64), Y(0.23)]), jit([X(0.76), Y(dy - 0.03)]), [X(0.92), Y(dy + 0.01)]], S * 0.02, S * 0.004, 1, 'limb', A, A.nodes.length - 1), 0.88);
+    const A2 = tone(ay < 0.26
+      ? limb([nodeAt(A, A.nodes.length - 1), jit([X(0.575), Y(0.11)]), [X(0.585), Y(0.025)]], S * 0.016, S * 0.004, 1, 'limb', A, A.nodes.length - 1)
+      : limb([nodeAt(A, A.nodes.length - 1), jit([X(0.64), Y(0.23)]), jit([X(0.76), Y(dy - 0.03)]), [X(0.92), Y(dy + 0.01)]], S * 0.02, S * 0.004, 1, 'limb', A, A.nodes.length - 1), 0.88);
     const kb = nearest(trunk, X(0.05), Y(0.58));
     const B = tone(limb([nodeAt(trunk, kb), jit([X(0.15), Y(0.64)]), jit([X(0.26), Y(0.62)]), jit([X(0.37), Y(0.7)]), [X(0.5), Y(0.66)]], S * 0.04, S * 0.005, 1, 'limb', trunk, kb), 0.55);
     B.hang = 0.55;
     limbs = [A, A1, A2, B];
     const ka = nearest(A, X(0.34), Y(0.27));
-    shoots.push(tone(limb([nodeAt(A, ka), [X(0.355), Y(0.15)], [X(0.375), Y(0.035)]], S * 0.012, S * 0.003, 2, 'shoot', A, ka, 0.4), 0.85));
+    shoots.push(tone(limb([nodeAt(A, ka), [X(0.355), Y(0.15)], [X(0.375), Y(0.035)]], S * 0.0092, S * 0.0026, 2, 'shoot', A, ka, 0.4), 0.85));
     const kb2 = nearest(B, X(0.26), Y(0.6));
-    shoots.push(tone(limb([nodeAt(B, kb2), [X(0.28), Y(0.46)], [X(0.305), Y(0.35)]], S * 0.01, S * 0.003, 2, 'shoot', B, kb2, 0.4), 0.6));
+    shoots.push(tone(limb([nodeAt(B, kb2), [X(0.28), Y(0.46)], [X(0.305), Y(0.35)]], S * 0.008, S * 0.0026, 2, 'shoot', B, kb2, 0.4), 0.6));
   } else {
     trunk = limb([[-S * 0.14, Y(0.86)], jit([X(0.03), Y(0.81)]), jit([X(0.12), Y(0.72)]), jit([X(0.17), Y(0.61)]), [X(0.26), Y(0.5)]], S * 0.12, S * 0.058, 0, 'trunk', null, 0, 1.8);
     const end = trunk.nodes.length - 1;
@@ -370,7 +375,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     const C = tone(limb([nodeAt(trunk, end), jit([X(0.23), Y(0.37)]), jit([X(0.26), Y(0.24)]), [X(0.21), Y(0.1)]], S * 0.026, S * 0.004, 1, 'limb', trunk, end), 0.72);
     limbs = [A, A1, A2, B, C];
     const ka = nearest(A, X(0.46), Y(0.34));
-    shoots.push(tone(limb([nodeAt(A, ka), [X(0.49), Y(0.2)], [X(0.51), Y(0.07)]], S * 0.011, S * 0.003, 2, 'shoot', A, ka, 0.4), 0.85));
+    shoots.push(tone(limb([nodeAt(A, ka), [X(0.49), Y(0.2)], [X(0.51), Y(0.07)]], S * 0.0088, S * 0.0026, 2, 'shoot', A, ka, 0.4), 0.85));
   }
   // twigs
   for (const b of limbs) sprout(b, 0.62, S * (tall ? 0.15 : 0.16), 2);
@@ -396,12 +401,13 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
       if (ny > 0 && rand() < 0.75) { nx = -nx; ny = -ny; }
       const off = w * 0.5 + R * 0.42;
       const px = x + nx * off, py = y + ny * off;
-      if (okSite(px, py)) cands.push({ x: px, y: py, dir: Math.atan2(ny, nx) + (rand() - 0.5) * 0.5, base: Math.atan2(-ny, -nx), b, tip: false });
+      // (never on top of another branch: a bud grows beside the wood, not over it)
+      if (okSite(px, py) && !crowded(px, py, [b.id], R * 0.62)) cands.push({ x: px, y: py, dir: Math.atan2(ny, nx) + (rand() - 0.5) * 0.5, base: Math.atan2(-ny, -nx), b, tip: false });
     }
     const tip = nd[nd.length - 1], pre = nd[nd.length - 2];
     const ta = Math.atan2(tip.y - pre.y, tip.x - pre.x);
     const tx = tip.x + Math.cos(ta) * R * 0.45, ty = tip.y + Math.sin(ta) * R * 0.45;
-    if (okSite(tx, ty)) cands.push({ x: tx, y: ty, dir: ta, base: ta + Math.PI, b, tip: true });
+    if (okSite(tx, ty) && !crowded(tx, ty, [b.id], R * 0.62)) cands.push({ x: tx, y: ty, dir: ta, base: ta + Math.PI, b, tip: true });
   }
   // spread them out: greedy farthest-point, starting near the middle of the branch
   const sites = [];
@@ -512,14 +518,16 @@ class InkStroke {
     if (this.done) return;
     const rand = rng(seed);
     this.rand = rand;
+    // how much paper a dry brush lets through its body (flying white, 비백)
+    this.fw = smooth(0.45, 0.9, dry);
     const w = S.map((p) => Math.max(0, width * prof(p.t)));
     const L = [], Rr = [], BL = [], BR = [];
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
     S.forEach((p, i) => {
-      const eL = 1 + (noise1(p.s * 0.045 + seed * 3.1, 2) - 0.5) * 0.24 + (noise1(p.s * 0.23 + seed, 5) - 0.5) * 0.08;
-      const eR = 1 + (noise1(p.s * 0.045 + seed * 7.7, 2) - 0.5) * 0.24 + (noise1(p.s * 0.23 + seed + 9, 5) - 0.5) * 0.08;
-      // a dry brush leaves the body narrower than the hairs towards its end
-      const kb = 1 - dry * 0.32 * smooth(0.15, 1, p.t) - dry * 0.12 * noise1(p.s * 0.08 + seed, 6);
+      const eL = 1 + (noise1(p.s * 0.045 + seed * 3.1, 2) - 0.5) * 0.24 + (noise1(p.s * 0.23 + seed, 5) - 0.5) * 0.06;
+      const eR = 1 + (noise1(p.s * 0.045 + seed * 7.7, 2) - 0.5) * 0.24 + (noise1(p.s * 0.23 + seed + 9, 5) - 0.5) * 0.06;
+      // a dry brush leaves the body a little narrower than the hairs towards its end
+      const kb = 1 - dry * 0.16 * smooth(0.15, 1, p.t) - dry * 0.08 * noise1(p.s * 0.05 + seed, 6);
       const hw = w[i] * 0.5;
       L.push([p.x + p.nx * hw * eL, p.y + p.ny * hw * eL]);
       Rr.push([p.x - p.nx * hw * eR, p.y - p.ny * hw * eR]);
@@ -544,20 +552,29 @@ class InkStroke {
     this.cw = Math.ceil((x1 + pad) * dpr) - this.ox; this.ch = Math.ceil((y1 + pad) * dpr) - this.oy;
     const nbr = nb ?? clamp(Math.round(width / 1.7), 3, 34);
     this.hairs = [];
+    // a broad brush splits into a few clumps of hair that run dry together,
+    // which is what gives an old trunk its long white streaks
+    const nClump = nbr >= 10 ? 3 + Math.floor(rand() * 3) : 1;
+    const clumps = Array.from({ length: nClump }, () => ({ jit: rand() * 1000, ink: 0.75 + rand() * 0.45, rate: 0.5 + rand() * 1.1 }));
     for (let j = 0; j < nbr * hair; j++) {
       const o = (nbr === 1 ? 0 : -1 + (2 * (j % nbr + 0.5)) / nbr) + (rand() - 0.5) * (1.4 / nbr);
       const edge = Math.abs(o);
+      const cl = clumps[Math.min(nClump - 1, Math.floor(((clamp(o, -0.999, 0.999) + 1) / 2) * nClump))];
       this.hairs.push({
-        o: clamp(o, -0.98, 0.98),
-        ink: 0.75 + rand() * 0.45 - edge * 0.25 * dry,
+        o: clamp(o, -0.96, 0.96),
+        cj: cl.jit, solo: nClump > 1 ? 0.38 : 1,
+        ink: lerp(0.75 + rand() * 0.45, cl.ink, nClump > 1 ? 0.65 : 0) - edge * 0.25 * dry,
         load: 0.75 + rand() * 0.45,
-        rate: dry * (0.5 + rand() * 1.1) * (1 + 0.9 * edge),
+        rate: dry * lerp(0.5 + rand() * 1.1, cl.rate, nClump > 1 ? 0.65 : 0) * (1 + 0.9 * edge),
         lw: Math.max(0.45, (width / nbr) * (0.55 + rand() * 0.9)),
         a: tone * (0.16 + rand() * 0.34),
-        jit: rand() * 1000, px: null, py: null,
+        wa: this.fw * (0.5 + rand() * 0.45),
+        jit: rand() * 1000, px: null, py: null, white: [],
       });
     }
-    this.rims = [-1, 1].map((sd) => ({ sd, a: tone * rim * (0.45 + rand() * 0.25), lw: Math.max(0.55, width * 0.05 + 0.25), jit: rand() * 1000, px: null, py: null, dry }));
+    // the dark pooled edges: thinner on a broad brush, and broken more the drier it runs
+    const rlw = Math.max(0.55, Math.min(width * 0.05 + 0.25, 1.1 + width * 0.022));
+    this.rims = [-1, 1].map((sd) => ({ sd, a: tone * rim * (0.45 + rand() * 0.25), lw: rlw, jit: rand() * 1000, px: null, py: null, dry }));
     this.press = press;
     this.width = width;
   }
@@ -601,22 +618,27 @@ class InkStroke {
     for (let i = i1; i >= a0; i--) ga.lineTo(BR[i][0], BR[i][1]);
     ga.closePath();
     ga.fill();
-    // hairs
+    // hairs: long streaks that skip where the hair runs dry (low-frequency
+    // noise, so the gaps are long like real 비백 rather than short dashes)
+    const fw = this.fw > 0.02;
     for (const h of this.hairs) {
       let pen = false, any = false;
       gb.beginPath();
       for (let i = i0; i <= i1; i++) {
         const p = S[i], ww = w[i];
         if (this.knot[i]) h.ink = Math.max(h.ink, h.load * (0.8 + 0.2 * noise1(h.jit + i, 2)));
-        const wob = (noise1(p.s * 0.06 + h.jit, 3) - 0.5) * 0.14;
+        const wob = (noise1(p.s * 0.05 + h.jit, 3) - 0.5) * 0.12;
         const k = (h.o + wob) * 0.5;
         const x = lerp(R[i][0], L[i][0], 0.5 + k), y = lerp(R[i][1], L[i][1], 0.5 + k);
-        const skip = noise1(p.s * 0.055 + h.jit, 7) * 0.75 + noise1(p.s * 0.21 + h.jit, 4) * 0.25 > 0.34 + 0.7 * clamp(h.ink);
-        if (h.px !== null && !skip && ww > 0.3) {
+        const own = noise1(p.s * 0.03 + h.jit, 7) * 0.8 + noise1(p.s * 0.085 + h.jit, 4) * 0.2;
+        const skip = lerp(noise1(p.s * 0.02 + h.cj, 7), own, h.solo) > 0.3 + 0.74 * clamp(h.ink);
+        if (h.px !== null && !skip && ww > Math.max(0.3, h.lw * 0.85)) {
           if (!pen) { gb.moveTo(h.px, h.py); pen = true; }
           gb.lineTo(x, y);
           any = true;
         } else pen = false;
+        // where a dry hair skips inside the body, the paper shows through it
+        if (fw && skip && h.px !== null && i > 0 && ww > 2 && Math.abs(h.o) < 0.82) h.white.push(h.px, h.py, x, y, i);
         h.px = x; h.py = y;
         if (i > 0) h.ink -= h.rate / this.n;
       }
@@ -626,39 +648,90 @@ class InkStroke {
         gb.stroke();
       }
     }
-    // rims
+    const last = i1 >= this.n - 1;
+    // (the next piece of body overlaps this one by a sample, so the newest bit of white waits for it)
+    if (fw) this.flyWhite(last ? Infinity : i1 - 1);
+    // rims: broken runs, each with its own weight and darkness
     for (const m of this.rims) {
       const E = m.sd < 0 ? BR : BL;
-      let pen = false, any = false;
-      gb.beginPath();
+      let pen = false;
       for (let i = i0; i <= i1; i++) {
         const p = S[i];
         const [x, y] = E[i];
-        const gap = this.near[i] || noise1(p.s * 0.035 + m.jit, 8) < 0.1 + m.dry * 0.22 * p.t;
+        const gap = this.near[i] || noise1(p.s * 0.03 + m.jit, 8) < 0.12 + m.dry * 0.3 * (0.35 + 0.65 * p.t);
         if (m.px !== null && !gap && w[i] > 0.8) {
-          if (!pen) { gb.moveTo(m.px, m.py); pen = true; }
+          if (!pen) {
+            if (!m.on) { m.on = true; const q = noise1(p.s * 0.011 + m.jit * 0.5, 9); m.ra = m.a * (0.5 + 0.75 * q); m.rw = m.lw * (0.6 + 0.8 * noise1(p.s * 0.013 + m.jit, 10)); }
+            gb.beginPath();
+            gb.moveTo(m.px, m.py);
+            pen = true;
+          }
           gb.lineTo(x, y);
-          any = true;
-        } else pen = false;
+        } else {
+          if (pen) this.rimStroke(m);
+          pen = false;
+          m.on = false;
+        }
         m.px = x; m.py = y;
       }
-      if (any) {
-        gb.lineWidth = m.lw;
-        gb.strokeStyle = `rgba(${r},${g},${b},${m.a.toFixed(3)})`;
-        gb.stroke();
-      }
+      if (pen) this.rimStroke(m);
     }
     this.i = i1;
-    if (i1 >= this.n - 1) { this.done = true; if (this.caps === true || this.caps === 'end') this.cap(this.n - 1); }
+    if (last) { this.done = true; if (this.caps === true || this.caps === 'end') this.cap(this.n - 1); }
     return i1 - i0 + 1;
+  }
+  rimStroke(m) {
+    const [r, g, b] = this.rgb;
+    this.gb.lineWidth = m.rw;
+    this.gb.strokeStyle = `rgba(${r},${g},${b},${clamp(m.ra).toFixed(3)})`;
+    this.gb.stroke();
+  }
+  /** wipe the dry streaks out of the body, up to sample `limit` */
+  flyWhite(limit) {
+    const g = this.ga;
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    g.lineCap = 'butt';
+    g.lineJoin = 'round';
+    for (const h of this.hairs) {
+      const Wt = h.white;
+      if (!Wt.length) continue;
+      const keep = [];
+      let lx = NaN, ly = NaN, any = false;
+      g.beginPath();
+      for (let j = 0; j < Wt.length; j += 5) {
+        if (Wt[j + 4] > limit) { keep.push(Wt[j], Wt[j + 1], Wt[j + 2], Wt[j + 3], Wt[j + 4]); continue; }
+        if (Wt[j] !== lx || Wt[j + 1] !== ly) g.moveTo(Wt[j], Wt[j + 1]);
+        g.lineTo(Wt[j + 2], Wt[j + 3]);
+        lx = Wt[j + 2]; ly = Wt[j + 3];
+        any = true;
+      }
+      if (any) {
+        g.lineWidth = Math.max(0.5, h.lw * 0.8);
+        g.strokeStyle = `rgba(0,0,0,${h.wa.toFixed(3)})`;
+        g.stroke();
+      }
+      h.white = keep;
+    }
+    g.restore();
   }
   /** a rounded end: where two knuckle strokes overlap, the joint darkens as it does on paper */
   cap(i) {
-    const p = this.S[i], r = this.w[i] * 0.5 * (i ? 0.92 : 0.86);
+    const p = this.S[i], r = this.w[i] * 0.5 * (i ? 0.9 : 0.8);
     if (r < 0.6) return;
-    this.ga.beginPath();
-    this.ga.ellipse(p.x, p.y, r, r * 0.9, Math.atan2(p.ny, p.nx), 0, TAU);
-    this.ga.fill();
+    // a slightly irregular blot, a little longer along the stroke than across it
+    const g = this.ga, a = Math.atan2(p.ny, p.nx), ca = Math.cos(a), sa = Math.sin(a);
+    const seed = this.rand() * 100;
+    g.beginPath();
+    for (let k = 0; k <= 16; k++) {
+      const th = (k / 16) * TAU;
+      const rr = r * (1 + (noise1(th * 1.3 + seed, 3) - 0.5) * 0.22);
+      const u = Math.cos(th) * rr, v = Math.sin(th) * rr * 1.12;
+      const x = p.x + u * ca - v * sa, y = p.y + u * sa + v * ca;
+      if (k) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath();
+    g.fill();
   }
   finish() { while (!this.done) this.step(400); }
   /** composite onto a canvas whose transform is the identity (device pixels) */
@@ -740,7 +813,7 @@ function brushwork(seed, push) {
     const wmax = Math.max(...nd.map((n) => n.w));
     const pts = nd.map((n) => [n.x, n.y]);
     const prof = (t) => (widthAt(nd, t) / wmax) * (1 - 0.2 * smooth(0.92, 1, t));
-    add({ pts, width: wmax, prof, tone: 0.92, body: 0.34, dry: 0.82, rim: 1.1, seed: sd++, halo: 0.16, hair: 1, caps: 'end' }, 0.55);
+    add({ pts, width: wmax, prof, tone: 0.92, body: 0.42, dry: 0.82, rim: 1.1, seed: sd++, halo: 0.16, hair: 1, caps: 'end' }, 0.55);
     const nm = normals(nd);
     // the shadow side, a second drier pass so the old wood has some roundness
     const down = nm[Math.floor(nm.length / 2)][1] > 0 ? 1 : -1;
@@ -768,13 +841,29 @@ function brushwork(seed, push) {
     const isLimb = b.depth === 1;
     const pts = [];
     const nodeIdx = [];
+    // a branch that leaves the side of its parent starts at the parent's edge
+    // (painted across the old wood it would leave a dark band); one that
+    // carries on from the parent's end starts where the parent stopped
+    const par = b.parent;
+    const fromSide = !!par && b.at < par.nodes.length - 1;
     for (let i = 0; i < nd.length - 1; i++) {
       const a = nd[i], c = nd[i + 1];
       const L = Math.hypot(c.x - a.x, c.y - a.y) || 1;
       const ux = (c.x - a.x) / L, uy = (c.y - a.y) / L;
       const epsA = Math.min(L * 0.16, Math.max(1.2, a.w * 0.3));
       const epsC = Math.min(L * 0.16, Math.max(1.2, c.w * 0.3));
-      if (i === 0) { const back = Math.min(a.w * 0.5, 8); pts.push([a.x - ux * back, a.y - uy * back]); }
+      if (i === 0 && fromSide) {
+        const pn = par.nodes, k = b.at;
+        const pa = pn[Math.max(0, k - 1)], pc = pn[Math.min(pn.length - 1, k + 1)];
+        const pl = Math.hypot(pc.x - pa.x, pc.y - pa.y) || 1;
+        const sinA = Math.abs(ux * (pc.y - pa.y) / pl - uy * (pc.x - pa.x) / pl);
+        const off = Math.min(L * 0.4, (pn[k].w * 0.36) / Math.max(0.45, sinA));
+        pts.push([a.x + ux * off, a.y + uy * off]);
+      } else if (i === 0) {
+        // carrying on from the end of the parent: the brush touches down inside its end, narrow, then presses
+        const back = par ? Math.min(a.w * 0.45, 12) : Math.min(a.w * 0.3, 5);
+        pts.push([a.x - ux * back, a.y - uy * back]);
+      }
       else { pts.push([a.x + ux * epsA, a.y + uy * epsA]); nodeIdx.push(pts.length - 1.5); }
       const bow = (rand() - 0.5) * L * 0.06;
       pts.push([(a.x + c.x) / 2 - uy * bow, (a.y + c.y) / 2 + ux * bow]);
@@ -795,15 +884,17 @@ function brushwork(seed, push) {
       let k = 1;
       while (k < ns.length - 1 && ns[k] < sx) k++;
       const f = clamp((sx - ns[k - 1]) / Math.max(1e-3, ns[k] - ns[k - 1]));
-      const wb = k === ns.length - 1 ? lerp(ws[k - 1], tipW, Math.pow(f, 0.8)) : lerp(ws[k - 1], ws[k], f);
+      // limbs taper all along their last joint; twigs hold their width and lift late
+      const wb = k === ns.length - 1 ? lerp(ws[k - 1], tipW, isLimb || b.kind === 'shoot' ? Math.pow(f, 0.8) : smooth(0.3, 1, f)) : lerp(ws[k - 1], ws[k], f);
       let bulge = 0;
       for (let j = 1; j < ns.length - 1; j++) bulge += Math.exp(-Math.pow((sx - ns[j]) / Math.max(2, ws[j] * 0.7), 2));
-      return (wb / wmax) * (1 + 0.1 * bulge) * (0.85 + 0.15 * smooth(0, 0.03, t));
+      const entry = par && !fromSide ? 0.38 + 0.62 * smooth(0, ws[0] * 1.4, sx) : 0.85 + 0.15 * smooth(0, 0.03, t);
+      return (wb / wmax) * (1 + 0.1 * bulge) * entry;
     };
     add({
       pts, width: wmax, prof, tone: b.tone, knots: ns.slice(1, -1).map((v) => v / total),
       body: isLimb ? 0.62 : 0.86, dry: isLimb ? 0.62 : b.kind === 'shoot' ? 0.35 : 0.3, rim: isLimb ? 0.75 : 0.35,
-      seed: sd++, press: isLimb ? 0.9 : 0.5, halo: isLimb ? 0.12 : 0.06, caps: 'start',
+      seed: sd++, press: isLimb ? (fromSide ? 0.75 : 0.18) : 0.4, halo: isLimb ? 0.12 : 0.06, caps: 'start',
       nb: isLimb ? undefined : clamp(Math.round(wmax / 1.2), 2, 6),
     }, isLimb ? 0.62 : b.kind === 'shoot' ? 1.2 : 0.95);
   }
@@ -852,7 +943,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   let bloomed = 0;
   let current = -1; // reason on the card, -1 = the introduction
   let faceOn = 0;
-  let painter = null, growScale = 1;
+  let painter = null, growScale = 1, avoidTop = null;
   let grown = false, growStarted = false, seen = false;
   let active = false, destroyed = false, raf = 0, last = 0;
   let doneShown = false, quick = false, live = null;
@@ -876,6 +967,11 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     at(80, 78, () => paintBlossom(pg, 9, { seed: 8, tint: ROSE, tilt: 0.7, rot: 2.1, base: -1.2 }));
     at(28, 14, () => paintBud(pg, 4, { seed: 2, tint: ROSE, dir: -2.2 }));
     at(38, 86, () => paintBud(pg, 3.5, { seed: 6, tint: ROSE, dir: 2.9 }));
+    // printed in a single pale cinnabar, as the motifs on old poem paper were, so writing can run over it
+    pg.setTransform(1, 0, 0, 1, 0, 0);
+    pg.globalCompositeOperation = 'source-in';
+    pg.fillStyle = 'rgb(184,50,42)';
+    pg.fillRect(0, 0, pc.width, pc.height);
     root.style.setProperty('--love-print', `url(${pc.toDataURL('image/png')})`);
   } catch (e) { /* only decoration */ }
 
@@ -911,6 +1007,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
       b.style.setProperty('--d', `${(i * 0.37) % 2.6}s`);
       b.setAttribute('aria-pressed', st[i].bloomAt ? 'true' : 'false');
       if (st[i].bloomAt) b.classList.add('is-open');
+      if (st[i].appearAt) b.classList.add('is-shown');
       budsEl.appendChild(b);
       buttons.push(b);
       const p = document.createElement('i');
@@ -939,7 +1036,9 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     if (!tall) {
       const rr = reading.getBoundingClientRect();
       const pad = 10;
-      avoid = { x0: rr.left - pad, y0: rr.top - sr.top - pad, x1: rr.right + pad, y1: h + 20 };
+      // one spare line above the card, so another language's longer reasons still fit
+      const lh = parseFloat(getComputedStyle(faces[faceOn].querySelector('.love-text')).lineHeight) || 40;
+      avoid = { x0: rr.left - pad, y0: rr.top - sr.top - pad, x1: rr.right + pad, y1: h + 20, room: Math.min(lh, h * 0.08) };
     }
     return { w, h, bx, avoid };
   }
@@ -952,21 +1051,21 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     let d = Math.min(2, window.devicePixelRatio || 1);
     const maxPx = 9e6;
     if (m.w * m.h * d * d > maxPx) d = Math.sqrt(maxPx / (m.w * m.h));
-    const key = [m.w, m.h, m.bx.x0, m.bx.x1, Math.round(m.avoid ? m.avoid.y0 : 0), tall, N, d].join('|');
-    if (!force && key === layout.key) return;
+    const key = [m.w, m.h, m.bx.x0, m.bx.x1, tall, N, d].join('|');
+    // (a card that grew past the room left for it, e.g. after a change of language, needs a new branch;
+    //  one that shrank keeps the old one, so the painting does not change under her)
+    const outgrown = !!(m.avoid && avoidTop !== null && m.avoid.y0 < avoidTop - 0.5);
+    if (!force && key === layout.key && !outgrown) return;
     layout.key = key;
     W = m.w; H = m.h; dpr = d; box = m.bx;
     for (const c of [canvas, overlay]) {
       c.width = Math.round(W * dpr);
       c.height = Math.round(H * dpr);
     }
-    comp = compose({ W, H, bx0: box.x0, bx1: box.x1, avoid: m.avoid, tall, N, seed: SEED });
-    buttons.forEach((b, i) => {
-      const s = comp.sites[i];
-      if (!s) return;
-      b.style.setProperty('--x', `${s.x.toFixed(1)}px`);
-      b.style.setProperty('--y', `${s.y.toFixed(1)}px`);
-    });
+    const avoid = m.avoid ? { ...m.avoid, y0: m.avoid.y0 - m.avoid.room } : null;
+    avoidTop = avoid ? avoid.y0 : null;
+    comp = compose({ W, H, bx0: box.x0, bx1: box.x1, avoid, tall, N, seed: SEED });
+    placeButtons();
     makeSprites();
     // the branch: grow it the first time, otherwise repaint it at once
     bg.setTransform(1, 0, 0, 1, 0, 0);
@@ -981,6 +1080,19 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     petals.length = 0;
     drawOverlay(performance.now());
     poke();
+  }
+
+  function placeButtons() {
+    if (!comp) return;
+    buttons.forEach((b, i) => {
+      const s = comp.sites[i];
+      if (!s) return;
+      b.style.setProperty('--x', `${s.x.toFixed(1)}px`);
+      b.style.setProperty('--y', `${s.y.toFixed(1)}px`);
+      // an open flower is bigger than a bud: a larger target, and a focus ring that clears its petals
+      b.style.setProperty('--hit-open', `${Math.max(48, s.R * 2.2).toFixed(0)}px`);
+      b.style.setProperty('--ring', `${Math.max(48, s.R * 2.7).toFixed(0)}px`);
+    });
   }
 
   function queue() {
@@ -1409,7 +1521,8 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   } else seen = true;
   function maybeGrow() {
     if (!active || !seen || !fontsReady || growStarted || destroyed) return;
-    layout();
+    // nothing is painted yet, so compose afresh with the card's final size
+    layout(true);
     startGrowth();
   }
 
@@ -1432,7 +1545,10 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
 
   // ── API ──
   function relabel() {
+    const focused = buttons.indexOf(document.activeElement);
     const changed = syncReasons();
+    // the last announcement was in the old language; clear it quietly
+    liveEl.textContent = '';
     budsEl.setAttribute('aria-label', t('love.branch'));
     if (keysEl) keysEl.textContent = t('love.keys');
     labelButtons();
@@ -1443,7 +1559,12 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     doneText.textContent = t('love.done');
     renderCount();
     if (changed) layout(true);
+    else if (active) layout();
     else measureCard();
+    if (changed && focused >= 0) {
+      const b = buttons[Math.min(focused, N - 1)];
+      if (b && b.classList.contains('is-shown')) b.focus();
+    }
   }
 
   syncReasons();

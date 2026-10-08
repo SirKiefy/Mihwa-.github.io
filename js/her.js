@@ -5,9 +5,9 @@
 //  e.g.  src: 'photos/01.jpg'.  Empty entries show a placeholder painting.
 //  Every photo is repainted in ink automatically; her colours come back on hover.
 //
-//  THOUGHTS, MEMORIES and REASONS below are EXAMPLES (marked `example: true`).
-//  Replace them with her real words, your real memories together, and the
-//  real reasons you love her.
+//  THOUGHTS and MEMORIES below are EXAMPLES (marked `example: true`).
+//  REASONS (why you love her) starts empty for you to write.
+//  Replace them with her real words and your real memories together.
 //  Every text has English (en), French (fr) and Korean (ko). In French, the
 //  space before : ; ? ! is a no-break space, so they never start a new line.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -16,6 +16,7 @@ export const HER = {
   name: { latin: 'Mihwa', ko: '미화', hanja: '美花' },
   instagram: 'mulnaengmyeonn',
   heroPhoto: 0,      // the photo in the ink at the top (index in PHOTOS)
+  wantedPhoto: 4,    // the photo on the wanted poster
 
   bio: {
     en: ['International relations', 'Human rights · diplomacy', 'Fashion, ink & a steady aim'],
@@ -147,64 +148,14 @@ export const PATH = [
   },
 ];
 
-// ✎ EXAMPLES — replace with the real reasons you love her. One short sentence each,
-//   written to her, in all three languages. Each reason is one blossom on the plum
-//   branch in "Why I love you", so add or remove as many as you like.
+// ✎ WHY YOU LOVE HER: yours to write. Each reason becomes one blossom on the plum
+//   branch in "Why I love you". One short sentence each, written to her.
+//   English is enough; add fr and ko if you like, otherwise the English shows in
+//   every language. The section stays hidden until there is at least one.
+//   The shape of one reason:
+//     { en: 'One reason, in your own words.' },
+//     { en: '…', fr: '…', ko: '…' },
 export const REASONS = [
-  {
-    example: true,
-    en: 'Your laugh, which always arrives a second before the punchline.',
-    fr: 'Ton rire, qui arrive toujours une seconde avant la chute.',
-    ko: '농담이 끝나기도 전에 먼저 터져 나오는 너의 웃음.',
-  },
-  {
-    example: true,
-    en: 'You care, truly, about people you have never even met.',
-    fr: 'Tu tiens sincèrement à des gens que tu n’as même jamais rencontrés.',
-    ko: '한 번도 만나 본 적 없는 사람들까지 진심으로 아끼는 너.',
-  },
-  {
-    example: true,
-    en: 'You turn getting dressed into a small work of art, every single day.',
-    fr: 'Chaque jour, tu fais de ta tenue une petite œuvre d’art.',
-    ko: '매일 입는 옷마저 작은 예술 작품으로 만드는 너.',
-  },
-  {
-    example: true,
-    en: 'You can lie still in the Chernarus grass for twenty minutes, waiting for one perfect shot.',
-    fr: 'Tu peux rester vingt minutes immobile dans l’herbe de Chernarus, à attendre le tir parfait.',
-    ko: '단 한 발을 위해 체르나러스 풀숲에 이십 분이고 가만히 엎드려 있는 너.',
-  },
-  {
-    example: true,
-    en: 'You hold a scope perfectly steady, then cry your eyes out at Red Dead Redemption 2.',
-    fr: 'Tu tiens ta lunette sans trembler, puis tu pleures à chaudes larmes devant Red Dead Redemption 2.',
-    ko: '조준경은 흔들림 없이 잡으면서, 레드 데드 리뎀션 2 앞에서는 펑펑 우는 너.',
-  },
-  {
-    example: true,
-    en: 'You defend mul-naengmyeon like a treaty you negotiated yourself.',
-    fr: 'Tu défends le mul-naengmyeon comme un traité que tu aurais négocié toi-même.',
-    ko: '물냉면을 네가 직접 맺은 조약처럼 굳게 지키는 너.',
-  },
-  {
-    example: true,
-    en: 'You carry Seoul and Paris in one heart, and you make anywhere feel like home.',
-    fr: 'Tu portes Séoul et Paris dans un seul cœur, et partout où tu es, on se sent chez soi.',
-    ko: '서울과 파리를 한 마음에 품고, 어디에 있든 그곳을 집처럼 만드는 너.',
-  },
-  {
-    example: true,
-    en: 'You study the whole world and still notice the smallest things in mine.',
-    fr: 'Tu étudies le monde entier, et tu remarques quand même les plus petites choses du mien.',
-    ko: '온 세상을 공부하면서도 내 사소한 일까지 다 알아봐 주는 너.',
-  },
-  {
-    example: true,
-    en: 'You stand up for equality and human rights, and you are going to spend your life doing it.',
-    fr: 'Tu te bats pour l’égalité et les droits humains, et tu vas y consacrer ta vie.',
-    ko: '평등과 인권을 위해 목소리를 내고, 평생 그 길을 걸어가려는 너.',
-  },
 ];
 
 // ✎ The letter at the end. One string per paragraph; the first one is the greeting.

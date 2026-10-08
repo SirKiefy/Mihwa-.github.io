@@ -1,17 +1,18 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  Mihwa · 미화 — an album in ink.
 //  Every photo is repainted as an ink painting, and each part of the page
-//  (her words, her memories, her path, her colours) sits on one sheet of hanji
-//  where the ink spreads in as you arrive.
+//  (her words, her memories, her path, her colours, her other side, and why
+//  she is loved) sits on one sheet of hanji where the ink spreads in as you
+//  arrive.
 // ─────────────────────────────────────────────────────────────────────────────
 import { LANGS, STRINGS } from './i18n.js';
-import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH } from './her.js';
+import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js';
 import { loadPhotos } from './fx/placeholder.js';
 import { inkify } from './fx/inkify.js';
 import { extractPalette } from './fx/palette.js';
 import { mountLightbox } from './fx/lightbox.js';
 import { makeGrainDataURL } from './scene/inktex.js';
-import { setSound, pluck, phrase } from './audio.js';
+import { setSound, pluck, phrase, shot, ping, glass } from './audio.js';
 import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -48,6 +49,7 @@ root.style.setProperty('--grain', `url(${makeGrainDataURL()})`);
 
 // the living parts of the page, filled in by boot()
 let field = null, hero = null, screen = null, homes = null, lightbox = null, photos = [];
+let scope = null, wanted = null, love = null;
 
 // ─────────────────────────── language ───────────────────────────
 function guessLang() {
@@ -469,6 +471,28 @@ async function boot() {
   tileCaps();
   onLang.push(tileCaps);
 
+  // her other side: the scope, the wanted poster and the dog tags;
+  // and the plum branch of reasons she is loved
+  const sound = { shot, ping, glass, pluck };
+  const part = async (name, make) => {
+    try { return await make(); } catch (err) { console.warn(`${name} unavailable`, err); return null; }
+  };
+  scope = await part('scope', async () => (await import('./fx/scope.js')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
+  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js')).mountWanted($('#wanted'), {
+    photo: photos[HER.wantedPhoto ?? HER.heroPhoto] || heroPh, t, reduceMotion, sound,
+  }));
+  // the reasons are written by hand in her.js; until there is one, the section stays out of the page
+  const reasonText = (r) => (r && (r[lang] || r.en || r.fr || r.ko || '')).trim();
+  if (REASONS.some((r) => reasonText(r))) {
+    love = await part('plum branch', async () => (await import('./fx/blossoms.js')).createBlossoms($('#love-branch'), {
+      reasons: () => REASONS.map(reasonText).filter(Boolean), t, reduceMotion, mobile, sound,
+    }));
+  } else {
+    $('#love').remove();
+    $('.rail a[href="#love"]')?.closest('li')?.remove();
+  }
+  [scope, wanted, love].forEach((api) => api && onLang.push(() => api.relabel()));
+
   layoutAll();
 
   // the sheet of hanji, and all the ink on it
@@ -578,6 +602,9 @@ async function boot() {
   watch($('#hero'), hero);
   watch($('#screen'), screen);
   watch($('#homes'), homes);
+  watch($('#scope'), scope);
+  watch($('#wanted'), wanted);
+  if (love) watch($('#love'), love);
   onScroll();
 
   await wait(reduceMotion ? 0 : 300);

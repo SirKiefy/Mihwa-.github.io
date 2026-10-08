@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mihwa · 미화</title>
-  <meta name="description" content="An ink-painted album for Mihwa: her portraits, her words, her memories, her path and her style.">
+  <meta name="description" content="An ink-painted album for Mihwa, made with love: her portraits, her words, her memories, her path, her style and why she is loved.">
   <meta name="theme-color" content="#f1ebe0">
   <link rel="icon" href="assets/seal.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Gowun+Batang:wght@400;700&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Serif+KR:wght@600;900&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Gowun+Batang:wght@400;700&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Serif+KR:wght@600;900&family=Rye&family=Special+Elite&display=swap">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -71,7 +71,9 @@
       <li><a href="#memories"><span class="rail-label" data-i18n="nav.memories">Memories</span><span class="rail-dot"></span></a></li>
       <li><a href="#path"><span class="rail-label" data-i18n="nav.path">Her path</span><span class="rail-dot"></span></a></li>
       <li><a href="#style"><span class="rail-label" data-i18n="nav.style">Her style</span><span class="rail-dot"></span></a></li>
+      <li><a href="#sharpshooter"><span class="rail-label" data-i18n="nav.offduty">Sharpshooter</span><span class="rail-dot"></span></a></li>
       <li><a href="#homes"><span class="rail-label" data-i18n="nav.homes">Two homes</span><span class="rail-dot"></span></a></li>
+      <li><a href="#love"><span class="rail-label" data-i18n="nav.love">Why I love you</span><span class="rail-dot"></span></a></li>
       <li><a href="#letter"><span class="rail-label" data-i18n="nav.letter">Letter</span><span class="rail-dot"></span></a></li>
     </ol>
   </nav>
@@ -88,7 +90,7 @@
         </div>
         <div class="hero-latin-block">
           <p class="hero-latin" aria-hidden="true">Mihwa</p>
-          <p class="hero-sub" data-i18n="hero.sub">An album of ink and paper, and one very photogenic friend.</p>
+          <p class="hero-sub" data-i18n="hero.sub">An album of ink and paper, painted for the girl I love.</p>
           <a class="ig-chip" id="hero-ig" target="_blank" rel="noopener"></a>
         </div>
       </div>
@@ -168,6 +170,151 @@
       </div>
     </section>
 
+    <!-- ─────────── 명사수: her other side ─────────── -->
+    <section id="sharpshooter" class="block off-sec">
+      <header class="sec-head">
+        <span class="seal seal--md" aria-hidden="true">射</span>
+        <h2><span class="sec-ko">명사수</span><span class="sec-latin" data-i18n="off.title">Off duty</span></h2>
+        <p class="lede" data-i18n="off.sub">The diplomat-to-be, off the clock.</p>
+      </header>
+      <div class="scope" id="scope">
+        <i class="ink" data-ink="bloom" data-dark="0.26" data-seed="6.6" style="left:-6%;top:-9%;width:46%;height:58%"></i>
+        <i class="ink" data-ink="line" data-dark="0.85" data-seed="9.3" data-w="1" data-dry="1" data-bow="0.35" style="left:50%;bottom:-22px;width:min(22rem,64%);height:16px;transform:translateX(-50%)"></i>
+        <div class="scope-stage">
+          <div class="scope-view" tabindex="0" role="application" aria-describedby="scope-help">
+            <canvas class="scope-canvas" aria-hidden="true"></canvas>
+          </div>
+          <div class="scope-grab" aria-hidden="true"></div>
+          <div class="scope-card">
+            <h3 class="scope-card-title" data-sk="scope.card">Range card</h3>
+            <p class="scope-card-note" data-sk="scope.card.note">holds in mils · zeroed at 200 m</p>
+            <table class="scope-table">
+              <thead><tr>
+                <th scope="col"><span class="scope-col-name" data-sk="scope.col.target">Target</span></th>
+                <th scope="col" data-sk="scope.col.range">Range</th>
+                <th scope="col" data-sk="scope.col.elev">Drop</th>
+                <th scope="col" data-sk="scope.col.wind">Wind</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="scope-wind" role="img" aria-label="Wind">
+            <svg class="scope-flag" viewBox="0 0 52 34" aria-hidden="true">
+              <path class="scope-ground" d="M4 32 Q26 29.5 48 32"/>
+              <line class="scope-pole" x1="26" y1="3" x2="26" y2="32"/>
+              <g class="scope-pennant-g"><path class="scope-pennant" d="M0 0 L22 4 L0 9 Z"/></g>
+            </svg>
+            <p class="scope-wind-text" aria-hidden="true"><span class="scope-wind-label" data-sk="scope.wind">Wind</span><span class="scope-wind-num"><span class="scope-wind-val">→ 1.8</span><span class="scope-wind-unit" data-sk="scope.unit.ms">m/s</span></span></p>
+          </div>
+          <p class="scope-toast" role="status" aria-live="polite"></p>
+          <div class="scope-done" aria-hidden="true">
+            <canvas class="scope-seal" aria-hidden="true"></canvas>
+            <p class="scope-done-title" data-sk="scope.done.title">Five for five.</p>
+            <p class="scope-done-line" data-sk="scope.done.line">She would have done it with her eyes closed.</p>
+            <p class="scope-done-love" data-sk="scope.done.love"></p>
+          </div>
+          <div class="scope-bar">
+            <button type="button" class="scope-btn scope-breath" aria-pressed="false"><span data-sk="scope.breath">Hold breath</span><span class="scope-breath-meter" aria-hidden="true"><i></i></span></button>
+            <p class="scope-tally"><span class="scope-pips" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span><span class="scope-tally-num" aria-hidden="true">0 / 5</span><span class="scope-sr scope-tally-sr"></span></p>
+            <div class="scope-right">
+              <button type="button" class="scope-btn scope-again"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.4 8.6A5.5 5.5 0 1 1 11.6 3.7"/><path d="M12.3 1.3v3.1H9.2"/></svg><span class="scope-again-text" data-sk="scope.again">Again</span></button>
+              <button type="button" class="scope-btn scope-fire"><span data-sk="scope.fire">Fire</span></button>
+            </div>
+          </div>
+        </div>
+        <p class="scope-help" id="scope-help"></p>
+      </div>
+      <div class="off-gap" aria-hidden="true"></div>
+      <div class="wanted" id="wanted">
+        <svg class="wanted-defs" width="0" height="0" aria-hidden="true" focusable="false">
+          <defs>
+            <!-- woodblock print: ragged edges, and specks where the ink missed the paper -->
+            <filter id="wanted-print" x="-4%" y="-8%" width="108%" height="116%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.62" numOctaves="2" seed="9" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" result="d"/>
+              <feTurbulence type="fractalNoise" baseFrequency="0.48" numOctaves="3" seed="23" result="n2"/>
+              <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  4.2 0 0 0 -1.05" result="speck"/>
+              <feComposite in="d" in2="speck" operator="in"/>
+            </filter>
+            <!-- the same, gentler, for small type -->
+            <filter id="wanted-print-lite" x="-4%" y="-8%" width="108%" height="116%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="5" result="n"/>
+              <feDisplacementMap in="SourceGraphic" in2="n" scale="0.8" xChannelSelector="R" yChannelSelector="G" result="d"/>
+              <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="29" result="n2"/>
+              <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  5 0 0 0 -0.9" result="speck"/>
+              <feComposite in="d" in2="speck" operator="in"/>
+            </filter>
+            <filter id="wanted-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
+            <path id="wanted-chain-d" d=""/>
+          </defs>
+        </svg>
+        <i class="ink" data-ink="bloom" data-dark="0.2" data-seed="17.3" style="left:-4%;top:6%;width:58%;height:74%"></i>
+        <i class="ink" data-ink="line" data-dark="0.8" data-seed="23.9" data-w="1" data-dry="1" data-bow="-0.3" style="right:2%;bottom:-26px;width:min(24rem,44%);height:16px"></i>
+
+        <figure class="wanted-board">
+          <canvas class="wanted-scrap" aria-hidden="true"></canvas>
+          <span class="wanted-nail wanted-nail--old" aria-hidden="true"></span>
+          <div class="wanted-poster">
+            <canvas class="wanted-paper" aria-hidden="true"></canvas>
+            <div class="wanted-sheet">
+              <p class="wanted-kicker"><span aria-hidden="true">★ </span><span data-wk="wanted.kicker"></span><span aria-hidden="true"> ★</span></p>
+              <h3 class="wanted-head" data-wk="wanted.head">WANTED</h3>
+              <p class="wanted-sub" data-wk="wanted.sub"></p>
+              <div class="wanted-portrait"><img alt="" decoding="async" data-wk-alt="wanted.alt"></div>
+              <p class="wanted-name"><span class="wanted-name-latin" data-wk="wanted.name">MIHWA</span><span class="wanted-name-ko" data-wk="wanted.name.ko"></span></p>
+              <p class="wanted-rule" aria-hidden="true"><span></span><svg class="wanted-reticle" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7"/><path d="M12 2v6.2M12 15.8V22M2 12h6.2M15.8 12H22"/><circle class="wanted-reticle-dot" cx="12" cy="12" r="1.15"/></svg><span></span></p>
+              <p class="wanted-label" data-wk="wanted.for"></p>
+              <p class="wanted-crime" data-wk="wanted.crime"></p>
+              <p class="wanted-reward-label" data-wk="wanted.reward"></p>
+              <p class="wanted-reward" data-wk="wanted.reward.v"></p>
+              <p class="wanted-reward-x" data-wk="wanted.reward.x"></p>
+              <p class="wanted-fine" data-wk="wanted.fine"></p>
+            </div>
+            <span class="wanted-stamp" aria-hidden="true"><span>美</span><span>花</span></span>
+            <canvas class="wanted-holes" aria-hidden="true"></canvas>
+            <button type="button" class="wanted-shoot" data-wk-label="wanted.shoot"></button>
+          </div>
+          <span class="wanted-nail wanted-nail--pivot" aria-hidden="true"></span>
+          <figcaption class="wanted-hint" data-wk="wanted.hint"></figcaption>
+        </figure>
+
+        <div class="wanted-side">
+          <div class="wanted-tags">
+            <button type="button" class="wanted-stage">
+              <canvas class="wanted-branch" aria-hidden="true"></canvas>
+              <svg class="wanted-chain" viewBox="0 0 300 350" aria-hidden="true" focusable="false">
+                <use href="#wanted-chain-d" class="wanted-chain-shadow" filter="url(#wanted-soft)"/>
+                <use href="#wanted-chain-d" class="wanted-chain-link"/>
+                <use href="#wanted-chain-d" class="wanted-chain-ball"/>
+                <use href="#wanted-chain-d" class="wanted-chain-hi"/>
+              </svg>
+              <span class="wanted-tag wanted-tag--b" aria-hidden="true"><span class="wanted-tag-plate"><span class="wanted-tag-text">
+                <span data-wk="wanted.tag2"></span><span class="wanted-tag-gap" data-wk="wanted.tag2.duty"></span>
+              </span></span></span>
+              <span class="wanted-tag wanted-tag--a" aria-hidden="true"><span class="wanted-tag-plate"><span class="wanted-tag-text">
+                <span data-wk="wanted.tag.name"></span><span data-wk="wanted.tag.ko"></span><span data-wk="wanted.tag.sn"></span><span data-wk="wanted.tag.blood"></span><span data-wk="wanted.tag.faith"></span>
+              </span></span></span>
+            </button>
+            <p class="wanted-tags-hint" data-wk="wanted.tags.hint"></p>
+          </div>
+
+          <aside class="wanted-card">
+            <span class="wanted-card-stamp" aria-hidden="true"><span>名</span><span>射</span><span>手</span></span>
+            <p class="wanted-card-kicker" data-wk="wanted.card.kicker"></p>
+            <h3 class="wanted-card-title" data-wk="wanted.card.title"></h3>
+            <dl>
+              <div><dt data-wk="wanted.card.callsign.k"></dt><dd data-wk="wanted.card.callsign.v"></dd></div>
+              <div><dt data-wk="wanted.card.games.k"></dt><dd data-wk="wanted.card.games.v"></dd></div>
+              <div><dt data-wk="wanted.card.role.k"></dt><dd><span data-wk="wanted.card.role.v"></span><svg class="wanted-reticle" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7"/><path d="M12 2v6.2M12 15.8V22M2 12h6.2M15.8 12H22"/><circle class="wanted-reticle-dot" cx="12" cy="12" r="1.15"/></svg></dd></div>
+              <div><dt data-wk="wanted.card.area.k"></dt><dd data-wk="wanted.card.area.v"></dd></div>
+              <div><dt data-wk="wanted.card.patience.k"></dt><dd><span data-wk="wanted.card.patience.v"></span><span class="wanted-inf" aria-hidden="true">∞</span></dd></div>
+            </dl>
+            <p class="wanted-card-note" data-wk="wanted.card.note"></p>
+          </aside>
+        </div>
+      </div>
+    </section>
+
     <!-- ─────────── 두 집: two homes, on a live globe ─────────── -->
     <section id="homes" class="homes-sec">
       <div class="sticky">
@@ -234,6 +381,49 @@
       </div>
     </section>
 
+    <!-- ─────────── 사랑: why I love you ─────────── -->
+    <section id="love" class="block love-sec">
+      <header class="sec-head">
+        <span class="seal seal--md" aria-hidden="true">愛</span>
+        <h2><span class="sec-ko">사랑</span><span class="sec-latin" data-i18n="love.title">Why I love you</span></h2>
+        <p class="lede" data-i18n="love.sub">A branch of red plum, painted one stroke at a time, just for you.</p>
+      </header>
+      <div class="love" id="love-branch">
+        <i class="ink" data-ink="bloom" data-color="red" data-dark="0.1" data-seed="15.3" style="left:6%;top:-4%;width:58%;height:62%"></i>
+        <div class="love-stage">
+          <div class="love-paint">
+            <canvas class="love-canvas" aria-hidden="true"></canvas>
+            <canvas class="love-overlay" aria-hidden="true"></canvas>
+            <div class="love-buds" role="group" aria-describedby="love-keys"></div>
+          </div>
+          <div class="love-reading">
+            <i class="ink" data-ink="bloom" data-dark="0.09" data-seed="21.7" style="left:-12%;top:-14%;width:124%;height:128%"></i>
+            <div class="love-card">
+              <div class="love-faces">
+                <div class="love-face is-on">
+                  <p class="love-kicker"><span class="love-num" aria-hidden="true">梅</span><span class="love-kick-text"></span></p>
+                  <p class="love-text"></p>
+                  <p class="love-hint"></p>
+                </div>
+                <div class="love-face" aria-hidden="true">
+                  <p class="love-kicker"><span class="love-num" aria-hidden="true">梅</span><span class="love-kick-text"></span></p>
+                  <p class="love-text"></p>
+                  <p class="love-hint"></p>
+                </div>
+              </div>
+            </div>
+            <div class="love-foot">
+              <p class="love-count"></p>
+              <span class="love-pips" aria-hidden="true"></span>
+            </div>
+            <p class="love-done"><canvas class="love-seal-c" aria-hidden="true"></canvas><span class="love-done-text"></span></p>
+            <p class="love-sr love-keys" id="love-keys"></p>
+            <p class="love-sr love-live" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ─────────── 편지 ─────────── -->
     <section id="letter" class="block letter-sec">
       <i class="ink" data-ink="bloom" data-dark="0.3" data-seed="12.3" style="left:50%;top:6%;width:min(70rem,96vw);height:88%;transform:translateX(-50%)"></i>
@@ -241,7 +431,7 @@
         <span class="seal seal--md" aria-hidden="true">書</span>
         <h2><span class="sec-ko">편지</span><span class="sec-latin" data-i18n="letter.title">For Mihwa</span></h2>
         <div class="letter-body" data-i18n-html="letter.body"></div>
-        <p class="letter-sign" data-i18n="letter.sign">— your friend</p>
+        <p class="letter-sign" data-i18n="letter.sign">— with all my love</p>
         <div class="letter-seal seal seal--lg" id="letter-seal" aria-hidden="true"><span>美</span><span>花</span></div>
       </article>
     </section>
@@ -249,7 +439,7 @@
 
   <footer class="footer">
     <i class="ink" data-ink="line" data-dark="0.85" data-seed="7.7" data-w="1" data-dry="1" data-bow="-0.3" style="left:50%;top:0;width:min(34rem,80vw);height:18px;transform:translateX(-50%)"></i>
-    <p class="footer-main" data-i18n="footer.main">Painted with ink and a lot of love, for Mihwa · 2026</p>
+    <p class="footer-main" data-i18n="footer.main">Painted with ink and all my love, for Mihwa · 2026</p>
     <button type="button" class="noodle" id="noodle" aria-expanded="false">
       <svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 12 H37 C36 21 29 26 20 26 C11 26 4 21 3 12 Z"/><path class="n" d="M10 12 C12 6 15 14 17 7 C19 13 22 5 24 11 C26 6 28 12 30 8"/><path class="n" d="M26 4 L33 11 M30 3 L36 9"/></svg>
       <span data-i18n="footer.q">Mul or bibim?</span>
