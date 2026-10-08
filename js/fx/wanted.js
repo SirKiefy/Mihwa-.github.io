@@ -17,6 +17,7 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, k) => a + (b - a) * k;
 const dprNow = () => Math.min(2, window.devicePixelRatio || 1);
 const MAX_HOLES = 6;
+const SHADE = { x: 24, t: 14, b: 50 };   // room around the poster for its painted shadow
 const PRINT = [30, 24, 22];      // woodblock ink
 const RUST = [128, 70, 36];
 const SEAL_RGB = [184, 50, 42];
@@ -36,6 +37,14 @@ export const WANTED_INNER = `
         <feDisplacementMap in="SourceGraphic" in2="n" scale="1.5" xChannelSelector="R" yChannelSelector="G" result="d"/>
         <feTurbulence type="fractalNoise" baseFrequency="0.48" numOctaves="3" seed="23" result="n2"/>
         <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  4.2 0 0 0 -1.05" result="speck"/>
+        <feComposite in="d" in2="speck" operator="in"/>
+      </filter>
+      <!-- the same, gentler, for small type -->
+      <filter id="wanted-print-lite" x="-4%" y="-8%" width="108%" height="116%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" seed="5" result="n"/>
+        <feDisplacementMap in="SourceGraphic" in2="n" scale="0.8" xChannelSelector="R" yChannelSelector="G" result="d"/>
+        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="2" seed="29" result="n2"/>
+        <feColorMatrix in="n2" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  5 0 0 0 -0.9" result="speck"/>
         <feComposite in="d" in2="speck" operator="in"/>
       </filter>
       <filter id="wanted-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.6"/></filter>
@@ -419,14 +428,24 @@ function holeSprite(r, seed, dpr) {
   const [c, g] = offCanvas(S, S, dpr);
   const R = rng(seed);
   const cx = S / 2, cy = S / 2;
-  // ink soaking into the paper, and a scorch
-  stamp(g, cx, cy, r * 3.6, INK, 0.06, 0.2);
-  stamp(g, cx + (R() - 0.5) * r * 0.6, cy + (R() - 0.5) * r * 0.6, r * 2.3, [86, 52, 30], 0.2, 0.35);
-  // ink splinters, flung out like a dry brush
-  const n = 10 + Math.floor(R() * 6);
+  // the ink on the bullet soaks into the hanji: a soft bloom, with the
+  // pigment pooling in a tide line at its edge
+  for (let i = 0; i < 6; i++) stamp(g, cx + (R() - 0.5) * r * 1.6, cy + (R() - 0.5) * r * 1.6, r * (1.5 + R() * 1.3), INK, 0.03 + R() * 0.03, 0.3);
+  const tide = r * (2 + R() * 0.6), ns0 = seed % 997, sq = 0.82 + R() * 0.25, tr = R() * TAU;
+  for (let i = 0, n = 110; i < n; i++) {
+    const a = (i / n) * TAU, w = i / n;
+    const rr = tide * (0.84 + 0.32 * (noise1(a * 1.7, ns0) * (1 - w) + noise1(a * 1.7 - TAU * 1.7, ns0) * w));
+    const px = Math.cos(a) * rr, py = Math.sin(a) * rr * sq;
+    stamp(g, cx + px * Math.cos(tr) - py * Math.sin(tr), cy + px * Math.sin(tr) + py * Math.cos(tr), 0.9 + R() * 0.8, INK, 0.035 + R() * 0.035, 0.45);
+  }
+  // a scorch
+  stamp(g, cx + (R() - 0.5) * r * 0.6, cy + (R() - 0.5) * r * 0.6, r * 2.1, [86, 52, 30], 0.2, 0.35);
+  // splinters of ink, flicked out like a dry brush: pressed at the hole,
+  // lifting to a point, and breaking up where the brush ran dry
+  const n = 8 + Math.floor(R() * 5);
   for (let k = 0; k < n; k++) {
-    const a = (k / n) * TAU + (R() - 0.5) * 0.6;
-    const len = r * (0.8 + R() * R() * 3.4), w = r * (0.14 + R() * 0.24), r0 = r * 0.6;
+    const a = (k / n) * TAU + (R() - 0.5) * 0.7;
+    const len = r * (0.8 + R() * R() * 3.4), w = r * (0.14 + R() * 0.22), r0 = r * 0.6;
     const bend = (R() - 0.5) * len * 0.4;
     const ca = Math.cos(a), sa = Math.sin(a);
     const P = (d, o) => [cx + ca * d - sa * o, cy + sa * d + ca * o];
@@ -434,10 +453,19 @@ function holeSprite(r, seed, dpr) {
     const [qx, qy] = P(r0 + len * 0.5, bend * 0.45);
     const p = new Path2D();
     p.moveTo(x1, y1); p.quadraticCurveTo(qx - sa * w * 0.2, qy + ca * w * 0.2, x2, y2); p.quadraticCurveTo(qx + sa * w * 0.2, qy - ca * w * 0.2, x3, y3); p.closePath();
-    g.fillStyle = `rgba(22,17,15,${0.1 + R() * 0.08})`;
-    g.save(); g.translate(ca * 0.6, sa * 0.6); g.fill(p); g.restore(); // a soft wet fringe
-    g.fillStyle = `rgba(22,17,15,${0.45 + R() * 0.45})`;
+    g.fillStyle = `rgba(22,17,15,${0.08 + R() * 0.07})`;
+    g.save(); g.translate(ca * 0.7, sa * 0.7); g.fill(p); g.restore(); // a soft wet fringe
+    g.fillStyle = `rgba(22,17,15,${0.62 + R() * 0.36})`;
     g.fill(p);
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    for (let j = 0, m = Math.round(len / 3.2); j < m; j++) {
+      const d = r0 + len * (0.45 + 0.55 * R()), o = (R() - 0.5) * w * 0.8;
+      const [dx, dy] = P(d, o + bend * Math.pow((d - r0) / len, 2));
+      g.globalAlpha = 0.5 + R() * 0.5;
+      g.beginPath(); g.ellipse(dx, dy, 0.35 + R() * 0.9, 0.2 + R() * 0.25, a, 0, TAU); g.fill();
+    }
+    g.restore();
   }
   // torn lips of paper around the hole, catching the light
   for (let k = 0; k < 7; k++) {
@@ -462,42 +490,56 @@ function holeSprite(r, seed, dpr) {
   grd.addColorStop(1, 'rgba(40,28,22,0.92)');
   g.fillStyle = grd;
   g.fill(pathOf(pts));
-  // a sliver of paper thickness on the lower rim
-  g.strokeStyle = 'rgba(230,214,186,0.35)';
-  g.lineWidth = Math.max(0.6, r * 0.12);
-  g.beginPath(); g.arc(cx, cy, r * 0.78, 0.15 * Math.PI, 0.75 * Math.PI); g.stroke();
+  // a glint of paper thickness on the far rim
+  g.strokeStyle = 'rgba(230,214,186,0.22)';
+  g.lineWidth = Math.max(0.5, r * 0.09);
+  g.beginPath(); g.arc(cx, cy, r * 0.8, 0.18 * Math.PI, 0.4 * Math.PI); g.stroke();
   // spatter
-  const ns = 6 + Math.floor(R() * 8);
+  const ns = 5 + Math.floor(R() * 7);
   for (let i = 0; i < ns; i++) {
     const a = R() * TAU, d = r * (1.8 + R() * 3);
-    stamp(g, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 0.4 + R() * R() * 1.6, INK, 0.5 + R() * 0.45, 0.6);
+    stamp(g, cx + Math.cos(a) * d, cy + Math.sin(a) * d, 0.4 + R() * R() * 1.5, INK, 0.45 + R() * 0.45, 0.6);
   }
   return c;
 }
 
-/** aimed at her face, the bullet lands as a cinnabar heart */
+/**
+ * Aimed at her face, the bullet lands as a cinnabar heart: pressed like a
+ * seal, with a carved inner line, uneven paste and specks where it missed.
+ */
 function heartSprite(r, seed, dpr) {
   const S = Math.ceil(r * 8);
   const [c, g] = offCanvas(S, S, dpr);
   const R = rng(seed);
-  const cx = S / 2, cy = S / 2, k = r * 0.13, rot = (R() - 0.5) * 0.5;
-  const pts = [];
-  for (let i = 0; i < 60; i++) {
-    const t = (i / 60) * TAU;
-    const x = 16 * Math.pow(Math.sin(t), 3), y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-    const j = 1 + (R() - 0.5) * 0.035;
-    pts.push([cx + (x * Math.cos(rot) - y * Math.sin(rot)) * k * j, cy + (x * Math.sin(rot) + y * Math.cos(rot)) * k * j]);
-  }
-  stamp(g, cx, cy, r * 2.8, SEAL_RGB, 0.1, 0.25);
-  g.fillStyle = `rgba(${SEAL_RGB},0.92)`;
-  g.fill(pathOf(pts));
+  const cx = S / 2, cy = S / 2 + r * 0.1, k = r * 0.105, rot = (R() - 0.5) * 0.5;
+  const heart = (sc, jit) => {
+    const pts = [];
+    for (let i = 0; i < 72; i++) {
+      const t = (i / 72) * TAU;
+      const x = 16 * Math.pow(Math.sin(t), 3), y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) - 1.5;
+      const j = sc * (1 + (R() - 0.5) * jit);
+      pts.push([cx + (x * Math.cos(rot) - y * Math.sin(rot)) * k * j, cy + (x * Math.sin(rot) + y * Math.cos(rot)) * k * j]);
+    }
+    return pathOf(pts);
+  };
+  stamp(g, cx, cy, r * 2.6, SEAL_RGB, 0.08, 0.25); // oil from the paste, soaking out
+  g.fillStyle = `rgba(${SEAL_RGB},0.93)`;
+  g.fill(heart(1, 0.03));
+  g.save();
   g.globalCompositeOperation = 'destination-out';
-  for (let i = 0; i < r * 7; i++) {
-    g.globalAlpha = 0.25 + R() * 0.75;
-    g.beginPath(); g.arc(cx + (R() - 0.5) * r * 4.4, cy + (R() - 0.5) * r * 4, 0.2 + R() * R() * r * 0.16, 0, TAU); g.fill();
+  // the carved line
+  g.lineJoin = 'round';
+  g.lineWidth = Math.max(0.75, r * 0.085);
+  g.strokeStyle = '#000';
+  g.stroke(heart(0.72, 0.015));
+  // uneven pressure: paler patches
+  for (let i = 0; i < 4; i++) stamp(g, cx + (R() - 0.5) * r * 2.4, cy + (R() - 0.5) * r * 2.2, r * (0.5 + R() * 0.7), INK, 0.12 + R() * 0.18, 0.2);
+  // specks where the paste missed the paper
+  for (let i = 0; i < r * 6; i++) {
+    g.globalAlpha = 0.3 + R() * 0.7;
+    g.beginPath(); g.arc(cx + (R() - 0.5) * r * 3.6, cy + (R() - 0.5) * r * 3.2, 0.2 + R() * R() * r * 0.11, 0, TAU); g.fill();
   }
-  g.globalAlpha = 1;
-  g.globalCompositeOperation = 'source-over';
+  g.restore();
   return c;
 }
 
@@ -553,10 +595,12 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   const hitCtx = document.createElement('canvas').getContext('2d');
   const play = (name, opts) => { try { sound && typeof sound[name] === 'function' && sound[name](opts); } catch { /* no sound is fine */ } };
 
-  let active = true, raf = 0, last = 0, destroyed = false;
+  let active = true, raf = 0, last = 0, destroyed = false, painted = false, stageDpr = 0;
+  const ac = new AbortController();
+  const opt = { signal: ac.signal };
 
   // ── poster state ──
-  const P = { W: 0, H: 0, dpr: 0, rest: -2.2, ang: 0, vel: 0, pivotY: 0, geo: null, holes: [], parts: [], puffs: [] };
+  const P = { W: 0, H: 0, dpr: 0, rest: -2.2, ang: 0, vel: 0, pivotY: 0, geo: null, photo: null, holes: [], parts: [], puffs: [] };
 
   function applyPoster() {
     poster.style.transform = `rotate(${(P.rest + P.ang).toFixed(3)}deg)`;
@@ -565,7 +609,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   function buildPaper() {
     const W = poster.offsetWidth, H = poster.offsetHeight, dpr = dprNow();
     if (!W || !H || (W === P.W && H === P.H && dpr === P.dpr)) return;
-    const resized = W !== P.W;
+    const resprite = W !== P.W || dpr !== P.dpr;
     P.W = W; P.H = H; P.dpr = dpr;
     P.rest = W < 400 ? -1.4 : -2.2;
     P.pivotY = W * 0.03;
@@ -573,8 +617,23 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     applyPoster();
     const geo = (P.geo = sheetGeometry(W, H, 7));
     const sheet = paintSheet(geo, dpr, 7);
-    // the poster
-    let g = sizeCanvas(paperC, W, H, dpr);
+    // the poster, with its shadow on the wall painted in once. (A CSS
+    // drop-shadow on the swinging poster would be re-blurred on every frame.)
+    // On a phone the margin is narrower, so the canvas never pokes past the screen.
+    const narrow = W < 400, sx = narrow ? 12 : SHADE.x, k = narrow ? 0.75 : 1;
+    let g = sizeCanvas(paperC, W + sx * 2, H + SHADE.t + SHADE.b, dpr);
+    paperC.style.left = `${-sx}px`;
+    paperC.style.top = `${-SHADE.t}px`;
+    g.translate(sx, SHADE.t);
+    g.save();
+    g.fillStyle = '#d9c4a0';
+    for (const [oy, blur, a] of [[20 * k, 18 * k, 0.25], [3, 3.5, 0.2]]) {
+      g.shadowColor = `rgba(60,38,18,${a})`;
+      g.shadowBlur = blur * dpr;
+      g.shadowOffsetY = oy * dpr;
+      g.fill(geo.paper);
+    }
+    g.restore();
     g.save(); g.clip(geo.paper); g.drawImage(sheet, 0, 0, W, H); g.restore();
     tearEdge(g, geo.tear, 1, 3);
     // the scrap left behind under the old nail, unrotated, where the corner used to be
@@ -586,13 +645,15 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     oldNail.style.left = `${poster.offsetLeft + W * 0.085}px`;
     oldNail.style.top = `${poster.offsetTop + W * 0.03}px`;
     // holes keep their place on the sheet; their sprites follow the new size
+    measurePhoto();
     sizeCanvas(holesC, W, H, dpr);
-    if (resized) P.holes.forEach(makeHoleSprite);
+    if (resprite) P.holes.forEach(makeHoleSprite);
     drawHoles(performance.now(), 0);
   }
 
+  const holeR = () => clamp(P.W * 0.019, 5.5, 10);
   function makeHoleSprite(h) {
-    const r = clamp(P.W * 0.017, 5, 9);
+    const r = holeR();
     h.r = r;
     h.sprite = h.kind === 'heart' ? heartSprite(r, h.seed, P.dpr) : holeSprite(r, h.seed, P.dpr);
     h.size = h.kind === 'heart' ? Math.ceil(r * 8) : Math.ceil(r * 11);
@@ -609,12 +670,18 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     const [x, y] = offsetIn(portrait, poster);
     return [x, y, portrait.offsetWidth, portrait.offsetHeight];
   }
+  /** her photo inside the frame: no hole or splinter is ever drawn over it */
+  function measurePhoto() {
+    const [x, y] = offsetIn(img, poster);
+    P.photo = [x, y, img.offsetWidth, img.offsetHeight];
+  }
   const inBox = (x, y, [bx, by, bw, bh], m = 0) => x > bx - m && x < bx + bw + m && y > by - m && y < by + bh + m;
 
   function addHole(x, y) {
     if (!P.geo) return;
     const now = performance.now();
-    const kind = inBox(x, y, portraitBox(), -2) ? 'heart' : 'hole';
+    // anywhere on her portrait or its frame, the bullet turns into a heart
+    const kind = inBox(x, y, portraitBox(), holeR()) ? 'heart' : 'hole';
     const h = { u: x / P.W, v: y / P.H, kind, seed: (Math.random() * 1e6) | 0, born: now, fading: 0 };
     makeHoleSprite(h);
     P.holes.push(h);
@@ -623,7 +690,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     play('shot', { gain: 0.42, pan: clamp((x / P.W - 0.5) * 0.6, -0.5, 0.5) });
     if (!reduceMotion) {
       // a jolt on the nail, a puff of ink, splinters and flakes of paper
-      P.vel += clamp((x / P.W - 0.5) * 9 + (Math.random() - 0.5) * 6, -9, 9);
+      P.vel = clamp(P.vel + (x / P.W - 0.5) * 7 + (Math.random() - 0.5) * 5, -9, 9);
       P.puffs.push({ x, y, t0: now, r: h.r, kind });
       const n = kind === 'heart' ? 6 : 12;
       for (let i = 0; i < n; i++) {
@@ -639,7 +706,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     const box = portraitBox();
     for (let i = 0; i < 40; i++) {
       const x = P.W * (0.12 + Math.random() * 0.76), y = P.H * (0.08 + Math.random() * 0.86);
-      if (onPaper(x, y) && !inBox(x, y, box, 14)) return [x, y];
+      if (onPaper(x, y) && !inBox(x, y, box, holeR() * 2.5)) return [x, y];
     }
     return [P.W * 0.8, P.H * 0.86];
   }
@@ -660,8 +727,10 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       stamp(g, p.x, p.y, p.r * (1.6 + k * 4), p.kind === 'heart' ? SEAL_RGB : INK, 0.2 * (1 - k) * (1 - k), 0.25);
       return true;
     });
-    g.save();
-    g.clip(P.geo.paper);
+    // holes stay on the paper and off her photo; hearts may sit on it
+    const holeClip = new Path2D();
+    holeClip.addPath(P.geo.paper);
+    if (P.photo) holeClip.rect(...P.photo);
     for (const h of P.holes) {
       let a = 1, sc = 1;
       if (h.fading) {
@@ -672,11 +741,15 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       const age = (now - h.born) / 1000;
       if (!reduceMotion && age < 0.1) { sc = 0.6 + 4 * age; busy = true; }
       const s = h.size * sc;
+      g.save();
+      if (h.kind === 'heart') g.clip(P.geo.paper); else g.clip(holeClip, 'evenodd');
       g.globalAlpha = a;
+      g.globalCompositeOperation = h.kind === 'heart' ? 'multiply' : 'source-over';
       g.drawImage(h.sprite, h.u * W - s / 2, h.v * H - s / 2, s, s);
+      g.restore();
     }
-    g.restore();
     g.globalAlpha = 1;
+    g.globalCompositeOperation = 'source-over';
     P.holes = P.holes.filter((h) => !h.dead);
     // splinters and paper flakes in flight
     P.parts = P.parts.filter((p) => {
@@ -703,12 +776,12 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
 
   function stepPoster(dt) {
     if (reduceMotion) return false;
-    if (Math.abs(P.ang) < 0.004 && Math.abs(P.vel) < 0.01) {
+    if (Math.abs(P.ang) < 0.03 && Math.abs(P.vel) < 0.08) {
       if (P.ang || P.vel) { P.ang = 0; P.vel = 0; applyPoster(); }
       return false;
     }
-    P.vel += (-15 * P.ang - 0.95 * P.vel) * dt;
-    P.ang = clamp(P.ang + P.vel * dt, -5, 5);
+    P.vel += (-15 * P.ang - 1.4 * P.vel) * dt;
+    P.ang = clamp(P.ang + P.vel * dt, -4, 4);
     applyPoster();
     return true;
   }
@@ -721,12 +794,12 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     if (lastPt && onPaper(x, y)) {
       const dx = clamp(e.clientX - lastPt[0], -40, 40);
       const lever = clamp((y - P.pivotY) / P.H, 0, 1);
-      P.vel = clamp(P.vel - dx * lever * 0.32, -13, 13);
+      P.vel = clamp(P.vel - dx * lever * 0.1, -7, 7);
       kick();
     }
     lastPt = [e.clientX, e.clientY];
-  });
-  board.addEventListener('pointerleave', () => { lastPt = null; });
+  }, opt);
+  board.addEventListener('pointerleave', () => { lastPt = null; }, opt);
   shootBtn.addEventListener('click', (e) => {
     let x, y;
     if (e.detail === 0 || (!e.clientX && !e.clientY)) [x, y] = randomSpot();
@@ -735,7 +808,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       if (!onPaper(x, y)) return; // the missing corner: nothing to hit
     }
     addHole(x, y);
-  });
+  }, opt);
 
   // ── dog tags ──
   const T = {
@@ -796,15 +869,16 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     if (reduceMotion) return false;
     let busy = false;
     for (const tg of [T.a, T.b]) {
-      const thAcc = -tg.kth * tg.th - 0.55 * tg.thv;
+      const thAcc = -tg.kth * tg.th - 1.4 * tg.thv;
       tg.thv += thAcc * dt;
       tg.th += tg.thv * dt;
-      const phAcc = -tg.kph * (tg.ph - tg.ph0) - 0.42 * tg.phv - 0.55 * thAcc;
+      const phAcc = -tg.kph * (tg.ph - tg.ph0) - 1.8 * tg.phv - 0.5 * thAcc;
       tg.phv += phAcc * dt;
       tg.ph += tg.phv * dt;
-      tg.thv = clamp(tg.thv, -120, 120); tg.phv = clamp(tg.phv, -240, 240);
-      tg.th = clamp(tg.th, -30, 30); tg.ph = clamp(tg.ph, -42, 42);
-      if (Math.abs(tg.th) > 0.02 || Math.abs(tg.thv) > 0.05 || Math.abs(tg.ph - tg.ph0) > 0.02 || Math.abs(tg.phv) > 0.05) busy = true;
+      tg.thv = clamp(tg.thv, -70, 70); tg.phv = clamp(tg.phv, -170, 170);
+      tg.th = clamp(tg.th, -16, 16); tg.ph = clamp(tg.ph, -26, 26);
+      if (Math.abs(tg.th) > 0.06 || Math.abs(tg.thv) > 0.3 || Math.abs(tg.ph - tg.ph0) > 0.06 || Math.abs(tg.phv) > 0.3) busy = true;
+      else { tg.th = 0; tg.thv = 0; tg.ph = tg.ph0; tg.phv = 0; }
     }
     holeOf(T.a); holeOf(T.b);
     const c = contact();
@@ -822,7 +896,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
         B.phv = -(vB + j) / (D2R * dB);
         A.thv -= rel * 0.05; B.thv += rel * 0.05;
         const now = performance.now();
-        if (rel > 14 && now - lastClink > 80) {
+        if (rel > 16 && now - lastClink > 110) {
           lastClink = now;
           play('ping', { gain: clamp(0.03 + rel / 2600, 0.03, 0.12) });
         }
@@ -835,7 +909,8 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
 
   function sizeStage() {
     S = stage.clientWidth / 300 || 1;
-    paintBranch(branchC, S, dprNow());
+    stageDpr = dprNow();
+    paintBranch(branchC, S, stageDpr);
     layoutTags();
   }
 
@@ -853,8 +928,8 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
           const [lx, ly] = toTag(tg, x, y);
           if (lx > -TW / 2 - 16 && lx < TW / 2 + 16 && ly > -HY - 14 && ly < TH - HY + 12) {
             const lever = clamp((ly + HY) / TH, 0.15, 1);
-            tg.phv -= dx * lever * 4.2;
-            tg.thv -= dx * 0.8;
+            tg.phv = clamp(tg.phv - dx * lever * 1.5, -120, 120);
+            tg.thv = clamp(tg.thv - dx * 0.3, -40, 40);
             hit = true;
           }
         }
@@ -862,8 +937,8 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       }
     }
     lastTagPt = [e.clientX, e.clientY];
-  });
-  root.addEventListener('pointerleave', () => { lastTagPt = null; });
+  }, opt);
+  root.addEventListener('pointerleave', () => { lastTagPt = null; }, opt);
   stage.addEventListener('click', (e) => {
     if (reduceMotion) {
       play('ping', { gain: 0.08 });
@@ -880,22 +955,23 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       }
     }
     // swing them into each other
-    if (which !== 'b') { T.a.phv -= which ? 170 : 120; T.a.thv -= 18; }
-    if (which !== 'a') { T.b.phv += which ? 170 : 110; T.b.thv += 14; }
+    if (which !== 'b') { T.a.phv -= which ? 150 : 110; T.a.thv -= 14; }
+    if (which !== 'a') { T.b.phv += which ? 150 : 100; T.b.thv += 10; }
     kick();
-  });
+  }, opt);
 
   // ── the loop: runs only while something moves ──
   function frame(now) {
     raf = 0;
     if (!active || destroyed || document.hidden) return;
-    const dt = Math.min(1 / 30, Math.max(0.001, (now - last) / 1000));
+    const dt = Math.min(0.1, Math.max(0.001, (now - last) / 1000));
     last = now;
     let busy = false;
-    // two substeps keep the springs stiff and stable
-    for (let i = 0; i < 2; i++) {
-      busy = stepPoster(dt / 2) || busy;
-      busy = stepTags(dt / 2) || busy;
+    // fixed small substeps keep the springs stable at any frame rate
+    const n = Math.ceil(dt * 240), h = dt / n;
+    for (let i = 0; i < n; i++) {
+      busy = stepPoster(h) || busy;
+      busy = stepTags(h) || busy;
     }
     busy = drawHoles(now, dt) || busy;
     if (busy) raf = requestAnimationFrame(frame);
@@ -905,8 +981,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     last = performance.now();
     raf = requestAnimationFrame(frame);
   }
-  const onVis = () => { if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else kick(); };
-  document.addEventListener('visibilitychange', onVis);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else kick(); }, opt);
 
   // ── text ──
   function fitTags() {
@@ -919,15 +994,16 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       }
     }
   }
-  function relabel() {
+  function relabel(fit = true) {
     root.querySelectorAll('[data-wk]').forEach((el) => { el.textContent = t(el.dataset.wk); });
     root.querySelectorAll('[data-wk-alt]').forEach((el) => { el.alt = t(el.dataset.wkAlt); });
     root.querySelectorAll('[data-wk-label]').forEach((el) => { el.setAttribute('aria-label', t(el.dataset.wkLabel)); });
     hintEl.textContent = t(touchy ? 'wanted.hint.touch' : 'wanted.hint');
     tagsHintEl.textContent = t(touchy ? 'wanted.tags.hint.touch' : 'wanted.tags.hint');
-    const say = (ks) => ks.map((k) => t(k).replace(/\s*\n\s*/g, ' ')).join(', ');
+    const say = (ks) => ks.map((k) => t(k).replace(/-\s*\n\s*/g, '-').replace(/\s*\n\s*/g, ' ')).join(', ');
     stage.setAttribute('aria-label', `${t('wanted.tags.label')} ${say(['wanted.tag.name', 'wanted.tag.ko', 'wanted.tag.sn', 'wanted.tag.blood', 'wanted.tag.faith'])}. ${say(['wanted.tag2', 'wanted.tag2.duty'])}.`);
-    fitTags();
+    if (fit && painted) fitTags();
+    if (P.geo) { measurePhoto(); drawHoles(performance.now(), 0); }
   }
   function setPhoto(ph) {
     const src = ph && (ph.inkUrl || ph.url);
@@ -937,7 +1013,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   // ── sizing ──
   let sizeQueued = false;
   const ro = new ResizeObserver(() => {
-    if (sizeQueued) return;
+    if (sizeQueued || !painted) return;
     sizeQueued = true;
     requestAnimationFrame(() => {
       sizeQueued = false;
@@ -949,16 +1025,39 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   });
   ro.observe(poster);
   ro.observe(stage);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (!destroyed) { fitTags(); buildPaper(); } });
+  const onFonts = () => { if (!destroyed && painted) { fitTags(); buildPaper(); } };
+  if (document.fonts) {
+    document.fonts.ready.then(onFonts);
+    document.fonts.addEventListener('loadingdone', onFonts, opt);
+  }
+  // a new device pixel ratio (browser zoom, another screen): repaint the canvases sharp
+  const checkDpr = () => {
+    if (destroyed || !painted || (dprNow() === P.dpr && dprNow() === stageDpr)) return;
+    buildPaper();
+    sizeStage();
+  };
+  const watchDpr = () => {
+    matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`).addEventListener('change', () => { watchDpr(); checkDpr(); }, { once: true, signal: ac.signal });
+  };
+  watchDpr();
+  window.addEventListener('resize', checkDpr, opt);
 
-  relabel();
+  relabel(false);
   setPhoto(photo);
   applyPoster();
-  sizeStage();
-  buildPaper();
+  // painting the paper and the branch takes a moment: do it when the page is idle
+  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 30));
+  idle(() => {
+    if (destroyed) return;
+    painted = true;
+    fitTags();
+    sizeStage();
+    buildPaper();
+    poster.classList.add('is-painted');
+  }, { timeout: 1500 });
 
   return {
-    relabel,
+    relabel: () => relabel(true),
     setPhoto,
     setActive(on) {
       active = !!on;
@@ -966,9 +1065,11 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     },
     destroy() {
       destroyed = true;
+      active = false;
       cancelAnimationFrame(raf);
+      raf = 0;
       ro.disconnect();
-      document.removeEventListener('visibilitychange', onVis);
+      ac.abort();
     },
   };
 }

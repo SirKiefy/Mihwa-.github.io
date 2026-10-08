@@ -16,9 +16,11 @@
 .wanted .wanted-poster {
   position: relative; z-index: 2;
   transform: rotate(-2.2deg); transform-origin: 50% 3cqi; will-change: transform;
-  filter: drop-shadow(0 22px 18px rgba(60, 38, 18, .24)) drop-shadow(0 3px 3px rgba(60, 38, 18, .2));
 }
-.wanted .wanted-paper, .wanted .wanted-holes { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+/* plain paper until the real sheet has been painted (a moment after load) */
+.wanted .wanted-poster:not(.is-painted) { background: #ecdcbc; box-shadow: 0 18px 30px -12px rgba(60, 38, 18, .3); }
+/* the paper canvas is larger than the poster: its shadow on the wall is painted into it */
+.wanted .wanted-paper, .wanted .wanted-holes { position: absolute; left: 0; top: 0; width: 100%; height: 100%; max-width: none; pointer-events: none; }
 .wanted .wanted-holes { z-index: 2; }
 .wanted .wanted-scrap { position: absolute; z-index: 1; left: 0; top: 0; pointer-events: none; filter: drop-shadow(0 2px 2px rgba(60, 38, 18, .22)); }
 
@@ -39,10 +41,10 @@
   display: grid; justify-items: center; text-align: center; color: #1c1614;
 }
 .wanted .wanted-sheet > p, .wanted .wanted-sheet > h3 { margin: 0; max-width: 100%; }
-.wanted .wanted-kicker, .wanted .wanted-head, .wanted .wanted-sub, .wanted .wanted-name,
-.wanted .wanted-rule, .wanted .wanted-label, .wanted .wanted-crime, .wanted .wanted-reward-label,
-.wanted .wanted-reward, .wanted .wanted-fine, .wanted .wanted-portrait::before, .wanted .wanted-portrait::after { filter: url(#wanted-print); }
-.wanted .wanted-kicker { font: 600 2.75cqi/1.2 var(--f-body); letter-spacing: .3em; text-transform: uppercase; color: #3a2f29; }
+.wanted .wanted-head, .wanted .wanted-sub, .wanted .wanted-name, .wanted .wanted-rule, .wanted .wanted-reward-label,
+.wanted .wanted-portrait::before, .wanted .wanted-portrait::after { filter: url(#wanted-print); }
+.wanted .wanted-kicker, .wanted .wanted-label, .wanted .wanted-crime, .wanted .wanted-reward, .wanted .wanted-fine { filter: url(#wanted-print-lite); }
+.wanted .wanted-kicker { font: 600 max(9px, 2.75cqi)/1.2 var(--f-body); letter-spacing: .3em; text-transform: uppercase; color: #3a2f29; }
 .wanted .wanted-head { margin-top: 1.4cqi; font: 400 15.6cqi/.92 "Rye", var(--f-display); letter-spacing: .02em; color: #1a1412; }
 .wanted .wanted-sub {
   margin-top: 2cqi; display: flex; align-items: center; justify-content: center; gap: 2.4cqi;
@@ -69,23 +71,23 @@
 .wanted .wanted-reticle { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
 .wanted .wanted-reticle .wanted-reticle-dot { fill: currentColor; stroke: none; }
 
-.wanted .wanted-label { font: 600 2.7cqi/1.2 var(--f-body); letter-spacing: .3em; text-transform: uppercase; color: #4a3d35; }
+.wanted .wanted-label { font: 600 max(9px, 2.7cqi)/1.2 var(--f-body); letter-spacing: .3em; text-transform: uppercase; color: #4a3d35; }
 .wanted .wanted-crime { margin-top: 1.2cqi !important; max-width: 94% !important; font: italic 400 5.3cqi/1.12 var(--f-display); text-wrap: balance; }
 .wanted .wanted-reward-label { margin-top: 3.4cqi !important; font: 400 7.8cqi/1 "Rye", var(--f-display); letter-spacing: .06em; color: #a92d25; }
 .wanted .wanted-reward { margin-top: 1.6cqi !important; font: 700 4cqi/1.15 var(--f-body); letter-spacing: .1em; text-transform: uppercase; }
 .wanted .wanted-reward-x { margin-top: .4cqi !important; font: 400 6.6cqi/1 var(--f-pen); color: var(--seal); transform: rotate(-4deg) translateX(9cqi); }
-.wanted .wanted-fine { margin-top: 2.8cqi !important; max-width: 80% !important; font: italic 400 3.3cqi/1.36 var(--f-body); color: #3a302a; text-wrap: balance; }
+.wanted .wanted-fine { margin-top: 2.8cqi !important; max-width: 80% !important; font: italic 400 max(11.5px, 3.3cqi)/1.36 var(--f-body); color: #3a302a; text-wrap: balance; }
 
 .wanted .wanted-stamp {
   position: absolute; z-index: 1; right: 8.4cqi; bottom: 6.4cqi; display: grid; place-items: center; gap: .3cqi;
   width: 6.4cqi; padding: 1.2cqi 0; border-radius: .5cqi; background: var(--seal); color: #f6efe3;
   font: 900 3.9cqi/1 var(--f-hanja); transform: rotate(-7deg); mix-blend-mode: multiply; opacity: .9;
-  filter: url(#wanted-print); user-select: none; pointer-events: none;
+  filter: url(#wanted-print-lite); user-select: none; pointer-events: none;
 }
 
 .wanted .wanted-shoot {
   position: absolute; inset: 0; z-index: 3; width: 100%; height: 100%; border-radius: 2px;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation; /* quick taps never zoom the page */
 }
 body:not(.has-cursor) .wanted .wanted-shoot { cursor: crosshair; }
 .wanted .wanted-shoot:focus-visible { outline: 2px solid var(--seal); outline-offset: 8px; }
@@ -99,7 +101,7 @@ body:not(.has-cursor) .wanted .wanted-shoot { cursor: crosshair; }
 .wanted .wanted-tags { width: min(100%, 320px); display: grid; justify-items: center; }
 .wanted .wanted-stage {
   position: relative; display: block; width: 100%; aspect-ratio: 300 / 350; container-type: inline-size;
-  border-radius: 8px; -webkit-tap-highlight-color: transparent;
+  border-radius: 8px; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
 .wanted .wanted-stage:focus-visible { outline: 2px solid var(--seal); outline-offset: 4px; }
 .wanted .wanted-branch {
@@ -116,7 +118,11 @@ body:not(.has-cursor) .wanted .wanted-shoot { cursor: crosshair; }
 .wanted .wanted-tag {
   position: absolute; left: 0; top: 0; width: 38.667cqi; height: 68.667cqi; display: block;
   transform-origin: 50% 6cqi; will-change: transform; pointer-events: none;
-  filter: drop-shadow(1.2cqi 3.2cqi 2cqi rgba(50, 34, 20, .3));
+}
+/* the tag's shadow, as a box-shadow: rasterised once with the tag, not re-blurred every frame like a filter */
+.wanted .wanted-tag::before {
+  content: ""; position: absolute; inset: 0; border-radius: 4.6cqi;
+  box-shadow: 1.2cqi 3.2cqi 2.2cqi rgba(50, 34, 20, .28), .2cqi .5cqi .5cqi rgba(50, 34, 20, .16);
 }
 .wanted .wanted-tag-plate {
   position: absolute; inset: 0; display: block; border-radius: 4.6cqi;
@@ -139,10 +145,10 @@ body:not(.has-cursor) .wanted .wanted-shoot { cursor: crosshair; }
   box-shadow: inset 0 0 0 .75cqi rgba(255, 255, 255, .32), 0 0 0 .3cqi rgba(60, 64, 68, .32), inset .3cqi .4cqi .5cqi rgba(40, 44, 48, .35);
 }
 .wanted .wanted-tag-text {
-  position: absolute; left: 4.4cqi; right: 3.6cqi; top: 11.6cqi; bottom: 4.6cqi;
+  position: absolute; left: 4.2cqi; right: 3.2cqi; top: 11.6cqi; bottom: 4.6cqi;
   display: flex; flex-direction: column; justify-content: center; gap: .9cqi;
   font: 400 4cqi/1.14 "Special Elite", var(--f-hanja), ui-monospace, monospace; text-transform: uppercase; letter-spacing: .04em;
-  text-align: left; white-space: pre-line; word-break: keep-all; overflow-wrap: normal; color: #55595d;
+  text-align: left; white-space: pre; color: #55595d;
   text-shadow: -.5px -.6px 0 rgba(28, 30, 32, .5), .6px .7px 0 rgba(255, 255, 255, .8);
 }
 .wanted .wanted-tag-text > span { display: block; }
@@ -159,7 +165,7 @@ html[lang="ko"] .wanted .wanted-tag-text { font-size: 4.2cqi; line-height: 1.32;
 .wanted .wanted-card-stamp {
   position: absolute; right: 22px; top: -18px; display: grid; gap: 2px; place-items: center; width: 26px; padding: 5px 0;
   border-radius: 2px; background: var(--seal); color: var(--paper-light); font: 900 14px/1 var(--f-hanja);
-  transform: rotate(5deg); filter: url(#wanted-print); user-select: none;
+  transform: rotate(5deg); filter: url(#wanted-print-lite); user-select: none;
 }
 .wanted .wanted-card-kicker { margin: 0; font-size: .74rem; letter-spacing: .26em; text-transform: uppercase; color: var(--seal); }
 .wanted .wanted-card-title { margin: 2px 0 12px; font: italic 400 2rem/1.05 var(--f-display); }
@@ -172,17 +178,18 @@ html[lang="ko"] .wanted .wanted-tag-text { font-size: 4.2cqi; line-height: 1.32;
 .wanted .wanted-card-note { margin: 14px 0 0; font: 400 1.6rem/1.1 var(--f-pen); color: var(--seal); transform: rotate(-2deg); transform-origin: left; }
 
 /* ── Korean ── */
-html[lang="ko"] .wanted .wanted-kicker { font-family: var(--f-ko); font-weight: 700; letter-spacing: .24em; font-size: 2.9cqi; }
+html[lang="ko"] .wanted .wanted-kicker { font-family: var(--f-ko); font-weight: 700; letter-spacing: .24em; font-size: max(9.5px, 2.9cqi); }
 html[lang="ko"] .wanted .wanted-sub { font: 900 4.1cqi/1.2 var(--f-hanja); letter-spacing: .1em; }
 html[lang="ko"] .wanted .wanted-label { font: 900 3.3cqi/1.2 var(--f-hanja); letter-spacing: .5em; padding-left: .5em; }
 html[lang="ko"] .wanted .wanted-crime { font: 400 4.3cqi/1.55 var(--f-ko); word-break: keep-all; }
 html[lang="ko"] .wanted .wanted-reward-label { font: 900 7cqi/1 var(--f-hanja); letter-spacing: .3em; padding-left: .3em; }
 html[lang="ko"] .wanted .wanted-reward { font: 700 4.3cqi/1.3 var(--f-ko); letter-spacing: .04em; }
-html[lang="ko"] .wanted .wanted-reward-x { font-size: 7.6cqi; }
-html[lang="ko"] .wanted .wanted-fine { font: 400 3.15cqi/1.65 var(--f-ko); word-break: keep-all; }
+html[lang="ko"] .wanted .wanted-reward-x { margin-top: 1.4cqi !important; font-size: 7.6cqi; }
+html[lang="ko"] .wanted .wanted-fine { font: 400 max(10.5px, 3.15cqi)/1.65 var(--f-ko); word-break: keep-all; }
 html[lang="ko"] .wanted .wanted-card-title { font: 400 2.5rem/1 var(--f-brush); }
 html[lang="ko"] .wanted .wanted-card dt { letter-spacing: 0; text-transform: none; font-size: .88rem; }
 html[lang="ko"] .wanted .wanted-card-note { font-size: 1.75rem; }
+html[lang="ko"] .wanted .wanted-hint, html[lang="ko"] .wanted .wanted-tags-hint { font-style: normal; letter-spacing: .02em; font-size: .82rem; }
 
 /* ── responsive ── */
 @media (max-width: 1100px) {
