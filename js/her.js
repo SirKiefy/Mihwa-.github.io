@@ -17,8 +17,8 @@ export const HER = {
   instagram: 'mulnaengmyeonn',
   heroPhoto: 0,      // the photo in the ink at the top (index in PHOTOS)
   wantedPhoto: 4,    // the photo on the wanted poster
-  // ✎ her cat: its name (optional) and coat: 'tabby', 'black', 'white', 'grey', 'orange' or 'calico'
-  cat: { name: '', coat: 'tabby' },
+  // ✎ her baby, the cat: write his name here when you know it (until then he is "her baby")
+  cat: { name: '' },
 
   bio: {
     en: ['International relations', 'Human rights · diplomacy', 'Fashion, ink & a steady aim'],
