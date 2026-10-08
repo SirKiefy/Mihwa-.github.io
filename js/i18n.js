@@ -48,6 +48,7 @@ export const STRINGS = {
 
     'ig.kicker': 'Find her',
     'ig.follow': 'Follow on Instagram',
+    'ig.posts': 'From her feed', 'ig.view': 'View this post on Instagram',
 
     'letter.title': 'For Mimi',
 
@@ -148,7 +149,7 @@ export const STRINGS = {
     "wanted.card.area.k": "Area of operations",
     "wanted.card.area.v": "Chernarus, Altis and the Wild West of 1899",
     "wanted.card.patience.k": "Patience",
-    "wanted.card.patience.v": "Zero. She still never misses.",
+    "wanted.card.patience.v": "Zero, she sometimes never misses.",
     "wanted.card.note": "Status: unstoppable",
 
     // love
@@ -210,6 +211,7 @@ export const STRINGS = {
 
     'ig.kicker': 'La retrouver',
     'ig.follow': 'La suivre sur Instagram',
+    'ig.posts': 'Sur son fil', 'ig.view': 'Voir cette publication sur Instagram',
 
     'letter.title': 'Pour Mimi',
 
@@ -310,7 +312,7 @@ export const STRINGS = {
     "wanted.card.area.k": "Zone d’opérations",
     "wanted.card.area.v": "Chernarus, Altis et le Far West de 1899",
     "wanted.card.patience.k": "Patience",
-    "wanted.card.patience.v": "Zéro. Et pourtant, elle ne rate jamais.",
+    "wanted.card.patience.v": "Zéro, parfois elle ne rate jamais.",
     "wanted.card.note": "Statut : inarrêtable",
 
     // love
@@ -372,6 +374,7 @@ export const STRINGS = {
 
     'ig.kicker': '미화 찾기',
     'ig.follow': '인스타그램 팔로우',
+    'ig.posts': '그녀의 피드에서', 'ig.view': '인스타그램에서 보기',
 
     'letter.title': '미미에게',
 
@@ -472,7 +475,7 @@ export const STRINGS = {
     "wanted.card.area.k": "작전 지역",
     "wanted.card.area.v": "체르나루스, 알티스, 그리고 1899년의 서부",
     "wanted.card.patience.k": "인내심",
-    "wanted.card.patience.v": "제로. 그래도 백발백중.",
+    "wanted.card.patience.v": "제로. 가끔은 백발백중.",
     "wanted.card.note": "상태: 아무도 못 말림",
 
     // love

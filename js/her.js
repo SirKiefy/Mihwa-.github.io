@@ -54,7 +54,8 @@ export const PHOTOS = [
 // ✎ EXAMPLES — replace with things she actually says.
 export const THOUGHTS = [
   { example: true, seal: '交', en: 'Diplomacy is just kindness with a dress code.', fr: 'La diplomatie, c’est de la gentillesse avec un code vestimentaire.', ko: '외교는 드레스 코드가 있는 다정함이야.' },
-  { example: true, seal: '界', en: 'Every border has people on both sides.', fr: 'Il y a des gens des deux côtés de chaque frontière.', ko: '국경 양쪽에는 언제나 사람이 있어.' },
+  // with the students and teachers of France, autumn 2026
+  { example: true, seal: '校', en: 'More teachers, real classrooms, schools that aren’t falling apart. That’s not too much to ask.', fr: 'Plus de profs, de vraies salles de classe, des écoles qui ne tombent pas en ruine. Ce n’est pas trop demander.', ko: '선생님은 더 많이, 교실은 제대로, 무너지지 않는 학교. 그게 그렇게 무리한 부탁이야?' },
   { example: true, seal: '服', en: 'A good outfit is a quiet argument.', fr: 'Une belle tenue, c’est un argument silencieux.', ko: '잘 고른 옷은 조용한 설득이야.' },
   { example: true, seal: '冷', en: 'Mul-naengmyeon is non-negotiable.', fr: 'Le mul-naengmyeon, c’est non négociable.', ko: '물냉면은 협상 불가야.' },
 ];

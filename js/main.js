@@ -374,6 +374,21 @@ function nearestPigments(colours) {
   });
 }
 
+// ─────────────────────────── her real posts, embedded from Instagram ───────────────────────────
+// Instagram's script loads only when the section comes near, then turns the quotes into posts.
+const igPosts = $('#ig-posts');
+if (igPosts) {
+  new IntersectionObserver((es, io) => {
+    if (!es.some((e) => e.isIntersecting)) return;
+    io.disconnect();
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.instagram.com/embed.js';
+    s.onload = () => window.instgrm?.Embeds?.process();
+    document.body.appendChild(s);
+  }, { rootMargin: '600px 0px' }).observe(igPosts);
+}
+
 // ─────────────────────────── footer: the eternal question ───────────────────────────
 $('#noodle').addEventListener('click', (e) => {
   const open = e.currentTarget.getAttribute('aria-expanded') !== 'true';
@@ -502,6 +517,11 @@ async function boot() {
   }
   [scope, wanted, love].forEach((api) => api && onLang.push(() => api.relabel()));
 
+  // the gentle storm behind the letter
+  const stormCanvas = $('#letter .storm-canvas');
+  const storm = await part('storm', async () => (await import('./fx/storm.js')).createStorm(stormCanvas, { reduceMotion, mobile }));
+  if (!storm) stormCanvas.classList.add('storm-fallback');
+
   layoutAll();
 
   // the sheet of hanji, and all the ink on it
@@ -614,6 +634,7 @@ async function boot() {
   watch($('#scope'), scope);
   watch($('#wanted'), wanted);
   if (love) watch($('#love'), love);
+  watch($('#letter'), storm);
   onScroll();
 
   await wait(reduceMotion ? 0 : 300);
