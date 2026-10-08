@@ -1,8 +1,8 @@
 // Procedural textures painted with the ink brush (pines, a pavilion, blossoms)
 // and the ink-wash map of the Earth.
-import * as THREE from '../../vendor/three/three.module.min.js';
-import { rng, stroke, strokeGen, blossomGen, bud, wash, stamp, PROFILE, INK } from '../ink/brush.js';
-import { LAND_PATH, LAND_W, LAND_H } from '../data/land.js';
+import * as THREE from '../../vendor/three/three.module.min.js?v=a59c17f65a';
+import { rng, stroke, strokeGen, blossomGen, bud, wash, stamp, PROFILE, INK } from '../ink/brush.js?v=a59c17f65a';
+import { LAND_PATH, LAND_W, LAND_H } from '../data/land.js?v=a59c17f65a';
 
 const run = (gen) => { const it = gen; while (!it.next().done); };
 

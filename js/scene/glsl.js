@@ -1,8 +1,8 @@
 // Shared GLSL chunks + a baked, tileable noise texture.
 // Every ink wash in the scene samples this one 256² texture instead of
 // evaluating procedural noise per pixel, which keeps phones and laptops cool.
-import * as THREE from '../../vendor/three/three.module.min.js';
-import { noiseData } from '../fx/noise.js';
+import * as THREE from '../../vendor/three/three.module.min.js?v=a59c17f65a';
+import { noiseData } from '../fx/noise.js?v=a59c17f65a';
 
 export function makeNoiseTexture(size = 256) {
   const { data } = noiseData(size);

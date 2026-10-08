@@ -1,5 +1,5 @@
 // Her palette: the dominant colours across all her photos (k-means in RGB).
-import { rng } from '../ink/brush.js';
+import { rng } from '../ink/brush.js?v=a59c17f65a';
 
 export function extractPalette(photos, k = 6) {
   const px = [];

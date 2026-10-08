@@ -50,6 +50,8 @@ Then open <http://localhost:8080>. Opening `index.html` directly from disk won't
 
 If the repository is public, her photos will be public too.
 
+Scripts and the stylesheet are loaded with a version stamp (`?v=…`) so visitors never get a mix of old and new files. The deploy stamps them automatically; after changing code locally you can run `node tools/stamp.mjs` yourself.
+
 ## How it's made
 
 - **Photo → ink painting** (`js/fx/inkify.js`): a Kuwahara filter to flatten the photo into brush-sized patches, banded ink washes with noisy edges, pigment pooling where washes dry, difference-of-Gaussians brush lines with dry-brush breaks, granulation and bleed, all on hanji.

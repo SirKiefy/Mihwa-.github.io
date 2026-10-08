@@ -5,15 +5,15 @@
 //  she is loved) sits on one sheet of hanji where the ink spreads in as you
 //  arrive.
 // ─────────────────────────────────────────────────────────────────────────────
-import { LANGS, STRINGS } from './i18n.js';
-import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js';
-import { loadPhotos } from './fx/placeholder.js';
-import { inkify } from './fx/inkify.js';
-import { extractPalette } from './fx/palette.js';
-import { mountLightbox } from './fx/lightbox.js';
-import { makeGrainDataURL } from './scene/inktex.js';
-import { setSound, pluck, phrase, shot, ping, glass } from './audio.js';
-import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js';
+import { LANGS, STRINGS } from './i18n.js?v=a59c17f65a';
+import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=a59c17f65a';
+import { loadPhotos } from './fx/placeholder.js?v=a59c17f65a';
+import { inkify } from './fx/inkify.js?v=a59c17f65a';
+import { extractPalette } from './fx/palette.js?v=a59c17f65a';
+import { mountLightbox } from './fx/lightbox.js?v=a59c17f65a';
+import { makeGrainDataURL } from './scene/inktex.js?v=a59c17f65a';
+import { setSound, pluck, phrase, shot, ping, glass } from './audio.js?v=a59c17f65a';
+import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=a59c17f65a';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -501,14 +501,14 @@ async function boot() {
   const part = async (name, make) => {
     try { return await make(); } catch (err) { console.warn(`${name} unavailable`, err); return null; }
   };
-  scope = await part('scope', async () => (await import('./fx/scope.js')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
-  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js')).mountWanted($('#wanted'), {
+  scope = await part('scope', async () => (await import('./fx/scope.js?v=a59c17f65a')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
+  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=a59c17f65a')).mountWanted($('#wanted'), {
     photo: photos[HER.wantedPhoto ?? HER.heroPhoto] || heroPh, t, reduceMotion, sound,
   }));
   // the reasons are written by hand in her.js; until there is one, the section stays out of the page
   const reasonText = (r) => (r && (r[lang] || r.en || r.fr || r.ko || '')).trim();
   if (REASONS.some((r) => reasonText(r))) {
-    love = await part('plum branch', async () => (await import('./fx/blossoms.js')).createBlossoms($('#love-branch'), {
+    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=a59c17f65a')).createBlossoms($('#love-branch'), {
       reasons: () => REASONS.map(reasonText).filter(Boolean), t, reduceMotion, mobile, sound,
     }));
   } else {
@@ -519,21 +519,21 @@ async function boot() {
 
   // the gentle storm behind the letter
   const stormCanvas = $('#letter .storm-canvas');
-  const storm = await part('storm', async () => (await import('./fx/storm.js')).createStorm(stormCanvas, { reduceMotion, mobile }));
+  const storm = await part('storm', async () => (await import('./fx/storm.js?v=a59c17f65a')).createStorm(stormCanvas, { reduceMotion, mobile }));
   if (!storm) stormCanvas.classList.add('storm-fallback');
 
   layoutAll();
 
   // the sheet of hanji, and all the ink on it
   try {
-    const { createInkField } = await import('./fx/inkfield.js');
+    const { createInkField } = await import('./fx/inkfield.js?v=a59c17f65a');
     field = createInkField($('#ink-field'), { reduceMotion });
   } catch (err) { console.warn('ink field unavailable', err); field = null; }
   if (!field) $('#ink-field').hidden = true;
 
   // hero: her portrait, in moving ink
   try {
-    const { createInkHero } = await import('./fx/fluid.js');
+    const { createInkHero } = await import('./fx/fluid.js?v=a59c17f65a');
     hero = createInkHero($('#ink-gl'), { source: heroPh.inkCanvas, reduceMotion, mobile, color: 1 });
   } catch (err) { console.warn('ink hero unavailable', err); hero = null; }
   if (hero) {
@@ -561,7 +561,7 @@ async function boot() {
 
   // the folding screen of portraits
   try {
-    const { createScreen } = await import('./fx/screen.js');
+    const { createScreen } = await import('./fx/screen.js?v=a59c17f65a');
     screen = createScreen($('#screen-gl'), photos, { reduceMotion, onOpen: (i, e) => open(i, e, 'col') });
   } catch (err) { console.warn('folding screen unavailable', err); screen = null; }
   if (screen) {
@@ -586,7 +586,7 @@ async function boot() {
 
   // two homes, on a live globe
   try {
-    const { createHomes } = await import('./fx/homes.js');
+    const { createHomes } = await import('./fx/homes.js?v=a59c17f65a');
     homes = createHomes($('#globe-gl'), HOMES, { mobile, reduceMotion });
   } catch (err) { console.warn('globe unavailable', err); homes = null; }
   if (homes) {
