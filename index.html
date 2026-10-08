@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Gowun+Batang:wght@400;700&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Serif+KR:wght@600;900&family=Rye&family=Special+Elite&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=5484e3cdd9">
+  <link rel="stylesheet" href="css/style.css?v=84ce73c042">
 </head>
 <body>
   <svg width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -71,6 +71,7 @@
       <li><a href="#memories"><span class="rail-label" data-i18n="nav.memories">Memories</span><span class="rail-dot"></span></a></li>
       <li><a href="#path"><span class="rail-label" data-i18n="nav.path">Her path</span><span class="rail-dot"></span></a></li>
       <li><a href="#style"><span class="rail-label" data-i18n="nav.style">Her style</span><span class="rail-dot"></span></a></li>
+      <li><a href="#baby"><span class="rail-label" data-i18n="nav.baby">Her baby</span><span class="rail-dot"></span></a></li>
       <li><a href="#sharpshooter"><span class="rail-label" data-i18n="nav.offduty">Sharpshooter</span><span class="rail-dot"></span></a></li>
       <li><a href="#homes"><span class="rail-label" data-i18n="nav.homes">Two homes</span><span class="rail-dot"></span></a></li>
       <li><a href="#love"><span class="rail-label" data-i18n="nav.love">One of a kind</span><span class="rail-dot"></span></a></li>
@@ -167,6 +168,31 @@
           <dl id="notes"></dl>
           <span class="seal seal--sm about-seal" aria-hidden="true"><span>美</span><span>花</span></span>
         </aside>
+      </div>
+    </section>
+
+    <!-- ─────────── 아기: her baby (and the avocado) ─────────── -->
+    <section id="baby" class="block cat-sec">
+      <header class="sec-head">
+        <span class="seal seal--md" aria-hidden="true">猫</span>
+        <h2><span class="sec-ko">아기</span><span class="sec-latin" data-i18n="baby.title">Her baby</span></h2>
+        <p class="lede" data-i18n="baby.sub">Her favourite creature in the world, and the only one who agrees with her about avocado.</p>
+      </header>
+      <div class="cat" id="cat">
+        <div class="cat-stage" role="img">
+          <canvas class="cat-bg" aria-hidden="true"></canvas>
+          <canvas class="cat-fg" aria-hidden="true"></canvas>
+          <span class="cat-grab" aria-hidden="true"></span>
+        </div>
+        <p class="cat-caption"><span class="cat-caption-main"></span> <span class="cat-caption-hint"></span></p>
+        <div class="cat-bar">
+          <p class="cat-count" aria-live="polite"><span class="cat-count-n"></span> <span class="cat-count-note"></span></p>
+          <div class="cat-btns">
+            <button type="button" class="cat-btn cat-btn--poke"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2.2c2 0 2.9 1.9 3.3 3.9.4 1.8 2.6 3.2 2.6 6.3 0 3.3-2.6 5.4-5.9 5.4S4.1 15.7 4.1 12.4c0-3.1 2.2-4.5 2.6-6.3C7.1 4.1 8 2.2 10 2.2z"/><circle cx="10" cy="12.6" r="2.6"/></svg><span class="cat-btn-text" data-ck="cat.btn.poke"></span></button>
+            <button type="button" class="cat-btn cat-btn--swat"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><ellipse cx="10" cy="13.4" rx="4.1" ry="3.3"/><circle cx="4.6" cy="8.6" r="1.7"/><circle cx="8" cy="5.4" r="1.8"/><circle cx="12" cy="5.4" r="1.8"/><circle cx="15.4" cy="8.6" r="1.7"/></svg><span class="cat-btn-text" data-ck="cat.btn.swat"></span></button>
+            <button type="button" class="cat-btn cat-btn--pet"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 16.4S3.2 12.3 3.2 7.6A3.4 3.4 0 0 1 10 6a3.4 3.4 0 0 1 6.8 1.6c0 4.7-6.8 8.8-6.8 8.8z"/></svg><span class="cat-btn-text cat-btn-pet"></span></button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -488,6 +514,6 @@
   <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
   <p class="webgl-fallback" hidden data-i18n="fallback">Your browser could not start WebGL.</p>
 
-  <script type="module" src="js/main.js?v=5484e3cdd9"></script>
+  <script type="module" src="js/main.js?v=84ce73c042"></script>
 </body>
 </html>

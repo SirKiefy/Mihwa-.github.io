@@ -13,7 +13,7 @@
 //
 //  createScope(root, { t, reduceMotion, mobile, sound }) → { setActive, relabel, destroy }
 // ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, smooth, stroke, dotGen, sealStamp, PROFILE } from '../ink/brush.js?v=5484e3cdd9';
+import { rng, noise1, smooth, stroke, dotGen, sealStamp, PROFILE } from '../ink/brush.js?v=84ce73c042';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

@@ -3,9 +3,9 @@
 //  Silk-mounted panels unfold as you scroll; hover a panel and her colours
 //  bleed back into the ink, spreading out from the middle like a wash.
 // ─────────────────────────────────────────────────────────────────────────────
-import * as THREE from '../../vendor/three/three.module.min.js?v=5484e3cdd9';
-import { makeNoiseTexture } from '../scene/glsl.js?v=5484e3cdd9';
-import { sealStamp } from '../ink/brush.js?v=5484e3cdd9';
+import * as THREE from '../../vendor/three/three.module.min.js?v=84ce73c042';
+import { makeNoiseTexture } from '../scene/glsl.js?v=84ce73c042';
+import { sealStamp } from '../ink/brush.js?v=84ce73c042';
 
 const NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const PW = 1, PH = 2.75;

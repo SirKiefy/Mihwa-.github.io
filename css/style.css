@@ -1102,3 +1102,85 @@ html[lang="ko"] .love .love-done { font-family: var(--f-ko); font-style: normal;
       rgba(120, 120, 118, .3) calc(100% - 9vh),
       rgba(241, 235, 224, 0) 100%);
 }
+
+/* ═══════════ her baby, and the avocado ═══════════ */
+/* ─────────── her baby: a cat, a window, and an avocado that had it coming ─────────── */
+.cat { position: relative; max-width: 1120px; margin: 0 auto; }
+.cat .cat-stage {
+  position: relative; height: clamp(480px, 30vw + 150px, 560px);
+  touch-action: pan-y; -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+}
+.cat .cat-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cat .cat-fg { z-index: 1; }
+/* sits on the avocado so a finger can drag it without scrolling the page */
+.cat .cat-grab {
+  position: absolute; left: 0; top: 0; z-index: 2; width: 78px; height: 78px; margin: -39px 0 0 -39px;
+  border-radius: 50%; touch-action: none; cursor: grab; will-change: transform;
+}
+.cat .cat-stage.is-grabbing, .cat .cat-stage.is-grabbing .cat-grab { cursor: grabbing; }
+
+.cat .cat-caption {
+  margin: 14px auto 0; max-width: 46rem; text-align: center; text-wrap: balance;
+  font-style: italic; line-height: 1.45; color: var(--ink-2);
+}
+.cat .cat-caption-hint { color: var(--ink-3); font-size: .9em; }
+
+.cat .cat-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 30px;
+  margin: 18px auto 0;
+}
+.cat .cat-count {
+  margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 2px 12px;
+  min-height: 2.2rem; text-align: center;
+}
+.cat .cat-count-n { white-space: nowrap; letter-spacing: .02em; color: var(--ink-2); }
+.cat .cat-count-n b {
+  display: inline-block; min-width: .7em; margin: 0 .08em; font-family: var(--f-display); font-style: italic; font-weight: 400;
+  font-size: 1.7rem; line-height: 1; color: var(--seal); font-variant-numeric: tabular-nums;
+}
+.cat .cat-count-note { font-family: var(--f-pen); font-size: 1.45rem; line-height: 1.1; color: var(--seal-deep); }
+.cat .cat-count-note:empty { display: none; }
+.cat .cat-count-note.is-new { animation: cat-note .8s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes cat-note { 0% { opacity: 0; transform: translateY(6px) rotate(-2deg) scale(.9); } 100% { opacity: 1; transform: none; } }
+
+.cat .cat-btns { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.cat .cat-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 0 20px 0 16px; border-radius: 999px; touch-action: manipulation;
+  background: rgba(248,244,236,.9); border: 1px solid rgba(22,17,15,.24); color: var(--ink);
+  font-size: .98rem; letter-spacing: .03em; line-height: 1.1; white-space: nowrap;
+  box-shadow: 0 12px 22px -16px rgba(60,40,20,.6);
+  transition: background .3s, color .3s, transform .15s, border-color .3s;
+  -webkit-user-select: none; user-select: none;
+}
+.cat .cat-btn svg { flex: none; width: 18px; height: 18px; fill: currentColor; opacity: .85; }
+.cat .cat-btn--poke svg { fill: #5f7d34; }
+.cat .cat-btn--poke svg circle { fill: #8a5a32; }
+.cat .cat-btn--pet svg { fill: var(--seal); }
+/* hover only where there is one: on touch screens a tapped button would otherwise stay inked */
+@media (hover: hover) {
+  .cat .cat-btn:hover { background: var(--ink); color: var(--paper-light); border-color: var(--ink); }
+  .cat .cat-btn:hover svg { opacity: 1; }
+}
+.cat .cat-btn:active { transform: scale(.96); }
+
+html[lang="ko"] .cat .cat-caption { font-style: normal; }
+html[lang="ko"] .cat .cat-btn { letter-spacing: 0; font-size: .95rem; }
+html[lang="ko"] .cat .cat-count-n { letter-spacing: 0; }
+
+@media (max-width: 640px) {
+  .cat .cat-stage { height: clamp(540px, 76vh, 640px); height: clamp(540px, 76svh, 640px); }
+  .cat .cat-caption { font-size: .92rem; padding: 0 4px; }
+  .cat .cat-bar { margin-top: 14px; gap: 12px; }
+  .cat .cat-count { width: 100%; flex-direction: column; align-items: center; gap: 0; }
+  .cat .cat-btns { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cat .cat-btn { min-height: 48px; padding: 6px 12px; font-size: .9rem; white-space: normal; text-align: center; }
+  .cat .cat-btn--pet { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat .cat-count-note.is-new { animation: none; }
+  .cat .cat-btn { transition: none; }
+}
+html[lang="ko"] .cat .cat-count-n b { margin-right: .02em; }

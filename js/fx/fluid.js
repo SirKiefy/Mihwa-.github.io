@@ -4,7 +4,7 @@
 //  carries ink across hanji paper. Where the ink gathers, her photo shows
 //  through, toned like an ink wash, with pigment pooling at the bloom's rim.
 // ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=5484e3cdd9';
+import { noiseData } from './noise.js?v=84ce73c042';
 
 const VERT = `#version 300 es
 precision highp float;

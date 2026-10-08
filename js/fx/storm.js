@@ -27,7 +27,7 @@
 //
 //  createStorm(canvas, { reduceMotion, mobile, card }) → { setActive, destroy, renderAt } | null
 // ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=5484e3cdd9';
+import { noiseData } from './noise.js?v=84ce73c042';
 
 // the swell, and the big rock at the cliff foot: shared by the shader and the JS that times the still frame
 const WK = 6;         // swells per unit of depth
