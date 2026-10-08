@@ -203,3 +203,49 @@ export function glass({ gain = 0.25, delay = 0 } = {}) {
     src.start(now + k * 0.018 + Math.random() * 0.03);
   }
 }
+
+/** A cat's purr: a low rumble pulsing about 25 times a second. */
+export function purr({ gain = 0.22, seconds = 1.4 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(seconds, 0.4);
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260;
+  const am = ctx.createGain(); am.gain.value = 0;
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 25;
+  const depth = ctx.createGain(); depth.gain.value = 0.5;
+  const bias = ctx.createConstantSource ? ctx.createConstantSource() : null;
+  lfo.connect(depth).connect(am.gain);
+  if (bias) { bias.offset.value = 0.5; bias.connect(am.gain); bias.start(now); bias.stop(now + seconds); }
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(gain, now + 0.25);
+  g.gain.setValueAtTime(gain, now + seconds - 0.35);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
+  src.connect(lp).connect(am).connect(g).connect(master);
+  lfo.start(now); lfo.stop(now + seconds);
+  src.start(now);
+}
+
+/** A small, polite 야옹. */
+export function meow({ gain = 0.16 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  const o = ctx.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(520, now);
+  o.frequency.linearRampToValueAtTime(820, now + 0.18);
+  o.frequency.linearRampToValueAtTime(600, now + 0.42);
+  o.frequency.linearRampToValueAtTime(430, now + 0.62);
+  const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 6;
+  f1.frequency.setValueAtTime(900, now);
+  f1.frequency.linearRampToValueAtTime(1500, now + 0.2);
+  f1.frequency.linearRampToValueAtTime(800, now + 0.6);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(gain, now + 0.06);
+  g.gain.setValueAtTime(gain * 0.8, now + 0.45);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.68);
+  o.connect(f1).connect(g).connect(master);
+  o.start(now); o.stop(now + 0.7);
+}

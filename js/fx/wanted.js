@@ -9,7 +9,7 @@
 //
 //  mountWanted(root, { photo, t, reduceMotion, sound }) → { relabel, setPhoto, setActive, destroy }
 // ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, stamp, wash, stroke, dotGen, blossomGen, bud, PROFILE, INK } from '../ink/brush.js?v=a59c17f65a';
+import { rng, noise1, stamp, wash, stroke, dotGen, blossomGen, bud, PROFILE, INK } from '../ink/brush.js?v=5484e3cdd9';
 
 const TAU = Math.PI * 2;
 const D2R = Math.PI / 180;

@@ -58,6 +58,7 @@ export const STRINGS = {
     'footer.main': 'Painted with ink and a lot of love, for Mihwa · 2026',
     'footer.q': 'Mul or bibim?',
     'footer.a': 'Mul-naengmyeon. Obviously.',
+    'footer.avo.q': 'Avocado?', 'footer.avo.a': 'Absolutely not.',
     fallback: 'Your browser could not start WebGL, so the moving ink is resting. Everything else still works.',
 
     // scope
@@ -221,6 +222,7 @@ export const STRINGS = {
     'footer.main': 'Peint à l’encre et avec beaucoup d’affection, pour Mihwa · 2026',
     'footer.q': 'Mul ou bibim ?',
     'footer.a': 'Mul-naengmyeon. Évidemment.',
+    'footer.avo.q': 'De l’avocat ?', 'footer.avo.a': 'Hors de question.',
     fallback: 'Votre navigateur n’a pas pu lancer WebGL : l’encre animée se repose. Tout le reste fonctionne.',
 
     // scope
@@ -384,6 +386,7 @@ export const STRINGS = {
     'footer.main': '먹과 정성을 가득 담아, 미화에게 · 2026',
     'footer.q': '물냉 vs 비냉?',
     'footer.a': '당연히 물냉.',
+    'footer.avo.q': '아보카도?', 'footer.avo.a': '절대 안 돼.',
     fallback: '브라우저에서 WebGL을 시작할 수 없어 움직이는 먹이 잠시 쉬고 있어요. 나머지는 그대로 즐길 수 있어요.',
 
     // scope

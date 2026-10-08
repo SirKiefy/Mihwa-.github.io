@@ -358,6 +358,9 @@ html[lang="ko"] .footer-main { font-style: normal; font-size: 1rem; }
 .noodle[aria-expanded="true"] .n { animation: slurp 1s var(--ease); }
 @keyframes slurp { from { stroke-dasharray: 60; stroke-dashoffset: 60; } to { stroke-dashoffset: 0; } }
 .noodle-a { margin: 0; font-family: var(--f-pen); font-size: 1.9rem; color: var(--seal); }
+.footer-qs { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.avo .x { stroke: var(--seal); stroke-width: 2.2; opacity: 0; transition: opacity .35s var(--ease); }
+.avo[aria-expanded="true"] .x { opacity: 1; }
 
 /* ─────────── lightbox ─────────── */
 .lb { position: fixed; inset: 0; z-index: 90; background: rgba(241,235,224,.97); clip-path: circle(0px at var(--ox, 50%) var(--oy, 50%)); transition: clip-path .8s var(--ease-io); }

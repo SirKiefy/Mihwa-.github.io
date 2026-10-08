@@ -7,11 +7,11 @@
 //  the cities glowing on its night side. A paper crane flies the red thread
 //  between her two homes. Scroll flies the camera from one home to the other.
 // ─────────────────────────────────────────────────────────────────────────────
-import * as THREE from '../../vendor/three/three.module.min.js?v=a59c17f65a';
-import { makeNoiseTexture, NOISE } from '../scene/glsl.js?v=a59c17f65a';
-import { makeLandTexture } from '../scene/inktex.js?v=a59c17f65a';
-import { CITIES } from '../data/cities.js?v=a59c17f65a';
-import { sunPosition, moonPhase } from './live.js?v=a59c17f65a';
+import * as THREE from '../../vendor/three/three.module.min.js?v=5484e3cdd9';
+import { makeNoiseTexture, NOISE } from '../scene/glsl.js?v=5484e3cdd9';
+import { makeLandTexture } from '../scene/inktex.js?v=5484e3cdd9';
+import { CITIES } from '../data/cities.js?v=5484e3cdd9';
+import { sunPosition, moonPhase } from './live.js?v=5484e3cdd9';
 
 const DEG = Math.PI / 180;
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));

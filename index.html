@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Gowun+Batang:wght@400;700&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Serif+KR:wght@600;900&family=Rye&family=Special+Elite&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=a59c17f65a">
+  <link rel="stylesheet" href="css/style.css?v=5484e3cdd9">
 </head>
 <body>
   <svg width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -455,11 +455,18 @@
   <footer class="footer">
     <i class="ink" data-ink="line" data-dark="0.85" data-seed="7.7" data-w="1" data-dry="1" data-bow="-0.3" style="left:50%;top:0;width:min(34rem,80vw);height:18px;transform:translateX(-50%)"></i>
     <p class="footer-main" data-i18n="footer.main">Painted with ink and a lot of love, for Mihwa · 2026</p>
-    <button type="button" class="noodle" id="noodle" aria-expanded="false">
-      <svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 12 H37 C36 21 29 26 20 26 C11 26 4 21 3 12 Z"/><path class="n" d="M10 12 C12 6 15 14 17 7 C19 13 22 5 24 11 C26 6 28 12 30 8"/><path class="n" d="M26 4 L33 11 M30 3 L36 9"/></svg>
-      <span data-i18n="footer.q">Mul or bibim?</span>
-    </button>
+    <div class="footer-qs">
+      <button type="button" class="noodle" id="noodle" aria-expanded="false" aria-controls="noodle-a">
+        <svg viewBox="0 0 40 28" aria-hidden="true"><path d="M3 12 H37 C36 21 29 26 20 26 C11 26 4 21 3 12 Z"/><path class="n" d="M10 12 C12 6 15 14 17 7 C19 13 22 5 24 11 C26 6 28 12 30 8"/><path class="n" d="M26 4 L33 11 M30 3 L36 9"/></svg>
+        <span data-i18n="footer.q">Mul or bibim?</span>
+      </button>
+      <button type="button" class="noodle avo" id="avo" aria-expanded="false" aria-controls="avo-a">
+        <svg viewBox="0 0 40 28" aria-hidden="true"><path d="M20 2 C24 2 25.5 6 26.5 9.5 C27.5 13 32 15.5 32 20.5 C32 24.5 27 27 20 27 C13 27 8 24.5 8 20.5 C8 15.5 12.5 13 13.5 9.5 C14.5 6 16 2 20 2 Z"/><circle cx="20" cy="19.5" r="4.2"/><path class="x" d="M7 26 L33 3"/></svg>
+        <span data-i18n="footer.avo.q">Avocado?</span>
+      </button>
+    </div>
     <p class="noodle-a" id="noodle-a" data-i18n="footer.a" hidden>Mul-naengmyeon. Obviously.</p>
+    <p class="noodle-a" id="avo-a" data-i18n="footer.avo.a" hidden>Absolutely not.</p>
   </footer>
 
   <div class="lb" id="lightbox" role="dialog" aria-modal="true" hidden>
@@ -481,6 +488,6 @@
   <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
   <p class="webgl-fallback" hidden data-i18n="fallback">Your browser could not start WebGL.</p>
 
-  <script type="module" src="js/main.js?v=a59c17f65a"></script>
+  <script type="module" src="js/main.js?v=5484e3cdd9"></script>
 </body>
 </html>

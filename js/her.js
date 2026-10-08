@@ -17,6 +17,8 @@ export const HER = {
   instagram: 'mulnaengmyeonn',
   heroPhoto: 0,      // the photo in the ink at the top (index in PHOTOS)
   wantedPhoto: 4,    // the photo on the wanted poster
+  // ✎ her cat: its name (optional) and coat: 'tabby', 'black', 'white', 'grey', 'orange' or 'calico'
+  cat: { name: '', coat: 'tabby' },
 
   bio: {
     en: ['International relations', 'Human rights · diplomacy', 'Fashion, ink & a steady aim'],
@@ -29,7 +31,8 @@ export const HER = {
     { k: { en: 'Studies', fr: 'Études', ko: '전공' }, v: { en: 'International relations (Bachelor’s), with a Master’s ahead', fr: 'Relations internationales (licence), un master en vue', ko: '국제관계학 학사, 다음은 석사' } },
     { k: { en: 'Roots', fr: 'Racines', ko: '뿌리' }, v: { en: 'Korean & French', fr: 'Coréennes & françaises', ko: '한국 & 프랑스' } },
     { k: { en: 'Cares about', fr: 'Se bat pour', ko: '마음 쓰는 것' }, v: { en: 'Human rights and equality, LGBTQ+ rights included', fr: 'Les droits humains et l’égalité, droits LGBTQ+ compris', ko: '인권과 평등, 성소수자의 권리까지' } },
-    { k: { en: 'Loves', fr: 'Adore', ko: '좋아하는 것' }, v: { en: 'Fashion, Korean ink painting (수묵화), military history, and anything with a scope', fr: 'La mode, la peinture à l’encre coréenne (수묵화), l’histoire militaire, et tout ce qui a une lunette de visée', ko: '패션, 수묵화, 밀리터리, 그리고 조준경 달린 건 전부' } },
+    { k: { en: 'Loves', fr: 'Adore', ko: '좋아하는 것' }, v: { en: 'Her cat above all, then fashion, Korean ink painting (수묵화), military history, and anything with a scope', fr: 'Son chat avant tout, puis la mode, la peinture à l’encre coréenne (수묵화), l’histoire militaire, et tout ce qui a une lunette de visée', ko: '무엇보다 고양이, 그다음 패션, 수묵화, 밀리터리, 그리고 조준경 달린 건 전부' } },
+    { k: { en: 'Hates', fr: 'Déteste', ko: '싫어하는 것' }, v: { en: 'Avocado. Passionately.', fr: 'L’avocat (le fruit, pas le métier). Passionnément.', ko: '아보카도. 진심으로.' } },
     { k: { en: 'Plays', fr: 'Côté jeux', ko: '게임' }, v: { en: 'DayZ in Chernarus and Arma 3 on Altis, as a sniper (obviously), and Red Dead Redemption 2, which she adores', fr: 'DayZ à Chernarus et Arma 3 sur Altis, en sniper (évidemment), et Red Dead Redemption 2, qu’elle adore', ko: 'DayZ(체르나루스)와 Arma 3(알티스)에선 당연히 저격수, 그리고 인생 게임 레드 데드 리뎀션 2' } },
     { k: { en: 'Handle', fr: 'Pseudo', ko: '아이디' }, v: { en: '@mulnaengmyeonn, like the cold noodles', fr: '@mulnaengmyeonn, comme les nouilles froides', ko: '@mulnaengmyeonn, 그 물냉면 맞아요' } },
   ],
