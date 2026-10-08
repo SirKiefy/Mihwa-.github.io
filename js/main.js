@@ -74,8 +74,17 @@ function applyLang() {
   $$('[data-i18n-label]').forEach((e) => e.setAttribute('aria-label', t(e.dataset.i18nLabel)));
   $$('[data-i18n-title]').forEach((e) => { e.title = t(e.dataset.i18nTitle); e.setAttribute('aria-label', t(e.dataset.i18nTitle)); });
   const body = $('[data-i18n-html="letter.body"]');
+  // the letter is written in English for every language; keep its own typography
+  const letterLang = JSON.stringify(LETTER[lang]) === JSON.stringify(LETTER.en) ? 'en' : lang;
+  body.lang = letterLang;
+  $('[data-i18n="letter.sign"]').lang = letterLang;
   body.innerHTML = '';
   LETTER[lang].body.forEach((para) => body.appendChild(el('p', null, para)));
+  if (LETTER[lang].ps) {
+    const ps = el('p', 'letter-ps', LETTER[lang].ps);
+    ps.lang = 'ko';
+    body.appendChild(ps);
+  }
   $$('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === lang)));
   onLang.forEach((fn) => fn(lang));
   requestAnimationFrame(layoutAll);

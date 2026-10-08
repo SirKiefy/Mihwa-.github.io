@@ -110,7 +110,7 @@ export const WANTED_INNER = `
         <div><dt data-wk="wanted.card.games.k"></dt><dd data-wk="wanted.card.games.v"></dd></div>
         <div><dt data-wk="wanted.card.role.k"></dt><dd><span data-wk="wanted.card.role.v"></span>${RETICLE}</dd></div>
         <div><dt data-wk="wanted.card.area.k"></dt><dd data-wk="wanted.card.area.v"></dd></div>
-        <div><dt data-wk="wanted.card.patience.k"></dt><dd><span data-wk="wanted.card.patience.v"></span><span class="wanted-inf" aria-hidden="true">∞</span></dd></div>
+        <div><dt data-wk="wanted.card.patience.k"></dt><dd><span data-wk="wanted.card.patience.v"></span></dd></div>
       </dl>
       <p class="wanted-card-note" data-wk="wanted.card.note"></p>
     </aside>
@@ -680,14 +680,14 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   function addHole(x, y) {
     if (!P.geo) return;
     const now = performance.now();
-    // every shot at her poster lands as a heart
-    const kind = 'heart';
+    // she's bulletproof: a shot on her portrait turns into a heart
+    const kind = inBox(x, y, portraitBox(), holeR()) ? 'heart' : 'hole';
     const h = { u: x / P.W, v: y / P.H, kind, seed: (Math.random() * 1e6) | 0, born: now, fading: 0 };
     makeHoleSprite(h);
     P.holes.push(h);
     const live = P.holes.filter((o) => !o.fading);
     if (live.length > MAX_HOLES) live[0].fading = now;
-    play('shot', { gain: 0.3, pan: clamp((x / P.W - 0.5) * 0.6, -0.5, 0.5) });
+    play('shot', { gain: 0.42, pan: clamp((x / P.W - 0.5) * 0.6, -0.5, 0.5) });
     if (!reduceMotion) {
       // a jolt on the nail, a puff of ink, splinters and flakes of paper
       P.vel = clamp(P.vel + (x / P.W - 0.5) * 7 + (Math.random() - 0.5) * 5, -9, 9);

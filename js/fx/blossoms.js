@@ -1461,9 +1461,9 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
       const g = sealC.getContext('2d');
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, sealC.width, sealC.height);
-      sealStamp(g, sealC.width / 2, sealC.height / 2, size * d * 1.25, '愛', { seed: 9, rot: -0.05 });
+      sealStamp(g, sealC.width / 2, sealC.height / 2, size * d * 1.25, '梅', { seed: 9, rot: -0.05 });
     };
-    if (document.fonts && document.fonts.load) document.fonts.load('900 40px "Noto Serif KR"', '愛').then(draw, draw);
+    if (document.fonts && document.fonts.load) document.fonts.load('900 40px "Noto Serif KR"', '梅').then(draw, draw);
     else draw();
   }
 
