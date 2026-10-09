@@ -1,23 +1,16 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  ✎  EVERYTHING ABOUT HER LIVES HERE.
-//
-//  Photos: put image files in  photos/  and write each name in PHOTOS below,
-//  e.g.  src: 'photos/01.jpg'.  Empty entries show a placeholder painting.
-//  Every photo is repainted in ink automatically; her colours come back on hover.
-//
-//  THOUGHTS and MEMORIES below are EXAMPLES (marked `example: true`).
-//  REASONS (what you admire about her) starts empty for you to write.
-//  Replace them with her real words and your real memories together.
-//  Every text has English (en), French (fr) and Korean (ko). In French, the
-//  space before : ; ? ! is a no-break space, so they never start a new line.
-// ─────────────────────────────────────────────────────────────────────────────
+// all the content about her is in this file, edit away.
+// photos go in photos/. easiest: name them 01.jpg, 02.jpg... in PHOTOS order and leave src blank.
+// or set src yourself (src: 'photos/beach.jpg'). no file = placeholder.
+// they get inked automatically, colour comes back on hover.
+// THOUGHTS and MEMORIES are placeholders (example: true), swap in the real ones.
+// texts are en/fr/ko. in french put a no-break space before : ; ? ! so they don't wrap
 
 export const HER = {
   name: { latin: 'Mihwa', ko: '미화', hanja: '美花' },
   instagram: 'mulnaengmyeonn',
   heroPhoto: 0,      // the photo in the ink at the top (index in PHOTOS)
   wantedPhoto: 4,    // the photo on the wanted poster
-  // ✎ her baby, the cat: write his name here when you know it (until then he is "her baby")
+  // the cat. put his name in once you know it, till then he's just "her baby"
   cat: { name: '' },
 
   bio: {
@@ -26,7 +19,6 @@ export const HER = {
     ko: ['국제관계학', '인권 · 외교', '패션 · 수묵화 · 명사수'],
   },
 
-  // short, true things about her
   notes: [
     { k: { en: 'Studies', fr: 'Études', ko: '전공' }, v: { en: 'International relations (Bachelor’s), with a Master’s ahead', fr: 'Relations internationales (licence), un master en vue', ko: '국제관계학 학사, 다음은 석사' } },
     { k: { en: 'Roots', fr: 'Racines', ko: '뿌리' }, v: { en: 'Korean & French', fr: 'Coréennes & françaises', ko: '한국 & 프랑스' } },
@@ -38,7 +30,7 @@ export const HER = {
   ],
 };
 
-// aspect: width / height, used only for placeholders
+// aspect = width / height, only used for the placeholders
 export const PHOTOS = [
   { src: '', aspect: 4 / 5, caption: { en: 'the look', fr: 'le regard', ko: '그 눈빛' } },
   { src: '', aspect: 4 / 5, caption: { en: 'golden hour', fr: 'l’heure dorée', ko: '골든 아워' } },
@@ -54,16 +46,16 @@ export const PHOTOS = [
   { src: '', aspect: 4 / 5, caption: { en: 'last frame', fr: 'dernière image', ko: '마지막 컷' } },
 ];
 
-// ✎ EXAMPLES — replace with things she actually says.
+// examples, replace with things she actually says
 export const THOUGHTS = [
   { example: true, seal: '交', en: 'Diplomacy is just kindness with a dress code.', fr: 'La diplomatie, c’est de la gentillesse avec un code vestimentaire.', ko: '외교는 드레스 코드가 있는 다정함이야.' },
-  // with the students and teachers of France, autumn 2026
+  // for the students and teachers in france, autumn 2026
   { example: true, seal: '校', en: 'More teachers, real classrooms, schools that aren’t falling apart. That’s not too much to ask.', fr: 'Plus de profs, de vraies salles de classe, des écoles qui ne tombent pas en ruine. Ce n’est pas trop demander.', ko: '선생님은 더 많이, 교실은 제대로, 무너지지 않는 학교. 그게 그렇게 무리한 부탁이야?' },
   { example: true, seal: '服', en: 'A good outfit is a quiet argument.', fr: 'Une belle tenue, c’est un argument silencieux.', ko: '잘 고른 옷은 조용한 설득이야.' },
   { example: true, seal: '冷', en: 'Mul-naengmyeon is non-negotiable.', fr: 'Le mul-naengmyeon, c’est non négociable.', ko: '물냉면은 협상 불가야.' },
 ];
 
-// ✎ EXAMPLES — replace with your real memories together. `photo` picks an image from PHOTOS.
+// examples again. photo is an index into PHOTOS
 export const MEMORIES = [
   {
     example: true, photo: 1, when: { en: '', fr: '', ko: '' },
@@ -103,7 +95,7 @@ export const MEMORIES = [
   },
 ];
 
-// Her path: from where she is now to where she's going.
+// path section, one station each, top to bottom
 export const PATH = [
   {
     seal: '學', when: { en: 'Now', fr: 'Maintenant', ko: '지금' },
@@ -152,19 +144,16 @@ export const PATH = [
   },
 ];
 
-// ✎ WHAT YOU ADMIRE ABOUT HER: yours to write. Each one becomes a blossom on the
-//   plum branch in "Why you’re one of a kind". One short sentence each, written to her.
-//   English is enough; add fr and ko if you like, otherwise the English shows in
-//   every language. The section stays hidden until there is at least one.
-//   The shape of one reason:
-//     { en: 'One reason, in your own words.' },
-//     { en: '…', fr: '…', ko: '…' },
+// reasons: each one is a blossom on the plum branch in the "one of a kind" section.
+// one short sentence each. english alone is fine, it gets used for fr/ko too.
+// the section stays hidden while this is empty. looks like:
+//   { en: 'One reason, in your own words.' },
+//   { en: '...', fr: '...', ko: '...' },
 export const REASONS = [
 ];
 
-// ✎ The letter at the end: the author’s own letter to her, written by them in
-//   their own words. It stays in English and is not translated: the same text
-//   shows in every language. One string per paragraph; the first one is the greeting.
+// the letter at the end. english only, same text in every language.
+// one string per paragraph, first one is the greeting
 const LETTER_TEXT = {
   body: [
     'Dear Mimi,',
@@ -173,7 +162,7 @@ const LETTER_TEXT = {
     'I hope the world treats you better, since I truly believe you deserve so much better, darling. You have worked so hard, with all those late nights staying up studying and trying your best to manage everything on your own. I want you to know you don’t have to. I’m here for you.',
     'You are truly one hell of a woman, and I can’t wait to see how far you go, lil stormy girl.',
   ],
-  // ✎ one last line in Korean, just above the sign (delete `ps` to remove it)
+  // little line above the signature, delete ps to drop it
   ps: '사랑해 ♡',
   sign: '— always here for you',
 };

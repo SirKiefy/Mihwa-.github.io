@@ -1,10 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Ink in water, revealing her portrait.
-//  A GPU "stable fluids" simulation (advection, vorticity, pressure projection)
-//  carries ink across hanji paper. Where the ink gathers, her photo shows
-//  through, toned like an ink wash, with pigment pooling at the bloom's rim.
-// ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=774a543f68';
+// hero: ink in water over the photo. stable fluids on the gpu (advection, vorticity,
+// pressure solve), and the photo shows through a blot that the flow pushes around
+import { noiseData } from './noise.js?v=e0590b5d34';
 
 const VERT = `#version 300 es
 precision highp float;
@@ -86,7 +82,6 @@ const FRAG = {
       float asp = uRes.x / uRes.y;
       vec2 uv = vUv;
       vec2 q = vec2(uv.x * asp, uv.y);
-      // hanji: fibres and soft mottling
       float fib = texture(uNoise, q * 2.4).b;
       float mott = texture(uNoise, q * 0.55).a;
       vec3 paper = PAPER * (0.972 + 0.04 * fib) * (0.985 + 0.03 * mott);
@@ -101,7 +96,7 @@ const FRAG = {
                     texture(uDye, uv + vec2(0.0, e.y)).r - texture(uDye, uv - vec2(0.0, e.y)).r);
         flow = texture(uVel, uv).xy;
       }
-      // the bloom that frames her: an organic blot whose edge the water can push around
+      // the blot, its edge drifts with the flow
       vec2 bu = uv - flow * 0.00022;
       vec2 bq = vec2(bu.x * asp, bu.y);
       vec2 p = (bu - uBlob) * vec2(asp, 1.0) / uBlobR;
@@ -111,7 +106,7 @@ const FRAG = {
       float r = length(p) + (n1 - 0.5) * 0.5 + (n2 - 0.5) * 0.1 + (n3 - 0.5) * 0.018;
       float blob = 1.0 - smoothstep(uBloom - 0.22, uBloom + 0.02, r);
 
-      // her photo, cover-fitted into its rectangle, gently refracted by the ink
+      // photo, cover fit into uRect, nudged a little by the ink gradient
       vec2 rs = uRect.zw - uRect.xy;
       vec2 pr = (uv - uRect.xy) / rs;
       float rectAsp = rs.x * asp / rs.y;
@@ -120,27 +115,25 @@ const FRAG = {
       vec3 ph = texture(uPhoto, puv).rgb;
       vec2 ed = min(pr, 1.0 - pr) * vec2(rs.x * asp, rs.y);
       float inRect = smoothstep(0.0, 0.06, min(ed.x, ed.y));
-      // film grade: soft S-curve, a little faded, warm highlights
+      // film look: mild s-curve, a bit faded, warm highlights
       ph = mix(ph, ph * ph * (3.0 - 2.0 * ph), 0.3);
       ph = mix(vec3(dot(ph, vec3(0.3, 0.59, 0.11))), ph, 0.86);
       ph = ph * vec3(1.03, 1.0, 0.93) + vec3(0.035, 0.025, 0.02);
       float lum = dot(ph, vec3(0.3, 0.59, 0.11));
       vec3 inked = mix(INK * 1.25, paper, smoothstep(0.02, 0.98, lum));
-      // the heart of the bloom is in colour; its edges fade to ink tones
+      // colour in the middle, ink tones toward the edge
       vec3 photo = mix(inked, ph, uColor * smoothstep(0.1, 0.7, blob));
 
       float show = smoothstep(0.02, 0.5, blob) * inRect;
       vec3 col = mix(paper, photo, show);
-      // pigment pools in a thin line at the edge of the bloom
       float rim = smoothstep(0.0, 0.1, blob) * (1.0 - smoothstep(0.1, 0.32, blob)) * inRect;
       float gran = texture(uNoise, q * 8.0).b;
       col = mix(col, INK, rim * (0.45 + 0.25 * gran) * 0.75);
-      // loose ink in the water: a soft wash, darker where it pools at its edges
+      // the loose ink from the sim, darker at its edges
       float dens = 1.0 - exp(-ink * 2.2);
       float edgeInk = smoothstep(0.03, 0.3, length(grad)) * smoothstep(0.02, 0.25, ink);
       dens = clamp(dens * 0.78 + edgeInk * 0.35, 0.0, 0.92);
       col = mix(col, INK, dens);
-      // film grain + vignette
       float g = hash(gl_FragCoord.xy + fract(uTime * 13.0) * 97.0) - 0.5;
       col += g * 0.045;
       vec2 vc = uv - 0.5; vc.x *= asp * 0.7;
@@ -152,9 +145,9 @@ const FRAG = {
 export function createInkHero(canvas, { source, reduceMotion = false, mobile = false, color = 0.62 } = {}) {
   const gl = canvas.getContext('webgl2', { alpha: false, depth: false, stencil: false, antialias: false, premultipliedAlpha: false, powerPreference: 'high-performance' });
   if (!gl) return null;
+  // no float render targets = no sim, just the still blot
   const fluidOK = !!gl.getExtension('EXT_color_buffer_float');
 
-  // ── programs ──
   function shader(type, src) {
     const s = gl.createShader(type);
     gl.shaderSource(s, src);
@@ -178,7 +171,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
   }
   const use = (p) => { gl.useProgram(p.prog); return p.u; };
 
-  // ── fullscreen quad ──
   const vao = gl.createVertexArray();
   gl.bindVertexArray(vao);
   const vb = gl.createBuffer();
@@ -192,7 +184,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 
-  // ── textures & framebuffers ──
   function texture(w, h, internal, format, type, filter, data = null) {
     const t = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, t);
@@ -224,7 +215,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
     return gl.drawingBufferWidth > gl.drawingBufferHeight ? { w: mx, h: mn } : { w: mn, h: mx };
   }
 
-  // noise texture (tileable) for paper, bloom edges and granulation
   const nd = noiseData(256);
   const noiseTex = texture(256, 256, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, gl.LINEAR, nd.data);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
@@ -232,7 +222,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
   gl.generateMipmap(gl.TEXTURE_2D);
 
-  // her photo
   const photoTex = gl.createTexture();
   let photoAspect = 0.8;
   function setPhoto(src) {
@@ -249,7 +238,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
   }
   if (source) setPhoto(source);
 
-  // ── simulation state ──
   const CFG = {
     sim: mobile ? 96 : 128,
     dye: mobile ? 512 : 1024,
@@ -350,7 +338,7 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
     blit(dye.write); dye.swap();
   }
 
-  // ── layout: where the portrait sits ──
+  // all in uv. rect is x0, y0, x1, y1
   let rect = [0.42, 0.06, 0.94, 0.94], blob = [0.68, 0.5], blobR = [0.46, 0.46];
   function setLayout(l) { rect = l.rect; blob = l.blob; blobR = l.blobR; }
 
@@ -373,7 +361,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
     blit(null);
   }
 
-  // ── pointer stirring ──
   const ptr = { x: 0, y: 0, px: 0, py: 0, moved: false, has: false };
   function pointer(clientX, clientY) {
     const r = canvas.getBoundingClientRect();
@@ -382,7 +369,7 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
     ptr.x = x; ptr.y = y; ptr.moved = true;
   }
 
-  // ── seeding: ink drops into the water around her ──
+  // first few drops, spun in around the blot
   let seeded = false, lastAuto = 0;
   function seed(t) {
     const ar = W / H;
@@ -397,7 +384,6 @@ export function createInkHero(canvas, { source, reduceMotion = false, mobile = f
     seeded = true; lastAuto = t;
   }
 
-  // ── loop ──
   let raf = 0, active = true, t = 0, last = performance.now(), start = null;
   function frame(now) {
     raf = requestAnimationFrame(frame);

@@ -1,15 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  The ink field: one WebGL layer behind the whole page that paints hanji and
-//  every ink mark on it. Marks are anchored to elements in the layout
-//  (<i class="ink" data-ink="…">) and paint themselves in when they scroll
-//  into view:
-//    bloom  – a wash that spreads, with pigment pooling at its rim
-//    arc    – a brush stroke along a circle (an open 원 or a full circle)
-//    line   – a straight brush stroke, pressed, pulled and lifted
-//    range  – a misty mountain ridge, dark at the crest, dissolving downward
-//  All of it is drawn with smooth shader maths, so it stays crisp at any size.
-// ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=774a543f68';
+// paper and all the ink marks, one webgl layer behind the page. each mark is an
+// <i class="ink" data-ink="bloom|arc|line|range"> and paints in when it scrolls into view
+import { noiseData } from './noise.js?v=e0590b5d34';
 
 const MAX = 16;
 const TYPES = { bloom: 0, arc: 1, line: 2, range: 3 };
@@ -20,14 +11,14 @@ void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
 const FRAG = `#version 300 es
 precision highp float;
-uniform vec2 uView;          // viewport in CSS px
+uniform vec2 uView;          // viewport, css px
 uniform float uDpr;
 uniform float uTime;
 uniform sampler2D uNoise;
 uniform int uCount;
 uniform vec4 uA[${MAX}];     // x, y, size, type
 uniform vec4 uB[${MAX}];     // seed, growth, darkness, red
-uniform vec4 uC[${MAX}];     // type-specific
+uniform vec4 uC[${MAX}];
 out vec4 o;
 
 const float TAU = 6.2831853;
@@ -38,22 +29,19 @@ const vec3 SEAL = vec3(0.72, 0.2, 0.165);
 float N(vec2 p, int c) { vec4 t = texture(uNoise, p); return c == 0 ? t.r : c == 1 ? t.g : c == 2 ? t.b : t.a; }
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 
-// a brush's width along its length: pressed in, carried, lifted to a point
 float press(float u) { return (0.62 + 0.38 * sin(3.14159 * pow(clamp(u, 0.0, 1.0), 0.65))) * (1.0 - 0.72 * smoothstep(0.78, 1.0, u)) * (0.75 + 0.25 * smoothstep(0.0, 0.06, u)); }
 
-// ink inside a stroke given (u along 0..1, v across -0.5..0.5, length in px)
+// u runs along 0..1, v across -0.5..0.5, len in px
 float strokeInk(float u, float v, float len, float seed, float grow, float dryness) {
   if (u < 0.0 || u > 1.0) return 0.0;
   float edgeN = (N(vec2(u * len * 0.004 + seed, 0.3), 2) - 0.5) * 0.12;
   float inside = 1.0 - smoothstep(0.4, 0.5, abs(v) + edgeN);
-  // bristles run along the stroke
   float br = N(vec2(u * len * 0.0007 + seed * 3.1, v * 2.4 + seed), 2);
   float br2 = N(vec2(u * len * 0.0003 + seed, v * 1.1 + 0.5), 1);
   float dryZone = smoothstep(0.35, 1.0, u) * dryness * 1.2 + smoothstep(0.22, 0.5, abs(v)) * 0.5 + 0.12;
   float gaps = smoothstep(0.4, 0.72, br * 0.75 + br2 * 0.25) * clamp(dryZone, 0.0, 1.0);
   float dens = inside * (0.95 - gaps);
   dens *= 0.86 + 0.14 * br2;
-  // the stroke is still being painted
   float head = smoothstep(grow + 0.004, grow - 0.02, u);
   return clamp(dens, 0.0, 1.0) * head;
 }
@@ -61,7 +49,6 @@ float strokeInk(float u, float v, float len, float seed, float grow, float dryne
 void main() {
   vec2 px = vec2(gl_FragCoord.x, uView.y * uDpr - gl_FragCoord.y) / uDpr;
   float asp = uView.x / uView.y;
-  // hanji: soft mottling and long fibres
   vec2 pq = px / 900.0;
   float mott = N(pq * 1.2, 3);
   float fib = N(vec2(pq.x * 7.0, pq.y * 7.0) + 0.3, 2);
@@ -76,7 +63,6 @@ void main() {
     float d = 0.0;
     int type = int(A.w + 0.5);
     if (type == 0) {
-      // bloom
       vec2 p = (px - A.xy) / A.z;
       float cr = cos(C.y), sr = sin(C.y);
       p = mat2(cr, -sr, sr, cr) * p;
@@ -93,14 +79,14 @@ void main() {
       float gran = 0.9 + 0.2 * hash(floor(px));
       d = (body * (0.14 + 0.62 * conc * conc) + rim * 0.34) * gran;
     } else if (type == 1) {
-      // arc: centre A.xy, radius A.z, from angle C.x through span C.y, width C.z (px)
+      // arc: centre A.xy, radius A.z, start angle C.x, span C.y, width C.z px
       vec2 dd = px - A.xy;
       float r = length(dd);
       float ang = atan(dd.y, dd.x);
       float a = mod(ang - C.x + TAU * 8.0, TAU);
       float span = C.y;
       float u = a / span;
-      // a closing circle may overlap its own start: take the later pass
+      // a full circle overlaps its own start, use the second pass
       if (span > TAU && u + TAU / span <= 1.0) u += TAU / span;
       float len = A.z * span;
       float w = C.z * press(u);
@@ -118,7 +104,7 @@ void main() {
       float v = (dot(dd, nrm) - bow + (N(vec2(u * len * 0.002 + seed, 3.1), 0) - 0.5) * C.z * 0.3) / w;
       d = strokeInk(u, v, len, seed, grow, C.w);
     } else {
-      // range: box from A.x-A.z/2 … A.x+A.z/2, crest around A.y, peak height C.x, depth C.y
+      // range: centred on A.x and A.z wide, crest near A.y, peak height C.x, depth C.y
       float x = (px.x - (A.x - A.z * 0.5)) / A.z;
       if (x > -0.02 && x < 1.02) {
         float h = N(vec2(x * 0.5 + seed, seed * 0.37), 0) * 0.66 + N(vec2(x * 0.9 + seed, seed), 1) * 0.3 + N(vec2(x * 1.4, seed), 2) * 0.04;
@@ -139,7 +125,6 @@ void main() {
   }
   vec3 col = mix(paper, INK, ink);
   col = mix(col, mix(paper, SEAL, 0.9), red * (1.0 - ink * 0.5));
-  // ink sinks into the fibres
   col += (hash(gl_FragCoord.xy) - 0.5) * 0.012;
   o = vec4(col, 1.0);
 }`;
@@ -181,7 +166,6 @@ export function createInkField(canvas, { reduceMotion = false } = {}) {
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.uniform1i(u.noise, 0);
 
-  // ── anchors ──
   const collect = () => [...document.querySelectorAll('i.ink')].map((el, i) => {
     const ds = el.dataset;
     return {
@@ -246,7 +230,7 @@ export function createInkField(canvas, { reduceMotion = false } = {}) {
         A.set([cx, cy, R, 1], o);
         C.set([m.a0, m.span, m.width * R, m.dry], o);
       } else if (m.type === 2) {
-        // a pulled stroke: across its box, or corner to corner when it has a direction
+        // across the box, or corner to corner if data-dir is set
         let x0 = r.left, x1 = r.right, y0, y1, w, bow;
         if (m.dir === 'down') { y0 = r.top; y1 = r.bottom; w = m.px; bow = m.bow * 60; }
         else if (m.dir === 'up') { y0 = r.bottom; y1 = r.top; w = m.px; bow = m.bow * 60; }
@@ -261,7 +245,7 @@ export function createInkField(canvas, { reduceMotion = false } = {}) {
       B.set([m.seed, m.grow, m.dark, m.red], o);
       n++;
     }
-    const moving = !reduceMotion; // the washes drift very slowly
+    const moving = !reduceMotion; // washes drift slowly, so keep redrawing
     if (!dirty && !animating && !moving) return;
     dirty = false;
     gl.uniform2f(u.view, vw, vh);
@@ -280,7 +264,7 @@ export function createInkField(canvas, { reduceMotion = false } = {}) {
   raf = requestAnimationFrame(frame);
   return {
     refresh() { dirty = true; },
-    /** pick up anchors added to the page after start-up */
+    // for marks added after startup
     scan() {
       const old = new Map(marks.map((m) => [m.el, m]));
       marks = collect().map((m) => old.get(m.el) || m);

@@ -1,19 +1,13 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Mihwa · 미화 — an album in ink.
-//  Every photo is repainted as an ink painting, and each part of the page
-//  (her words, her memories, her path, her colours, her other side, and why
-//  she is loved) sits on one sheet of hanji where the ink spreads in as you
-//  arrive.
-// ─────────────────────────────────────────────────────────────────────────────
-import { LANGS, STRINGS } from './i18n.js?v=774a543f68';
-import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=774a543f68';
-import { loadPhotos } from './fx/placeholder.js?v=774a543f68';
-import { inkify } from './fx/inkify.js?v=774a543f68';
-import { extractPalette } from './fx/palette.js?v=774a543f68';
-import { mountLightbox } from './fx/lightbox.js?v=774a543f68';
-import { makeGrainDataURL } from './scene/inktex.js?v=774a543f68';
-import { setSound, pluck, phrase, shot, ping, glass, purr, meow } from './audio.js?v=774a543f68';
-import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=774a543f68';
+// page setup: text, layout bits, then boot() loads the photos and the heavy scenes
+import { LANGS, STRINGS } from './i18n.js?v=e0590b5d34';
+import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=e0590b5d34';
+import { loadPhotos } from './fx/placeholder.js?v=e0590b5d34';
+import { inkify } from './fx/inkify.js?v=e0590b5d34';
+import { extractPalette } from './fx/palette.js?v=e0590b5d34';
+import { mountLightbox } from './fx/lightbox.js?v=e0590b5d34';
+import { makeGrainDataURL } from './scene/inktex.js?v=e0590b5d34';
+import { setSound, pluck, phrase, shot, ping, glass, purr, meow } from './audio.js?v=e0590b5d34';
+import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=e0590b5d34';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -35,7 +29,7 @@ function el(tag, cls, text) {
   if (text != null) e.textContent = text;
   return e;
 }
-/** an anchor for the ink field: <i class="ink" data-ink="…"> */
+// empty <i> that the ink field paints a mark at
 function ink(type, style, data = {}) {
   const e = document.createElement('i');
   e.className = 'ink';
@@ -47,11 +41,10 @@ function ink(type, style, data = {}) {
 
 root.style.setProperty('--grain', `url(${makeGrainDataURL()})`);
 
-// the living parts of the page, filled in by boot()
 let field = null, hero = null, screen = null, homes = null, lightbox = null, photos = [];
 let scope = null, wanted = null, love = null, cat = null;
 
-// ─────────────────────────── language ───────────────────────────
+// --- language ---
 function guessLang() {
   const saved = store.get('mihwa-lang');
   if (LANGS.includes(saved)) return saved;
@@ -74,7 +67,7 @@ function applyLang() {
   $$('[data-i18n-label]').forEach((e) => e.setAttribute('aria-label', t(e.dataset.i18nLabel)));
   $$('[data-i18n-title]').forEach((e) => { e.title = t(e.dataset.i18nTitle); e.setAttribute('aria-label', t(e.dataset.i18nTitle)); });
   const body = $('[data-i18n-html="letter.body"]');
-  // the letter is written in English for every language; keep its own typography
+  // the letter is english in every language, tag it so the right fonts/quotes apply
   const letterLang = JSON.stringify(LETTER[lang]) === JSON.stringify(LETTER.en) ? 'en' : lang;
   body.lang = letterLang;
   $('[data-i18n="letter.sign"]').lang = letterLang;
@@ -96,7 +89,6 @@ $$('.lang button').forEach((b) => b.addEventListener('click', () => {
   pluck(LANGS.indexOf(lang) * 2 + 3, { gain: 0.14 });
 }));
 
-// ─────────────────────────── sound ───────────────────────────
 const soundBtn = $('.sound');
 soundBtn.addEventListener('click', () => {
   const on = soundBtn.getAttribute('aria-pressed') !== 'true';
@@ -105,14 +97,12 @@ soundBtn.addEventListener('click', () => {
   if (on) phrase(2);
 });
 
-// ─────────────────────────── static bits ───────────────────────────
 $('#hero-ig').href = IG_URL;
 $('#hero-ig').textContent = `@${HER.instagram}`;
 $('#ig-follow').href = IG_URL;
 $('#ig-avatar').href = IG_URL;
 $('#ig-handle').textContent = `@${HER.instagram}`;
 
-// ─────────────────────────── cursor ───────────────────────────
 if (finePointer) {
   const cursor = $('.cursor'), cDot = $('.cursor-dot'), cRing = $('.cursor-ring');
   let mx = innerWidth / 2, my = innerHeight / 2, rx = mx, ry = my;
@@ -123,7 +113,7 @@ if (finePointer) {
   document.addEventListener('pointerover', (e) => cursor.classList.toggle('is-hover', !!e.target.closest('a, button, input, .fan, .ig-tile, #screen-gl, #globe-gl')));
 }
 
-// ─────────────────────────── two homes: live clocks, sun and weather ───────────────────────────
+// --- two homes: clocks, sun, weather ---
 function haversine(a, b) {
   const R = 6371, r = Math.PI / 180;
   const h = Math.sin(((b.lat - a.lat) * r) / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(((b.lon - a.lon) * r) / 2) ** 2;
@@ -171,7 +161,7 @@ function showWeather() {
 onLang.push(tickClocks, showWeather);
 setInterval(tickClocks, 1000);
 
-// move through the day: the sun sweeps across the globe and both clocks follow
+// time slider. moves the sun on the globe and both clocks with it
 const scrub = $('#scrub'), scrubOut = $('#scrub-out'), scrubNow = $('#scrub-now');
 function setOffset(mins) {
   timeOffset = mins * 60000;
@@ -194,7 +184,6 @@ scrubNow.addEventListener('click', () => {
 });
 onLang.push(() => setOffset(Number(scrub.value)));
 
-// ─────────────────────────── about her & bio ───────────────────────────
 onLang.push(() => {
   const dl = $('#notes');
   dl.innerHTML = '';
@@ -208,7 +197,6 @@ onLang.push(() => {
   (HER.bio[lang] || []).forEach((line) => bio.appendChild(el('li', null, line)));
 });
 
-// ─────────────────────────── her words ───────────────────────────
 const quotesEl = $('#quotes');
 const quoteEls = THOUGHTS.map((q, i) => {
   const fig = el('figure', 'quote');
@@ -225,7 +213,6 @@ const quoteEls = THOUGHTS.map((q, i) => {
 });
 onLang.push(() => quoteEls.forEach(({ q, bq }) => { bq.textContent = q[lang] ?? q.en; }));
 
-// ─────────────────────────── her path ───────────────────────────
 const pathEl = $('#path-list');
 const stationEls = PATH.map((s, i) => {
   const st = el('article', 'station');
@@ -243,7 +230,7 @@ onLang.push(() => stationEls.forEach(({ s, when, h, p }) => {
   h.textContent = s.title[lang];
   p.textContent = s.text[lang];
 }));
-// the brush path is re-drawn to fit wherever the stations end up
+// path: the brush line gets redrawn whenever the stations move
 const pathInk = el('div', 'path-ink');
 pathInk.setAttribute('aria-hidden', 'true');
 pathEl.prepend(pathInk);
@@ -278,7 +265,7 @@ function layoutPath() {
   return true;
 }
 
-// ─────────────────────────── memories: the handscroll ───────────────────────────
+// --- memories (horizontal handscroll) ---
 const memSec = $('#memories');
 const memTrack = $('#mem-track');
 const memWindow = $('.scroll-window');
@@ -323,8 +310,7 @@ function updateMemories() {
   memTrack.style.transform = `translate3d(${(-p * memSpan).toFixed(1)}px, 0, 0)`;
 }
 
-// ─────────────────────────── her colours, as pigments ───────────────────────────
-// traditional Korean colour names; each of her colours is matched to the nearest
+// palette: traditional korean colour names, each photo colour gets the closest one
 const PIGMENTS = [
   { ko: '먹색', en: 'Ink black', fr: 'Noir d’encre', rgb: [28, 26, 23] },
   { ko: '주홍', en: 'Vermilion', fr: 'Vermillon', rgb: [217, 80, 43] },
@@ -342,7 +328,7 @@ const PIGMENTS = [
   { ko: '녹두', en: 'Mung bean', fr: 'Haricot mungo', rgb: [122, 143, 69] },
   { ko: '살구', en: 'Apricot', fr: 'Abricot', rgb: [240, 167, 115] },
 ];
-// CIE Lab, so that "nearest" means nearest to the eye
+// rgb to CIE Lab so the distance roughly matches what the eye sees
 function lab([r, g, b]) {
   const lin = (c) => { c /= 255; return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
   const R = lin(r), G = lin(g), B = lin(b);
@@ -358,13 +344,13 @@ function nearestPigments(colours) {
   const used = new Map();
   return colours.map((c) => {
     const ranked = PIGMENTS.map((p) => ({ p, d: d2(c.rgb, p.rgb) })).sort((a, b) => a.d - b.d);
-    // prefer a pigment not used yet, unless it is a much worse match
+    // prefer an unused pigment unless it's a lot worse
     const free = ranked.find((r) => !used.has(r.p));
     const pick = free && free.d < ranked[0].d * 2 + 60 ? free : ranked[0];
     const n = used.get(pick.p) || 0;
     used.set(pick.p, n + 1);
     if (!n) return pick.p;
-    // the same pigment again: name it by shade, 연 (pale) or 진 (deep)
+    // already used, so call this one pale or deep
     const pale = lum(c.rgb) > lum(pick.p.rgb);
     return {
       ko: (pale ? '연' : '진') + pick.p.ko,
@@ -374,8 +360,7 @@ function nearestPigments(colours) {
   });
 }
 
-// ─────────────────────────── her real posts, embedded from Instagram ───────────────────────────
-// Instagram's script loads only when the section comes near, then turns the quotes into posts.
+// instagram's embed.js only gets loaded once the posts are close
 const igPosts = $('#ig-posts');
 if (igPosts) {
   new IntersectionObserver((es, io) => {
@@ -389,14 +374,12 @@ if (igPosts) {
   }, { rootMargin: '600px 0px' }).observe(igPosts);
 }
 
-// ─────────────────────────── footer: the eternal question ───────────────────────────
 $('#noodle').addEventListener('click', (e) => {
   const open = e.currentTarget.getAttribute('aria-expanded') !== 'true';
   e.currentTarget.setAttribute('aria-expanded', String(open));
   $('#noodle-a').hidden = !open;
   if (open) phrase(5);
 });
-// and the other eternal question
 $('#avo').addEventListener('click', (e) => {
   const open = e.currentTarget.getAttribute('aria-expanded') !== 'true';
   e.currentTarget.setAttribute('aria-expanded', String(open));
@@ -404,13 +387,12 @@ $('#avo').addEventListener('click', (e) => {
   if (open) meow();
 });
 
-// ─────────────────────────── the seal on the letter ───────────────────────────
 const letterSeal = $('#letter-seal');
 new IntersectionObserver((es, io) => es.forEach((e) => {
   if (e.isIntersecting) { letterSeal.classList.add('is-stamped'); setTimeout(() => pluck(0, { gain: 0.24 }), 550); io.disconnect(); }
 }), { threshold: 0.5 }).observe(letterSeal);
 
-// seals press into the paper as they arrive
+// rest of the seals stamp in as they scroll into view
 root.classList.add('js-seals');
 const sealIO = new IntersectionObserver((es) => es.forEach((e) => {
   if (e.isIntersecting) { e.target.classList.add('is-pressed'); sealIO.unobserve(e.target); }
@@ -419,7 +401,7 @@ $$('main .seal:not(.letter-seal)').forEach((s) => sealIO.observe(s));
 
 applyLang();
 
-// ─────────────────────────── boot: fonts → photos → ink → scenes ───────────────────────────
+// --- boot: fonts, photos, ink, then the scenes ---
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const idle = () => new Promise((r) => (window.requestIdleCallback ? requestIdleCallback(() => r(), { timeout: 60 }) : setTimeout(r, 0)));
 const fonts = document.fonts
@@ -441,7 +423,7 @@ async function boot() {
   await fonts.catch(() => {});
   photos = await loadPhotos(PHOTOS, t('placeholder'));
 
-  // repaint every photo in ink (on the CPU, one at a time so the page stays responsive)
+  // inkify runs on the cpu, one photo per idle slot so the page doesn't lock up
   for (const ph of photos) {
     await idle();
     const src = ph.image || ph.canvas;
@@ -458,7 +440,6 @@ async function boot() {
   onLang.push(() => lightbox.refresh());
   const open = (i, e, v) => lightbox.open(i, e, v);
 
-  // memories: each one painted on a fan
   memEls.forEach(({ m, fan, imInk, imCol }) => {
     const ph = photos[m.photo] || photos[0];
     imInk.src = ph.inkUrl;
@@ -466,7 +447,6 @@ async function boot() {
     fan.addEventListener('click', (e) => open(ph.index, e, 'ink'));
   });
 
-  // her colours, ground as pigments
   const pal = extractPalette(photos, 6);
   const names = nearestPigments(pal);
   const dishes = $('#dishes');
@@ -486,7 +466,6 @@ async function boot() {
   dishText();
   onLang.push(dishText);
 
-  // instagram card: ink first, colour on hover
   $('#ig-avatar-img').src = heroPh.url;
   const grid = $('#ig-grid');
   photos.slice(0, 9).forEach((ph, i) => {
@@ -502,20 +481,19 @@ async function boot() {
   tileCaps();
   onLang.push(tileCaps);
 
-  // her other side: the scope, the wanted poster and the dog tags;
-  // and the plum branch of reasons she is loved
+  // scenes are optional. if one throws we log it and carry on without it
   const sound = { shot, ping, glass, pluck };
   const part = async (name, make) => {
     try { return await make(); } catch (err) { console.warn(`${name} unavailable`, err); return null; }
   };
-  scope = await part('scope', async () => (await import('./fx/scope.js?v=774a543f68')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
-  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=774a543f68')).mountWanted($('#wanted'), {
+  scope = await part('scope', async () => (await import('./fx/scope.js?v=e0590b5d34')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
+  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=e0590b5d34')).mountWanted($('#wanted'), {
     photo: photos[HER.wantedPhoto ?? HER.heroPhoto] || heroPh, t, reduceMotion, sound,
   }));
-  // the reasons are written by hand in her.js; until there is one, the section stays out of the page
+  // no reasons in her.js yet = drop the section and its nav link
   const reasonText = (r) => (r && (r[lang] || r.en || r.fr || r.ko || '')).trim();
   if (REASONS.some((r) => reasonText(r))) {
-    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=774a543f68')).createBlossoms($('#love-branch'), {
+    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=e0590b5d34')).createBlossoms($('#love-branch'), {
       reasons: () => REASONS.map(reasonText).filter(Boolean), t, reduceMotion, mobile, sound,
     }));
   } else {
@@ -524,29 +502,26 @@ async function boot() {
   }
   [scope, wanted, love].forEach((api) => api && onLang.push(() => api.relabel()));
 
-  // her baby, keeping the house avocado-free
-  cat = await part('her baby', async () => (await import('./fx/cat.js?v=774a543f68')).createCat($('#cat'), {
+  cat = await part('her baby', async () => (await import('./fx/cat.js?v=e0590b5d34')).createCat($('#cat'), {
     t, reduceMotion, mobile, sound: { purr, meow, pluck }, name: HER.cat?.name || '',
   }));
   if (cat) onLang.push(() => cat.relabel());
 
-  // the gentle storm behind the letter
   const stormCanvas = $('#letter .storm-canvas');
-  const storm = await part('storm', async () => (await import('./fx/storm.js?v=774a543f68')).createStorm(stormCanvas, { reduceMotion, mobile }));
+  const storm = await part('storm', async () => (await import('./fx/storm.js?v=e0590b5d34')).createStorm(stormCanvas, { reduceMotion, mobile }));
   if (!storm) stormCanvas.classList.add('storm-fallback');
 
   layoutAll();
 
-  // the sheet of hanji, and all the ink on it
+  // paper background + every ink mark on the page
   try {
-    const { createInkField } = await import('./fx/inkfield.js?v=774a543f68');
+    const { createInkField } = await import('./fx/inkfield.js?v=e0590b5d34');
     field = createInkField($('#ink-field'), { reduceMotion });
   } catch (err) { console.warn('ink field unavailable', err); field = null; }
   if (!field) $('#ink-field').hidden = true;
 
-  // hero: her portrait, in moving ink
   try {
-    const { createInkHero } = await import('./fx/fluid.js?v=774a543f68');
+    const { createInkHero } = await import('./fx/fluid.js?v=e0590b5d34');
     hero = createInkHero($('#ink-gl'), { source: heroPh.inkCanvas, reduceMotion, mobile, color: 1 });
   } catch (err) { console.warn('ink hero unavailable', err); hero = null; }
   if (hero) {
@@ -572,16 +547,15 @@ async function boot() {
     img.hidden = false;
   }
 
-  // the folding screen of portraits
   try {
-    const { createScreen } = await import('./fx/screen.js?v=774a543f68');
+    const { createScreen } = await import('./fx/screen.js?v=e0590b5d34');
     screen = createScreen($('#screen-gl'), photos, { reduceMotion, onOpen: (i, e) => open(i, e, 'col') });
   } catch (err) { console.warn('folding screen unavailable', err); screen = null; }
   if (screen) {
     screen.setCaptions(lang);
     onLang.push((l) => screen.setCaptions(l));
   } else {
-    // no WebGL: show the ink paintings as a simple album instead
+    // no webgl: plain grid of the ink paintings instead
     const sec = $('#screen');
     sec.classList.add('is-flat');
     const flat = el('div', 'screen-flat');
@@ -597,9 +571,8 @@ async function boot() {
     $('#screen .sticky').appendChild(flat);
   }
 
-  // two homes, on a live globe
   try {
-    const { createHomes } = await import('./fx/homes.js?v=774a543f68');
+    const { createHomes } = await import('./fx/homes.js?v=e0590b5d34');
     homes = createHomes($('#globe-gl'), HOMES, { mobile, reduceMotion });
   } catch (err) { console.warn('globe unavailable', err); homes = null; }
   if (homes) {
@@ -639,7 +612,7 @@ async function boot() {
 
   if (!hero && !screen) $('.webgl-fallback').hidden = false;
 
-  // run each canvas only while it is on screen
+  // only animate canvases that are on screen
   const watch = (target, api) => api && new IntersectionObserver((es) => es.forEach((e) => api.setActive(e.isIntersecting)), { rootMargin: '10% 0px' }).observe(target);
   watch($('#hero'), hero);
   watch($('#screen'), screen);
@@ -654,11 +627,11 @@ async function boot() {
   await wait(reduceMotion ? 0 : 300);
   $('#loader').classList.add('is-done');
   document.body.classList.add('is-ready');
-  // fonts and images may have shifted things while loading
+  // late fonts/images can shift things, measure again
   setTimeout(layoutAll, 600);
 }
 
-// ─────────────────────────── scroll ───────────────────────────
+// --- scroll ---
 const railLinks = $$('.rail a');
 const screenHead = $('#screen .sec-head--over');
 function onScroll() {
@@ -666,7 +639,7 @@ function onScroll() {
     const r = $('#screen').getBoundingClientRect();
     const p = -r.top / Math.max(1, r.height - innerHeight);
     screen.setProgress(p);
-    // the title steps aside as the screen unfolds across the page
+    // fade the title out as the screen opens
     const k = Math.max(0, Math.min(1, (p - 0.1) / 0.2));
     screenHead.style.opacity = String(1 - k * k * (3 - 2 * k));
   }

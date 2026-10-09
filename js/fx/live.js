@@ -1,13 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  The live sky: where the sun is overhead right now, sunrise and sunset for a
-//  place, tonight's moon, and (when the network allows) the weather.
-//  Sun position: the NOAA low-precision formulae, good to a fraction of a degree.
-// ─────────────────────────────────────────────────────────────────────────────
+// live sky: sun, sunrise/sunset, moon, weather.
+// sun maths is the NOAA low precision formula, good to a fraction of a degree
 const RAD = Math.PI / 180;
 const wrap180 = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
 const daysJ2000 = (ms) => ms / 86400000 + 2440587.5 - 2451545.0;
 
-/** The point on Earth where the sun is directly overhead. */
+// lat/lon where the sun is straight overhead
 export function sunPosition(date) {
   const d = daysJ2000(date.getTime());
   const g = (357.529 + 0.98560028 * d) * RAD;
@@ -21,16 +18,16 @@ export function sunPosition(date) {
   return { lat: dec, lon: wrap180(-15 * (utcH - 12) - eqt) };
 }
 
-/** The sun's altitude above the horizon at a place, in degrees. */
+// degrees above the horizon
 export function sunAltitude(lat, lon, date) {
   const s = sunPosition(date);
   const c = Math.sin(lat * RAD) * Math.sin(s.lat * RAD) + Math.cos(lat * RAD) * Math.cos(s.lat * RAD) * Math.cos((lon - s.lon) * RAD);
   return Math.asin(Math.max(-1, Math.min(1, c))) / RAD;
 }
 
-/** Day, dusk/dawn or night, and how long until the next sunrise or sunset. */
+// day/twilight/night, plus ms until the next sunrise or sunset
 export function skyAt(lat, lon, date) {
-  const H0 = -0.833;
+  const H0 = -0.833; // sun's radius + refraction
   const alt = sunAltitude(lat, lon, date);
   const up = alt > H0;
   const state = up ? 'day' : alt > -6 ? 'twilight' : 'night';
@@ -49,7 +46,7 @@ export function skyAt(lat, lon, date) {
   return { alt, state, next: null, in: 0 };
 }
 
-/** 0 = new moon, 0.25 first quarter, 0.5 full, 0.75 last quarter. */
+// 0 new, .25 first quarter, .5 full, .75 last quarter
 export function moonPhase(date) {
   const days = date.getTime() / 86400000 + 2440587.5 - 2451550.1;
   return (((days / 29.530588853) % 1) + 1) % 1;
@@ -62,7 +59,7 @@ export const MOON_NAMES = {
 };
 export const moonIndex = (p) => Math.round(p * 8) % 8;
 
-// Open-Meteo weather codes, grouped
+// open-meteo weather codes
 const WX = [
   [[0], 'clear'], [[1, 2], 'cloudy'], [[3], 'overcast'], [[45, 48], 'fog'],
   [[51, 53, 55, 56, 57], 'drizzle'], [[61, 63, 65, 66, 67, 80, 81, 82], 'rain'],
@@ -74,7 +71,6 @@ export const WEATHER_NAMES = {
   ko: { clear: '맑음', cloudy: '구름 조금', overcast: '흐림', fog: '안개', drizzle: '이슬비', rain: '비', snow: '눈', storm: '뇌우' },
 };
 
-/** Current weather for each place, or null if the network says no. */
 export async function fetchWeather(places, { timeout = 6000 } = {}) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), timeout);

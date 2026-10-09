@@ -1,20 +1,19 @@
-// Placeholder frames, used until her real photos are added in her.js.
-// Each one is a soft, film-like portrait: a figure in warm light, bokeh, grain.
-import { rng } from '../ink/brush.js?v=774a543f68';
+// fake film photos, shown until real ones are added in her.js
+import { rng } from '../ink/brush.js?v=e0590b5d34';
 
 const TONES = [
-  ['#2c1f1b', '#b9805f', '#f0b27a'], // amber
-  ['#2a2419', '#c9a26a', '#ffd9a0'], // golden hour
-  ['#1f2826', '#8fa597', '#e8e1c8'], // dusty teal
-  ['#2d1d20', '#c4898a', '#f6c9c0'], // rose
-  ['#26251c', '#a99d73', '#efe2b6'], // olive
-  ['#1b202b', '#7b8aa6', '#d9d4e4'], // blue hour
-  ['#2e211d', '#d19a7e', '#ffd2b8'], // peach
-  ['#231c17', '#a88867', '#ead3ae'], // sepia
-  ['#1f1c24', '#9b8aa4', '#f0d7d7'], // lilac dusk
-  ['#27201a', '#b48b62', '#f7c98f'], // tungsten
-  ['#1d2320', '#96a58c', '#f1e6c4'], // green room
-  ['#2b1b18', '#c07a62', '#f5b89a'], // last light
+  ['#2c1f1b', '#b9805f', '#f0b27a'],
+  ['#2a2419', '#c9a26a', '#ffd9a0'],
+  ['#1f2826', '#8fa597', '#e8e1c8'],
+  ['#2d1d20', '#c4898a', '#f6c9c0'],
+  ['#26251c', '#a99d73', '#efe2b6'],
+  ['#1b202b', '#7b8aa6', '#d9d4e4'],
+  ['#2e211d', '#d19a7e', '#ffd2b8'],
+  ['#231c17', '#a88867', '#ead3ae'],
+  ['#1f1c24', '#9b8aa4', '#f0d7d7'],
+  ['#27201a', '#b48b62', '#f7c98f'],
+  ['#1d2320', '#96a58c', '#f1e6c4'],
+  ['#2b1b18', '#c07a62', '#f5b89a'],
 ];
 
 export function makePlaceholder(i, aspect = 4 / 5, label = 'your photo here', long = 900) {
@@ -26,7 +25,6 @@ export function makePlaceholder(i, aspect = 4 / 5, label = 'your photo here', lo
   const R = rng(1000 + i * 17);
   const [dark, mid, light] = TONES[i % TONES.length];
 
-  // base: a soft diagonal light fall
   const a = R() * Math.PI * 2;
   const grd = g.createLinearGradient(w / 2 - Math.cos(a) * w, h / 2 - Math.sin(a) * h, w / 2 + Math.cos(a) * w, h / 2 + Math.sin(a) * h);
   grd.addColorStop(0, mid);
@@ -35,7 +33,7 @@ export function makePlaceholder(i, aspect = 4 / 5, label = 'your photo here', lo
   g.fillStyle = grd;
   g.fillRect(0, 0, w, h);
 
-  // big soft shapes, like an out-of-focus room
+  // blurry room shapes
   for (let k = 0; k < 7; k++) {
     const x = R() * w, y = R() * h, r = (0.25 + R() * 0.5) * Math.max(w, h);
     const rg = g.createRadialGradient(x, y, 0, x, y, r);
@@ -60,11 +58,11 @@ export function makePlaceholder(i, aspect = 4 / 5, label = 'your photo here', lo
   }
   g.globalCompositeOperation = 'source-over';
 
-  // a soft-focus figure, so the ink painting has someone in it
+  // a figure, so the ink version has someone in it
   drawFigure(g, w, h, R, i, dark, mid, light);
 
   g.globalCompositeOperation = 'screen';
-  // light leak from one edge
+  // light leak
   const lx = R() < 0.5 ? 0 : w, ly = R() * h;
   const leak = g.createRadialGradient(lx, ly, 0, lx, ly, w * 0.9);
   leak.addColorStop(0, 'rgba(255,120,60,0.55)');
@@ -74,7 +72,6 @@ export function makePlaceholder(i, aspect = 4 / 5, label = 'your photo here', lo
   g.fillRect(0, 0, w, h);
   g.globalCompositeOperation = 'source-over';
 
-  // vignette
   const v = g.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.3, w / 2, h / 2, Math.max(w, h) * 0.75);
   v.addColorStop(0, 'rgba(0,0,0,0)');
   v.addColorStop(1, 'rgba(0,0,0,0.3)');
@@ -90,7 +87,6 @@ export function makePlaceholder(i, aspect = 4 / 5, label = 'your photo here', lo
   }
   g.putImageData(img, 0, 0);
 
-  // label
   const fs = Math.round(w * 0.032);
   g.font = `500 ${fs}px "DM Mono", ui-monospace, monospace`;
   g.fillStyle = 'rgba(255,248,236,0.72)';
@@ -105,12 +101,8 @@ function hexA(hex, a) {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-/**
- * Resolve every photo to something drawable: a loaded <img> for real files,
- * or a painted placeholder. An entry with no `src` also looks for
- * photos/01.jpg, photos/02.jpg … (or .jpeg / .png / .webp), so photos can
- * simply be dropped into the folder with those names.
- */
+// entries without a src try photos/01.jpg, 02.jpg and so on (jpeg, png and webp
+// work too), so you can just drop files in named like that. missing ones get a placeholder
 const EXT = ['jpg', 'jpeg', 'png', 'webp'];
 function loadImage(src) {
   return new Promise((resolve) => {
@@ -139,7 +131,7 @@ function mixHex(a, b, t) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
-// Poses: [x, y, head size (of height), tilt, turn, hair]  hair: 0 long, 1 bob, 2 bun
+// [x, y, head size as a fraction of height, tilt, turn, hair]  hair: 0 long, 1 bob, 2 bun
 const POSES = [
   [0.52, 0.36, 0.17, -0.06, 0.3, 0],
   [0.38, 0.36, 0.16, 0.1, 0.6, 0],
@@ -164,7 +156,7 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   f.translate(px * w, py * h);
   f.rotate(tilt * 0.5);
 
-  // light falls from the side she is turned towards
+  // light comes from the side the face turns to
   const ls = turn >= 0 ? -1 : 1;
   const hairCol = f.createLinearGradient(ls * 0.7 * H, -0.8 * H, -ls * 0.5 * H, 1.2 * H);
   hairCol.addColorStop(0, '#4a3a33');
@@ -176,9 +168,9 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   cloth.addColorStop(1, mixHex(dark, '#000000', 0.25));
   const skin = mixHex(mid, light, 0.55);
   const shade = mixHex(mid, dark, 0.35);
-  const fx = turn * 0.13 * H; // the face turns inside the hair
+  const fx = turn * 0.13 * H; // face offset inside the hair
 
-  // long hair: the back of it, behind the shoulders
+  // back of the long hair, behind the shoulders
   f.fillStyle = hairCol;
   if (hair === 0) {
     f.beginPath();
@@ -190,7 +182,6 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
     f.fill();
   }
 
-  // shoulders and body
   f.save();
   f.rotate(tilt * 0.6);
   f.fillStyle = cloth;
@@ -203,7 +194,6 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   f.bezierCurveTo(1.0 * H, 1.02 * H, 0.45 * H, 1.0 * H, 0.22 * H, 0.82 * H);
   f.closePath();
   f.fill();
-  // a neckline
   f.fillStyle = skin;
   f.beginPath();
   f.moveTo(-0.34 * H + fx * 0.3, 1.0 * H);
@@ -212,7 +202,6 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   f.fill();
   f.restore();
 
-  // neck
   f.fillStyle = shade;
   f.beginPath();
   f.moveTo(-0.17 * H + fx * 0.4, 0.3 * H);
@@ -222,7 +211,7 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   f.closePath();
   f.fill();
 
-  // hair, the part around the head
+  // hair around the head, then bob or bun
   f.fillStyle = hairCol;
   f.beginPath();
   f.ellipse(-fx * 0.35, -0.06 * H, 0.52 * H, 0.6 * H, 0, 0, Math.PI * 2);
@@ -241,7 +230,7 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
     f.fill();
   }
 
-  // two locks falling forward over the shoulders
+  // two locks over the shoulders
   if (hair === 0) {
     f.fillStyle = hairCol;
     [-1, 1].forEach((sd) => {
@@ -256,7 +245,6 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
     });
   }
 
-  // face, lit from one side
   const fw = 0.38 * H * (1 - Math.abs(turn) * 0.14);
   const lg = f.createLinearGradient(fx - fw, 0, fx + fw, 0);
   const lit = turn >= 0 ? [skin, shade] : [shade, skin];
@@ -268,7 +256,7 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   f.ellipse(fx, 0.05 * H, fw, 0.47 * H, 0, 0, Math.PI * 2);
   f.fill();
 
-  // fringe across the forehead
+  // fringe
   f.fillStyle = hairCol;
   f.beginPath();
   f.moveTo(fx - fw * 1.08, 0.02 * H);
@@ -278,7 +266,7 @@ function drawFigure(g, w, h, R, i, dark, mid, light) {
   f.closePath();
   f.fill();
 
-  // a soft focus, as if the lens breathed
+  // soft focus, if the browser can blur
   if ('filter' in g) {
     g.save();
     g.filter = `blur(${Math.max(1, Math.round(w / 500))}px)`;

@@ -1,19 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Through her scope — a sharpshooter's game painted in ink.
-//
-//  A valley in the spirit of Chernarus (rolling hills dissolving into mist,
-//  spruce and birch, a hunting stand, a shack, a radio mast, fences across the
-//  fields) is painted ONCE, procedurally, onto a large offscreen sheet. The
-//  stage shows it small and soft, the way the naked eye sees it; a scope
-//  follows the pointer and shows it 4–6× through a mil-dot reticle.
-//
-//  Five targets wait between 200 and 900 m. Bullets drop and drift in mils;
-//  the range card gives the holds for the drop and for the wind right now.
-//  Breathing sways the rifle; holding the breath steadies it for ~4 s.
-//
-//  createScope(root, { t, reduceMotion, mobile, sound }) → { setActive, relabel, destroy }
-// ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, smooth, stroke, dotGen, sealStamp, PROFILE } from '../ink/brush.js?v=774a543f68';
+// sharpshooter mini game. the valley is painted once onto a big offscreen sheet,
+// and the scope follows the pointer and shows it at 4-6x through a mil-dot reticle
+import { rng, noise1, smooth, stroke, dotGen, sealStamp, PROFILE } from '../ink/brush.js?v=e0590b5d34';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -28,15 +15,15 @@ const SEAL_D = [142, 35, 28];
 const EARTH = [111, 101, 93];
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${clamp(a, 0, 1).toFixed(3)})`;
 
-// ─────────────────────────── ballistics (all angles in mils) ───────────────────────────
-const ZERO = 200; // the rifle is zeroed at 200 m
+// ballistics, all angles in mils
+const ZERO = 200; // zeroed at 200 m
 const dropMil = (d) => (d <= ZERO ? 0 : 0.001714 * Math.pow(d - ZERO, 1.2));
-/** drift to the right for a wind blowing to the right at w m/s */
+// w is wind in m/s, positive blows to the right
 const driftMil = (d, w) => 0.032 * Math.pow(d / 100, 1.45) * w;
 const flightTime = (d) => d / 850;
-const CYCLE = 1.05; // working the bolt
+const CYCLE = 1.05; // seconds to work the bolt
 
-// hit boxes in mils (generous, but a careful hold is still needed far out)
+// hit boxes in mils, a bit generous
 const TARGETS = [
   { id: 'bottle', d: 200, w: 0.56, h: 1.5 },
   { id: 'can', d: 350, w: 0.74, h: 0.94 },
@@ -46,7 +33,7 @@ const TARGETS = [
 ];
 const TOL = 0.14;
 
-// ─────────────────────────── the valley's layout (fractions of the sheet) ───────────────────────────
+// layouts, as fractions of the sheet
 const LAYOUTS = {
   wide: {
     sun: [0.705, 0.16, 0.048],
@@ -80,7 +67,7 @@ const LAYOUTS = {
   },
 };
 
-// ─────────────────────────── painting helpers (world units) ───────────────────────────
+// --- painting helpers (world units) ---
 function blob(g, x, y, rx, ry, c, a) {
   if (rx <= 0 || ry <= 0) return;
   g.save();
@@ -105,10 +92,7 @@ function poly(g, pts, c, a) {
   g.fill();
 }
 
-/**
- * A wash with soft, bled edges: the shape is drawn off the sheet and only its
- * blurred shadow lands on the paper (shadow offsets and blur are in sheet pixels).
- */
+// soft bled edges: draw off the sheet so only the blurred shadow lands (offset and blur in sheet px)
 function softFill(g, S, build, fill, blur, c = INK) {
   const off = S.Ww + 80;
   g.save();
@@ -140,7 +124,6 @@ function line(g, pts, w, c, a) {
   g.stroke();
 }
 
-/** a sagging wire between two points */
 function wire(g, x0, y0, x1, y1, sag, w, a) {
   g.lineWidth = w;
   g.strokeStyle = rgba(INK, a);
@@ -159,13 +142,12 @@ function brush(g, pts, width, tone, o = {}) {
   });
 }
 
-/** an ink dot (苔點), the painter's moss dots */
 function moss(g, x, y, r, tone, seed) {
   const it = dotGen(g, x, y, r, { tone, seed, angle: -0.2 });
   while (!it.next().done);
 }
 
-/** a watercolour disc with pigment pooling at the rim */
+// watercolour disc, pigment pools at the rim
 function washDisc(g, x, y, r, c, a, R, seed = 1) {
   const rand = rng(seed);
   g.save();
@@ -203,7 +185,6 @@ function ridgePts(Ww, y0, amp, seed, step = 3) {
   return pts;
 }
 
-/** points along an arc, for brush strokes that go round */
 function arcPts(cx, cy, r, a0, a1, n) {
   const out = [];
   for (let i = 0; i <= n; i++) {
@@ -220,7 +201,7 @@ const ridgeAt = (pts, x) => {
   return lerp(pts[i][1], pts[i + 1][1], k);
 };
 
-/** a misty range: one soft wash, darker on the peaks, ink gathered under the crest, dissolving into mist */
+// one soft wash per range, darkest under the crest, fading into mist
 function rangeBody(g, pts, depth, tone, seed, S, blur = 2.2) {
   let minY = Infinity, maxY = -Infinity;
   for (const p of pts) { if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1]; }
@@ -239,7 +220,6 @@ function rangeBody(g, pts, depth, tone, seed, S, blur = 2.2) {
   softPoly(g, band, rgba(INK, tone * 0.42), blur * 1.8, S);
 }
 
-/** the crest: a few long dry strokes along the ridge, overlapping like a painter's */
 function crest(g, pts, Ww, width, tone, seed) {
   const rand = rng(seed);
   let x = -10;
@@ -254,7 +234,6 @@ function crest(g, pts, Ww, width, tone, seed) {
   }
 }
 
-/** a band of mist: paper laid back over the ink, with a few drifting wisps */
 function mist(g, S, y0, y1, a, rand) {
   const gr = g.createLinearGradient(0, y0, 0, y1);
   gr.addColorStop(0, rgba(PAPER, 0));
@@ -272,7 +251,7 @@ function farPine(g, x, yb, h, a, rand) {
   g.fill();
 }
 
-/** distant pines, gathered by tone and laid down as soft washes so their edges bleed into the paper */
+// grouped by tone so each group is one blurred wash
 function pineWash(g, S, items, blur = 0.35) {
   const buckets = new Map();
   for (const it of items) {
@@ -305,13 +284,10 @@ function pinePath(g, x, yb, h, rand) {
   g.closePath();
 }
 
-/** bristles for a stroke `w` sheet units wide: the brush engine thinks in pixels, the sheet is drawn R× larger */
+// the brush engine counts in pixels and the sheet is drawn R times bigger
 const bristlesFor = (w, R) => clamp(Math.round((w * R) / 1.4), 5, 24);
 
-/**
- * A spruce, the way a painter dabs one in: a pale bled silhouette, one thin pull for the trunk,
- * then tiers of side-brush dabs pressed at the trunk and dragged out and down, drying toward the tips.
- */
+// pale silhouette, thin trunk, then tiers of side dabs that dry out toward the tips
 function spruce(g, x, yb, h, tone, rand, S) {
   const seed = (rand() * 1e5) | 0;
   const lean = (rand() - 0.5) * 0.04;
@@ -350,13 +326,11 @@ function quadAt(p0, p1, p2, t) {
   return [u * u * p0[0] + 2 * u * t * p1[0] + t * t * p2[0], u * u * p0[1] + 2 * u * t * p1[1] + t * t * p2[1]];
 }
 
-/** a white birch: paper trunk with dark lenticels, fine drooping twigs, a crown of small dotted leaves */
 function birch(g, x, yb, h, tone, rand, lean = 0) {
   const seed = (rand() * 1e5) | 0;
   const tw = Math.max(1, h * 0.028);
   const p0 = [x, yb], p2 = [x + lean * h, yb - h], p1 = [x + lean * h * 0.4 + (rand() - 0.5) * h * 0.05, yb - h * 0.5];
   const leafR = clamp(h * 0.0085, 0.45, 1.7);
-  // twigs, then leaves gathered around them
   const nb = h > 200 ? 12 : 7;
   const clusters = [];
   for (let i = 0; i < nb; i++) {
@@ -366,7 +340,6 @@ function birch(g, x, yb, h, tone, rand, lean = 0) {
     const len = h * (0.07 + rand() * 0.1) * (1.15 - f * 0.5);
     const end = [bx + side * len, by - len * 0.05 + len * 0.35 * rand()];
     brush(g, [[bx, by], [bx + side * len * 0.5, by - len * 0.32], end], Math.max(0.35, tw * 0.09), tone * 0.7, { profile: PROFILE.twig, dry: 0.7, seed: seed + i, bristles: 3 });
-    // a few hanging twigs off each branch
     for (let k = 0; k < 2; k++) {
       const q = quadAt([bx, by], [bx + side * len * 0.5, by - len * 0.32], end, 0.45 + k * 0.3);
       line(g, [q, [q[0] + side * len * 0.12, q[1] + len * 0.18], [q[0] + side * len * 0.16, q[1] + len * 0.32]], Math.max(0.2, tw * 0.03), INK, tone * 0.45);
@@ -387,7 +360,6 @@ function birch(g, x, yb, h, tone, rand, lean = 0) {
       g.fill();
     }
   }
-  // the trunk: paper body
   const N = 24, left = [], right = [];
   for (let i = 0; i <= N; i++) {
     const t = i / N;
@@ -403,7 +375,7 @@ function birch(g, x, yb, h, tone, rand, lean = 0) {
   poly(g, [...left, ...right.slice().reverse()], PAPER_L, 0.97);
   brush(g, left.filter((_, i) => i % 3 === 0), Math.max(0.45, tw * 0.22), tone * 0.8, { dry: 0.8, bleed: 0.05, seed, profile: PROFILE.flat, bristles: 4 });
   line(g, right, Math.max(0.2, tw * 0.07), INK, tone * 0.35);
-  // lenticels: short dark lens shapes across the bark
+  // lenticels (the dark marks on birch bark)
   const marks = Math.round(h / 4);
   for (let i = 0; i < marks; i++) {
     const tt = rand() * 0.86;
@@ -437,7 +409,6 @@ function tuft(g, x, y, size, a, rand, lean = 0.2) {
   for (let i = 0; i < n; i++) grassBlade(g, x + (rand() - 0.5) * size * 0.5, y, size * (0.5 + rand() * 0.6), lean + (rand() - 0.5) * 0.9, size * 0.07, a * (0.5 + rand() * 0.5));
 }
 
-/** a haystack (stog) on its pole, the old way: a beehive of dry strokes, darker where it meets the ground */
 function haystack(g, x, yb, r, seed, S) {
   const rand = rng(seed);
   const h = r * 1.75;
@@ -450,7 +421,6 @@ function haystack(g, x, yb, r, seed, S) {
   gr.addColorStop(0.6, rgba(INK, 0.22));
   gr.addColorStop(1, rgba(INK, 0.42));
   softPoly(g, shape, gr, 0.7, S);
-  // straw: dry strokes falling from the crown, following the dome
   for (let i = 0; i < 18; i++) {
     const u = ((i + rand() * 0.6) / 18) * 2 - 1;
     const pts = [];
@@ -466,14 +436,13 @@ function haystack(g, x, yb, r, seed, S) {
   tuft(g, x + r * 0.75, yb + 0.5, r * 0.5, 0.5, rand);
 }
 
-// ─────────────────────────── the painting ───────────────────────────
+// --- the painting ---
 function* paintValley(g, S) {
   const { Ww, Hw, P, L, R, seed } = S;
   const rand = rng(seed);
   const X = (f) => f * Ww, Y = (f) => f * Hw;
   const upm = (d) => (1000 / d) * P;
 
-  // hanji: a warm sheet, faint blotches, fibres
   g.fillStyle = rgba(PAPER, 1);
   g.fillRect(0, 0, Ww, Hw);
   for (let i = 0; i < 16; i++) blob(g, rand() * Ww, rand() * Hw, (0.08 + rand() * 0.22) * Ww, (0.05 + rand() * 0.12) * Hw, [226, 214, 194], 0.1 + rand() * 0.08);
@@ -491,7 +460,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // sky: a breath of indigo high up, warmth around a cinnabar sun, mist drawn across it
+  // sky and the red sun
   const sky = g.createLinearGradient(0, 0, 0, Y(0.42));
   sky.addColorStop(0, 'rgba(40,51,77,0.08)');
   sky.addColorStop(1, 'rgba(40,51,77,0)');
@@ -507,7 +476,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // far range: the palest hills with forest along their backs
+  // far hills
   const far1 = ridgePts(Ww, Y(L.far1[0]), Y(L.far1[1]), seed * 0.37 + 1.3);
   S.skyline = far1;
   rangeBody(g, far1, Y(0.1), 0.3, seed + 1, S, 2.4);
@@ -523,7 +492,6 @@ function* paintValley(g, S) {
     pineWash(g, S, items, 0.3);
   }
   yield;
-  // the radio mast on the far hill, with its cinnabar bands and guy wires
   {
     const mx = X(L.mast), mb = ridgeAt(far1, mx) + 3, mh = Y(0.19);
     const top = mb - mh;
@@ -550,7 +518,6 @@ function* paintValley(g, S) {
   mist(g, S, Y(L.far1[0] - 0.01), Y(L.far2[0] + 0.035), 0.6, rand);
   yield;
 
-  // second range
   const far2 = ridgePts(Ww, Y(L.far2[0]), Y(L.far2[1]), seed * 0.61 + 4.1);
   rangeBody(g, far2, Y(0.09), 0.42, seed + 2, S, 2.2);
   crest(g, far2, Ww, 2.2, 0.4, seed + 6);
@@ -563,7 +530,6 @@ function* paintValley(g, S) {
     }
     pineWash(g, S, items, 0.35);
   }
-  // a village water tower and a few roofs on the left slope
   {
     const tx = X(L.tower), tb = ridgeAt(far2, tx) + Y(0.012), th = Y(0.075);
     for (let i = 0; i < 4; i++) {
@@ -582,7 +548,7 @@ function* paintValley(g, S) {
   mist(g, S, Y(L.far2[0] - 0.005), Y(L.tree[0] + 0.025), 0.55, rand);
   yield;
 
-  // the forested hills behind the meadow (~1 km): a dense treeline of spruce, birches catching the light
+  // treeline, about 1 km out
   const tree = ridgePts(Ww, Y(L.tree[0]), Y(L.tree[1]), seed * 0.83 + 7.7, 2);
   rangeBody(g, tree, Y(0.07), 0.55, seed + 3, S, 1.6);
   {
@@ -592,24 +558,21 @@ function* paintValley(g, S) {
       const h = Y(0.016) + Y(0.03) * n * (0.6 + rand() * 0.6);
       items.push({ x, yb: ridgeAt(tree, x) + h * 0.25, h, a: 0.18 + rand() * 0.22 });
     }
-    // back to front: paler and softer first
     items.sort((p, q) => p.a - q.a);
     pineWash(g, S, items.filter((it) => it.a < 0.3), 0.6);
     pineWash(g, S, items.filter((it) => it.a >= 0.3), 0.35);
-    // dry strokes down the darker trunks so the treeline keeps a brush in it
     for (const it of items) if (it.a > 0.33 && rand() < 0.5) line(g, [[it.x, it.yb + it.h * 0.05], [it.x, it.yb - it.h * 0.85]], Math.max(0.25, it.h * 0.03), INK, 0.35);
     yield;
     for (let i = 0; i < Ww / 14; i++) {
       const x = rand() * Ww, yb = ridgeAt(tree, x) + Y(0.012), h = Y(0.018) + rand() * Y(0.02);
       line(g, [[x, yb], [x + (rand() - 0.5) * 1.2, yb - h]], 0.5 + rand() * 0.4, PAPER_L, 0.6);
     }
-    // moss dots along the treeline, the painter's punctuation
     for (let x = rand() * 30; x < Ww; x += 18 + rand() * 40) moss(g, x, ridgeAt(tree, x) + Y(0.006) + rand() * 3, 0.9 + rand() * 0.9, 0.7, seed + 50 + (x | 0));
   }
   mist(g, S, Y(L.tree[0] + 0.004), Y(L.meadow[0] + 0.03), 0.48, rand);
   yield;
 
-  // the meadow (700–900 m): pale grass, long dry strokes
+  // meadow, 700-900 m
   {
     const [m0, m1] = L.meadow;
     const mg = g.createLinearGradient(0, Y(m0), 0, Y(m1 + 0.02));
@@ -625,7 +588,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // the steel gong's frame on the meadow (900 m)
+  // gong frame, 900 m
   {
     const u = P, [gx, gy] = L.gong;
     const x = X(gx), ground = Y(gy);
@@ -638,7 +601,7 @@ function* paintValley(g, S) {
     tuft(g, x - half, ground + 0.8, 0.9 * u, 0.45, rand);
     tuft(g, x + half, ground + 0.8, 0.8 * u, 0.45, rand);
   }
-  // far fence across the meadow (700 m), the balloon's post
+  // far fence at 700 m, the balloon is tied to one post
   {
     const u7 = upm(700), [f0, f1, y0, y1] = L.fenceFar;
     const ph = 1.3 * u7;
@@ -663,7 +626,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // the hunting stand, with a birch grove behind it
+  // grove, then the hunting stand
   if (L.grove) {
     const [g0, g1, gy] = L.grove;
     for (let i = 0; i < 6; i++) blob(g, X(g0) + rand() * X(g1 - g0), Y(gy) - Y(0.01), Y(0.05), Y(0.015), INK, 0.12);
@@ -708,7 +671,7 @@ function* paintValley(g, S) {
   mist(g, S, Y(L.meadow[1] - 0.045), Y(L.meadow[1] + 0.015), 0.32, rand);
   yield;
 
-  // the forest edge on the right: big spruce and birch
+  // forest edge on the right
   {
     const [f0, f1, fy] = L.forest;
     const items = [];
@@ -716,7 +679,7 @@ function* paintValley(g, S) {
       const isBirch = rand() < 0.36;
       items.push({ x, isBirch, h: (isBirch ? Y(0.13) : Y(0.15)) * (0.7 + rand() * 0.6), yb: Y(fy) - rand() * Y(0.012) });
     }
-    // a back row, smaller and paler, so the edge reads as a forest
+    // smaller paler back row so it reads as a forest
     let nb = 0;
     for (let x = X(f0) + Y(0.02); x < X(f1); x += Y(0.012) + rand() * Y(0.016)) {
       const h = Y(0.07) + rand() * Y(0.06);
@@ -738,7 +701,7 @@ function* paintValley(g, S) {
     mist(g, S, Y(fy - 0.035), Y(fy + 0.01), 0.26);
   }
 
-  // the shack (500 m) — the paper target is pinned to its wall
+  // shack at 500 m, the paper target goes on its wall
   {
     const u5 = upm(500), [shx, shy] = L.shack;
     const x = X(shx), yb = Y(shy);
@@ -750,16 +713,14 @@ function* paintValley(g, S) {
     const ridgeL = x - w / 2 + w * 0.1, ridgeR = x + w / 2 - w * 0.1, ridgeY = ry - rh;
     const roof = [[eaveL, eaveY], [ridgeL, ridgeY], [ridgeR, ridgeY], [eaveR, eaveY]];
     const wall = [[x - w / 2, yb], [x + w / 2, yb], [x + w / 2, ry], [x - w / 2, ry]];
-    // its shadow on the ground, then paper laid down so the forest does not show through
+    // shadow, then paper so the forest doesn't show through
     blob(g, x + w * 0.06, yb + 0.4, w * 0.82, 0.55 * u5, INK, 0.2);
     poly(g, wall, PAPER_L, 1);
     poly(g, roof, PAPER_L, 1);
-    // a curl of stove smoke drifting off
     for (let i = 0; i < 9; i++) {
       const k = i / 8;
       blob(g, x + w * 0.28 + k * k * w * 0.55 + Math.sin(k * 5) * u5 * 0.25, ridgeY - rh * 0.28 - k * rh * 1.6, u5 * (0.18 + k * 0.6), u5 * (0.14 + k * 0.32), INK, 0.1 * (1 - k * 0.7));
     }
-    // weathered planks: a warm wash darker at the foot, the shadow under the eave, soft vertical pulls
     const wg = g.createLinearGradient(0, ry, 0, yb);
     wg.addColorStop(0, rgba([90, 58, 36], 0.24));
     wg.addColorStop(1, rgba([70, 45, 28], 0.4));
@@ -770,16 +731,13 @@ function* paintValley(g, S) {
       const y0 = ry + (0.1 + rand() * 0.25) * u5, y1 = yb - (0.05 + rand() * 0.4) * u5;
       line(g, [[px, y0], [px + (rand() - 0.5) * 0.08 * u5, (y0 + y1) / 2], [px + (rand() - 0.5) * 0.1 * u5, y1]], bw, INK, 0.16 + rand() * 0.14);
     }
-    // the door, dark and wet, its frame dry
     const dl = x + w * 0.16, dr = x + w * 0.38, dt = yb - wh * 0.8;
     softPoly(g, [[dl, yb], [dr, yb], [dr, dt], [dl, dt]], rgba(INK, 0.6), 0.5, S);
     brush(g, [[dl, yb], [dl, dt]], 0.09 * u5, 0.85, { dry: 0.55, seed: sd + 8, profile: PROFILE.segment, bristles: bris(0.09 * u5) });
     brush(g, [[dl - 0.05 * u5, dt], [dr + 0.08 * u5, dt + 0.02 * u5]], 0.09 * u5, 0.85, { dry: 0.6, seed: sd + 9, profile: PROFILE.segment, bristles: bris(0.09 * u5) });
-    // corner posts and the sill
     brush(g, [[x - w / 2, yb + 0.5], [x - w / 2 + 0.02 * u5, ry]], 0.13 * u5, 0.9, { dry: 0.5, seed: sd, profile: PROFILE.segment, bristles: bris(0.13 * u5) });
     brush(g, [[x + w / 2, yb + 0.5], [x + w / 2 - 0.02 * u5, ry]], 0.13 * u5, 0.9, { dry: 0.5, seed: sd + 1, profile: PROFILE.segment, bristles: bris(0.13 * u5) });
     brush(g, [[x - w / 2 - 0.12 * u5, yb + 0.25], [x, yb + 0.1], [x + w / 2 + 0.12 * u5, yb]], 0.09 * u5, 0.7, { dry: 0.7, seed: sd + 2, bristles: bris(0.09 * u5) });
-    // the roof: a wash, paler toward the ridge where the light falls, boards pulled down the slope
     const rg = g.createLinearGradient(0, ridgeY, 0, eaveY);
     rg.addColorStop(0, rgba(INK, 0.22));
     rg.addColorStop(1, rgba(INK, 0.5));
@@ -792,12 +750,10 @@ function* paintValley(g, S) {
       brush(g, [[lerp(bx0, bx1, k0), lerp(ridgeY, eaveY, k0)], [lerp(bx0, bx1, (k0 + k1) / 2), lerp(ridgeY, eaveY, (k0 + k1) / 2)], [lerp(bx0, bx1, k1), lerp(ridgeY, eaveY, k1) - 0.05 * u5]], bw, 0.14 + rand() * 0.16,
         { dry: 0.45, bleed: 0.1, seed: sd + 60 + i, profile: PROFILE.stroke, bristles: bris(bw) });
     }
-    // eave and ridge: two decisive strokes, the eave heavier; the gable edges lighter
     brush(g, [[eaveL - 0.1 * u5, eaveY + 0.03 * u5], [x, eaveY + 0.06 * u5], [eaveR + 0.1 * u5, eaveY - 0.02 * u5]], 0.12 * u5, 0.92, { dry: 0.45, bleed: 0.2, seed: sd + 3, profile: PROFILE.segment, bristles: bris(0.12 * u5) });
     brush(g, [[ridgeL - 0.05 * u5, ridgeY + 0.02 * u5], [ridgeR + 0.05 * u5, ridgeY - 0.02 * u5]], 0.1 * u5, 0.9, { dry: 0.55, seed: sd + 4, profile: PROFILE.segment, bristles: bris(0.1 * u5) });
     brush(g, [[eaveL, eaveY], [ridgeL, ridgeY]], 0.07 * u5, 0.75, { dry: 0.6, seed: sd + 5, bristles: bris(0.07 * u5) });
     brush(g, [[eaveR, eaveY], [ridgeR, ridgeY]], 0.07 * u5, 0.75, { dry: 0.6, seed: sd + 6, bristles: bris(0.07 * u5) });
-    // the stovepipe
     brush(g, [[x + w * 0.28, ridgeY + rh * 0.45], [x + w * 0.28, ridgeY - rh * 0.28]], 0.16 * u5, 0.85, { dry: 0.4, seed: sd + 7, profile: PROFILE.segment, bristles: bris(0.16 * u5) });
     for (let i = 0; i < 6; i++) tuft(g, x - w / 2 + rand() * w * 1.05, yb + 1, 0.9 * u5 * (0.6 + rand() * 0.6), 0.55, rand);
     for (let i = 0; i < 4; i++) moss(g, x - w * 0.7 + rand() * w * 1.4, yb + 1 + rand() * 2, 0.6 + rand() * 0.6, 0.75, sd + 20 + i);
@@ -805,7 +761,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // the field (350 m): furrows, round bales, a dirt track, the fallen log
+  // field, 350 m
   {
     const [f0, f1] = L.field;
     const fg = g.createLinearGradient(0, Y(f0 - 0.03), 0, Y(f1 + 0.04));
@@ -814,7 +770,6 @@ function* paintValley(g, S) {
     fg.addColorStop(1, 'rgba(90,58,36,0)');
     g.fillStyle = fg;
     g.fillRect(0, Y(f0 - 0.03), Ww, Y(f1 - f0 + 0.07));
-    // a low swell across the field, one soft wash with a dry contour along its back
     const swell = [];
     for (let x = -10; x <= Ww + 10; x += 6) swell.push([x, Y(f0 + 0.005) + Y(0.02) * (noise1(x * 0.006 + seed, 11) - 0.5) - Y(0.012) * Math.sin((x / Ww) * Math.PI)]);
     rangeBody(g, swell, Y(0.07), 0.12, seed + 612, S, 2.5);
@@ -827,7 +782,6 @@ function* paintValley(g, S) {
     }
     yield;
     for (const [bxF, byF, m] of L.bales) haystack(g, X(bxF), Y(byF), m * 0.75 * upm(450 + (0.6 - byF) * 2000), seed + 640 + (bxF * 100 | 0), S);
-    // the track: two wheel ruts and a strip of grass between
     const tr = L.track.map(([a, b]) => [X(a), Y(b)]);
     const widen = (k) => lerp(Ww * 0.045, Ww * 0.005, k);
     const lt = [], rt = [];
@@ -841,7 +795,7 @@ function* paintValley(g, S) {
       tuft(g, lerp(tr[j][0], tr[j + 1][0], kk), lerp(tr[j][1], tr[j + 1][1], kk) + 1, lerp(Y(0.02), Y(0.006), k), 0.35, rand);
     }
     yield;
-    // the log, the can's perch
+    // the log the can sits on
     const u3 = upm(350), [lxF, lyF] = L.log;
     const x = X(lxF), y = Y(lyF);
     const len = 2.5 * u3, th = 0.46 * u3;
@@ -858,7 +812,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // the near fence (200 m): posts, two sagging wires; the bottle's post
+  // near fence at 200 m, the bottle sits on one post
   {
     const [[a0, b0], [a1, b1]] = L.fenceNear;
     const x0 = X(a0), y0 = Y(b0), x1 = X(a1), y1 = Y(b1);
@@ -892,7 +846,7 @@ function* paintValley(g, S) {
   }
   yield;
 
-  // foreground: deep grass, a few stones, a tall birch framing the right edge
+  // foreground
   {
     const fy = Y(L.fore);
     const fg = g.createLinearGradient(0, fy - Y(0.05), 0, Hw);
@@ -926,7 +880,7 @@ function* paintValley(g, S) {
   yield;
 }
 
-// ─────────────────────────── the game ───────────────────────────
+// --- the game ---
 export function createScope(root, { t = (k) => k, reduceMotion = false, mobile = false, sound = {} } = {}) {
   const $ = (s) => root.querySelector(s);
   const stage = $('.scope-stage');
@@ -953,22 +907,20 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   const g = canvas.getContext('2d');
   const snd = {
     shot: () => { try { sound.shot && sound.shot(); } catch (e) { /* sound is optional */ } },
-    ping: (o) => { try { sound.ping && sound.ping(o); } catch (e) { /* */ } },
-    glass: (o) => { try { sound.glass && sound.glass(o); } catch (e) { /* */ } },
+    ping: (o) => { try { sound.ping && sound.ping(o); } catch (e) {} },
+    glass: (o) => { try { sound.glass && sound.glass(o); } catch (e) {} },
   };
   const rand = rng(77);
 
-  // ── sizes ──
   let W = 0, H = 0, dpr = 1;
-  let s = 1, ox = 0, oy = 0; // sheet → stage
+  let s = 1, ox = 0, oy = 0; // sheet to stage
   let Rs = 160, Z = 5, small = false;
-  let world = null; // the painted sheet and its layout
+  let world = null;
   let painter = null, painted = false, paintStarted = false;
   const base = document.createElement('canvas');
   const soft = document.createElement('canvas');
   let baseDirty = true, baseAt = 0;
 
-  // ── state ──
   let active = false, raf = 0, last = 0, T = 0, destroyed = false;
   let lastInput = -10, hover = false, focused = false;
   const C = { x: 0, y: 0 }, Ct = { x: 0, y: 0 };
@@ -989,13 +941,12 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
 
   const lang = { dec: '.' };
 
-  // ─────────────────────────── targets ───────────────────────────
   function resetTargets() {
     targets = TARGETS.map((d, i) => ({ ...d, i, hit: false, gone: false, at: -10, holes: [], marks: [], side: 1, impact: null }));
   }
   resetTargets();
 
-  /** centre of a target on the sheet (the balloon moves with the wind) */
+  // target centre on the sheet, the balloon drifts with the wind
   function centre(tg) {
     const u = world.P;
     if (tg.id === 'bottle') return { x: world.bottle.x, y: world.bottle.y - 0.75 * u };
@@ -1010,7 +961,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   }
   const hittable = (tg) => !tg.gone;
 
-  // ─────────────────────────── world ───────────────────────────
   function newWorld() {
     const a = clamp(W / Math.max(1, H), 0.5, 2.6);
     const tall = a < 1.15;
@@ -1027,7 +977,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     const wg = c.getContext('2d');
     wg.setTransform(R, 0, 0, R, 0, 0);
     world = { canvas: c, g: wg, Ww, Hw, P, L, R, aspect: a, tall, seed: 11, skyline: null };
-    // placeholders until the painter reaches them
+    // rough spots until the painter gets there
     world.bottle = { x: L.bottle * Ww, y: lerp(L.fenceNear[0][1], L.fenceNear[1][1], (L.bottle - L.fenceNear[0][0]) / (L.fenceNear[1][0] - L.fenceNear[0][0])) * Hw - 1.25 * (1000 / 200) * P, postW: 4 };
     world.can = { x: L.log[0] * Ww + 0.15 * (1000 / 350) * P, y: L.log[1] * Hw - 0.15 * (1000 / 350) * P };
     world.paper = { x: L.shack[0] * Ww - 4.4 * (1000 / 500) * P * 0.18, y: L.shack[1] * Hw - 2.5 * (1000 / 500) * P * 0.5 };
@@ -1060,7 +1010,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     if (!celebrated && !shots.length) toast(t('scope.start'), 4200);
   }
 
-  // ─────────────────────────── layout ───────────────────────────
   function resize() {
     const w = Math.max(1, Math.round(view.clientWidth)), h = Math.max(1, Math.round(view.clientHeight));
     const d = Math.min(2, window.devicePixelRatio || 1);
@@ -1083,7 +1032,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     poke();
   }
 
-  /** where the rifle rests: the treeline and the gong's frame in the glass, not an empty field */
+  // start aimed at the treeline and the gong, not an empty field
   function aimHome(snap) {
     const [fx, fy] = world.tall ? [0.7, 0.425] : [0.585, 0.462];
     Ct.x = clamp(ox + fx * world.Ww * s, Rs * 0.6, W - Rs * 0.6);
@@ -1116,14 +1065,13 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     bg.imageSmoothingEnabled = true;
     bg.imageSmoothingQuality = 'high';
     bg.drawImage(soft, 0, 0, bw, bh);
-    // a veil of air: the naked eye sees it paler
+    // a bit paler outside the scope
     bg.fillStyle = 'rgba(245,239,228,0.1)';
     bg.fillRect(0, 0, bw, bh);
     baseDirty = false;
     baseAt = T;
   }
 
-  // ─────────────────────────── aim ───────────────────────────
   const toSheet = (x, y) => ({ x: (x - ox) / s, y: (y - oy) / s });
 
   function sway() {
@@ -1144,7 +1092,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     return reduceMotion ? 0 : 3.1 * (k / tau) * Math.exp(1 - k / tau);
   }
 
-  /** the point under the reticle, on the sheet; with the rifle's kick when `withKick` */
   function aimPoint(withKick = true) {
     const p = toSheet(C.x, C.y);
     const sw = sway();
@@ -1157,7 +1104,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     return { x, y };
   }
 
-  /** roughly how far away the ground at this point is */
+  // rough distance to the ground here, -1 means sky
   function rangeAt(x, y) {
     const L = world.L, Hw = world.Hw;
     if (world.skyline && y < ridgeAt(world.skyline, x)) return -1;
@@ -1172,7 +1119,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     return 60;
   }
 
-  // ─────────────────────────── shooting ───────────────────────────
+  // shooting
   function fire() {
     if (!world || T < nextFireAt) return;
     nextFireAt = T + CYCLE;
@@ -1198,7 +1145,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       if (inside) { shot = { tg, x: ix, y: iy, dx, dy, d: tg.d }; break; }
     }
     if (!shot) {
-      // which target was she aiming at? the nearest miss decides the hint
+      // closest target decides the miss hint
       let best = null;
       for (const tg of order) {
         if (!hittable(tg)) continue;
@@ -1278,9 +1225,8 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     }
   }
 
-  // ─────────────────────────── HUD ───────────────────────────
   const fmt = (v) => (Math.round(Math.abs(v) * 10) / 10).toFixed(1).replace('.', lang.dec);
-  /** French counts 1,8 mil but 2,4 mils (and 1,8 mètre): the "one" forms cover values under 2 */
+  // french says 1,8 mil but 2,4 mils, so the singular covers anything under 2
   const few = (v) => Math.round(Math.abs(v) * 10) / 10 < 2;
   const milWord = (v) => t(few(v) ? 'scope.mil' : 'scope.mils');
 
@@ -1324,7 +1270,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     const v = Math.abs(wr);
     windVal.textContent = (wr > 0.04 ? '→ ' : wr < -0.04 ? '← ' : '') + fmt(v);
     windEl.setAttribute('aria-label', t(few(v) ? 'scope.wind.aria.one' : 'scope.wind.aria').replace('{v}', fmt(v)).replace('{dir}', t(wr >= 0 ? 'scope.wind.toRight' : 'scope.wind.toLeft')));
-    // the pennant streams out with the wind and droops when it is calm
+    // pennant streams out in the wind, droops when calm
     const k = clamp(v / 4, 0, 1);
     windEl.style.setProperty('--wk', k.toFixed(2));
     windEl.style.setProperty('--wdir', wr >= 0 ? '1' : '-1');
@@ -1351,7 +1297,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     btnBreath.classList.toggle('is-out', exhausted);
   }
 
-  /** what the spotter says; `quiet` only announces it, without the pill */
+  // quiet = screen reader only, no pill
   function toast(msg, ms = 2600, sr = '', quiet = false) {
     toastEl.textContent = msg;
     if (sr) {
@@ -1370,7 +1316,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   async function celebrate() {
     const token = ++stampToken;
     celebrated = true;
-    // the rifle comes down, so the valley and the note can be seen whole
+    // lower the rifle so the whole valley and the note show
     if (!drag && !keys.size) { Ct.y = H + Rs + 60; placed = true; poke(); }
     doneEl.classList.add('is-on');
     doneEl.setAttribute('aria-hidden', 'false');
@@ -1378,7 +1324,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     toast(`${t('scope.done.title')} ${t('scope.done.line')} ${t('scope.done.love')}`, 0, '', true);
     try {
       if (document.fonts && document.fonts.load) await Promise.race([document.fonts.load('900 60px "Noto Serif KR"', '名射手印'), new Promise((r) => setTimeout(r, 900))]);
-    } catch (e) { /* the seal still stamps in a fallback face */ }
+    } catch (e) { /* fallback font is fine */ }
     if (token !== stampToken || !celebrated || destroyed) return;
     const size = 86;
     const d = Math.min(2, window.devicePixelRatio || 1);
@@ -1406,12 +1352,12 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     poke();
   }
 
-  // ─────────────────────────── drawing the live things ───────────────────────────
-  /** px = sheet units per CSS pixel in the current view */
+  // --- live drawing ---
+  // px = sheet units per css px
   function drawLive(px, inScope) {
     const P = world.P;
     const minW = (w) => Math.max(w, px * 0.9);
-    // the ribbon on the bottle's post: the wind made visible
+    // ribbon on the bottle post so you can see the wind
     {
       const b = world.bottle;
       const x0 = b.x + b.postW * 0.45, y0 = b.y + 0.55 * P;
@@ -1455,7 +1401,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       g.moveTo(-0.3 * P, 0); g.lineTo(-0.28 * P, dy - G.r * 0.92);
       g.moveTo(0.3 * P, 0); g.lineTo(0.28 * P, dy - G.r * 0.92);
       g.stroke();
-      // painted steel: washed and rimmed with a dry brush, from a sprite made once per zoom
       drawSprite('gong', px, 0, dy);
       for (const m of tg.marks) {
         g.fillStyle = rgba([90, 84, 80], 0.7);
@@ -1472,7 +1417,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       g.strokeStyle = rgba(INK, 0.6);
       g.beginPath();
       if (tg.gone) {
-        // the string falls limp down the post
         const fall = reduceMotion ? 1 : clamp(age / 0.9, 0, 1);
         const ex = lerp(c.x, bx + 0.25 * P, fall), ey = lerp(c.y + 0.5 * P, by + 1.1 * P, fall);
         g.moveTo(bx, by);
@@ -1526,14 +1470,13 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       return;
     }
     if (tg.id === 'can') {
-      if (tg.gone) return; // drawn by its flight
+      if (tg.gone) return; // the fx draws it while it flies
       drawCan(c.x, world.can.y, 0, 1, px);
       return;
     }
     if (tg.id === 'bottle') {
       const b = world.bottle;
       if (tg.gone) {
-        // a jagged stump of glass stays on the post
         g.fillStyle = rgba(INK, 0.5);
         g.beginPath();
         g.moveTo(b.x - 0.26 * P, b.y);
@@ -1551,9 +1494,9 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     }
   }
 
-  // ── the targets themselves, painted with the brush once per zoom level (the brush engine needs real pixels) ──
+  // targets get brush painted into sprites once per zoom level, the brush needs real pixels
   const sprites = new Map();
-  /** a brush pull in sprite pixels: `pts` in sheet units around the sprite's anchor */
+  // pts are in sheet units around the sprite anchor
   function pull(sg, k, ox, oy, pts, w, tone, o = {}) {
     const wpx = Math.max(0.9, w * k);
     stroke(sg, {
@@ -1563,7 +1506,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     });
   }
   const PAINT = {
-    // steel: pale where the light falls, a grey wash pooled low on the right, an ensō of a rim
     gong(sg, k, P) {
       const r = world.gong.r, R = r * k, o = r * 1.4 * k;
       sg.fillStyle = rgba(INK, 0.14);
@@ -1585,7 +1527,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       blob(sg, o - R * 0.42, o - R * 0.46, R * 0.2, R * 0.13, [255, 253, 248], 0.8);
       return { w: r * 2.8, h: r * 2.8, ax: r * 1.4, ay: r * 1.4 };
     },
-    // green glass: a bled wash, darker where it pools, a paper-white glint, a paper label, a dry outline
     bottle(sg, k, P) {
       const bw = 0.52 * P, bh = 0.92 * P, nh = 0.42 * P, nw = 0.17 * P, sh = 0.24 * P;
       const W = 0.9 * P, H = 1.85 * P, ox = (W / 2) * k, oy = (H - 0.1 * P) * k;
@@ -1615,7 +1556,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       path();
       sg.clip();
       blob(sg, ox + 0.08 * P * k, oy - 0.08 * P * k, 0.34 * P * k, 0.2 * P * k, INK, 0.35);
-      // the label, a scrap of paper with a cinnabar mark
       sg.fillStyle = rgba(PAPER_L, 0.62);
       sg.fillRect(ox - (bw / 2) * k, oy - bh * 0.64 * k, bw * k, bh * 0.3 * k);
       sg.fillStyle = rgba(SEAL, 0.8);
@@ -1628,7 +1568,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       pull(sg, k, ox, oy, [[-nw / 2 - 0.02 * P, -(bh + sh + nh)], [nw / 2 + 0.02 * P, -(bh + sh + nh)]], 0.06 * P, 0.9, { seed: 65, dry: 0.3 });
       return { w: W, h: H, ax: W / 2, ay: H - 0.1 * P };
     },
-    // tin: a grey wash with a light streak, a cinnabar label, the lid's ellipse, a dry outline
     can(sg, k, P) {
       const cw = 0.72 * P, ch = 0.92 * P, ey = 0.1 * P;
       const W = 1.0 * P, H = 1.25 * P, ox = (W / 2) * k, oy = (H / 2) * k;
@@ -1668,7 +1607,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       sg.fillRect(ox - cw * 0.1 * k, oy + ch * 0.04 * k, cw * 0.2 * k, ch * 0.05 * k);
       sg.restore();
       pull(sg, k, ox, oy, [[-cw * 0.2, ch * 0.42], [-cw * 0.2, -ch * 0.4]], 0.05 * P, 0.75, { rgb: PAPER_L, dry: 0.5, seed: 71, profile: PROFILE.stroke });
-      // the lid
       sg.fillStyle = 'rgba(222,216,206,1)';
       sg.beginPath(); sg.ellipse(ox, oy - (ch / 2) * k, (cw / 2) * k, ey * k, 0, 0, TAU); sg.fill();
       stroke(sg, { pts: arcPts(0, 0, 1, -2.6, -2.6 + TAU * 0.95, 28).map(([x, y]) => [ox + x * (cw / 2) * k, oy - (ch / 2) * k + y * ey * k]), width: Math.max(0.9, 0.04 * P * k), tone: 0.85, dry: 0.45, seed: 72, rgb: INKB, bristles: 5 });
@@ -1677,7 +1615,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       stroke(sg, { pts: arcPts(0, 0, 1, Math.PI, 0, 16).map(([x, y]) => [ox + x * (cw / 2) * k, oy + (ch / 2) * k - y * ey * k]), width: Math.max(0.9, 0.045 * P * k), tone: 0.8, dry: 0.55, seed: 75, rgb: INKB, bristles: 5 });
       return { w: W, h: H, ax: W / 2, ay: H / 2 };
     },
-    // a cinnabar wash, pigment pooled at the rim like the sun's, a paper glint, the knot
     balloon(sg, k, P) {
       const rx = 0.42 * P, ry = 0.5 * P;
       const W = 1.1 * P, H = 1.3 * P, ox = (W / 2) * k, oy = 0.6 * P * k;
@@ -1696,7 +1633,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       return { w: W, h: H, ax: W / 2, ay: 0.6 * P };
     },
   };
-  /** draw a painted target with its anchor at (x, y) in the current sheet transform */
   function drawSprite(name, px, x, y) {
     const k = clamp(Math.round((dpr / px) * 2) / 2, 1, 24);
     const key = name + '|' + k + '|' + world.P;
@@ -1833,7 +1769,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     }
   }
 
-  // ─────────────────────────── the frame ───────────────────────────
+  // --- render ---
   function render() {
     if (!world) return;
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -1841,7 +1777,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     g.imageSmoothingQuality = 'high';
     if (baseDirty && (painted || T - baseAt > 0.12)) buildBase();
     g.drawImage(base, 0, 0);
-    // what the naked eye sees, live
     g.setTransform(dpr * s, 0, 0, dpr * s, dpr * ox, dpr * oy);
     drawLive(1 / s, false);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1871,7 +1806,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     g.restore();
   }
 
-  // the lens furniture never changes while the size stays the same: shadow, vignette, glint, reticle, tube
+  // lens overlay is cached and only redrawn when the size changes
   const lensSprite = document.createElement('canvas');
   let lensKey = '';
   const ringW = () => (small ? 9 : 12);
@@ -1886,7 +1821,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     lensSprite.width = lensSprite.height = size;
     const c = lensSprite.getContext('2d');
     c.setTransform(dpr, 0, 0, dpr, (size / 2), (size / 2));
-    // the scope's shadow on the land
     const sh = c.createRadialGradient(0, 0, Rs, 0, 0, ext);
     sh.addColorStop(0, 'rgba(22,17,15,0.24)');
     sh.addColorStop(1, 'rgba(22,17,15,0)');
@@ -1922,10 +1856,10 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   }
 
   function drawScope() {
-    if (C.y - Rs - 70 > H) return; // the rifle is lowered
+    if (C.y - Rs - 70 > H) return; // rifle lowered
     const k = s * Z;
     const rk = recoil();
-    // the circle sits on whole device pixels so the reticle stays crisp
+    // snap to device pixels or the reticle goes blurry
     const cx = Math.round((C.x + (reduceMotion ? 0 : rk * recoilSide * 3)) * dpr) / dpr;
     const cy = Math.round((C.y - (reduceMotion ? 0 : rk * 5)) * dpr) / dpr;
     const A = aimPoint(true);
@@ -1956,7 +1890,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.drawImage(lensSprite, Math.round(cx * dpr - lensSprite.width / 2), Math.round(cy * dpr - lensSprite.height / 2));
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // breath: an arc around the tube
     if (breath < 0.995 || hold.size) {
       const rr = Rs + ringW() + 6;
       g.lineCap = 'round';
@@ -1988,7 +1921,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     const halo = 'rgba(248,244,236,0.35)';
     const post = Math.min(Rs * 0.8, 5.5 * mil);
     c.lineCap = 'butt';
-    // halo under the thin lines so they read on dark spruce
+    // pale halo so the thin lines still show over dark trees
     for (const pass of [0, 1]) {
       c.strokeStyle = pass ? ink : halo;
       c.lineWidth = pass ? 1.1 : 2.6;
@@ -1997,7 +1930,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       c.moveTo(cx, cy - post); c.lineTo(cx, cy + post);
       c.stroke();
     }
-    // thick outer posts, tapering toward the centre
     c.fillStyle = ink;
     const pw = small ? 3.2 : 4.2;
     const posts = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -2044,7 +1976,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       }
     }
     c.stroke();
-    // numbers for holdover below, and for wind on either side
     c.font = `${small ? 9 : 10}px "Cormorant Garamond", Georgia, serif`;
     c.textBaseline = 'middle';
     c.textAlign = 'left';
@@ -2058,17 +1989,14 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       c.fillText(String(i), cx - i * mil, cy + 10);
       c.textAlign = 'left';
     }
-    // the cinnabar heart of it
     c.fillStyle = 'rgba(248,244,236,0.7)';
     c.beginPath(); c.arc(cx, cy, 3.4, 0, TAU); c.fill();
     c.fillStyle = rgba(SEAL, 1);
     c.beginPath(); c.arc(cx, cy, 2.2, 0, TAU); c.fill();
   }
 
-  // ─────────────────────────── per frame ───────────────────────────
   function update(dt) {
     T += dt;
-    // keyboard aim
     if (keys.size) {
       keyHeld += dt;
       let vx = 0, vy = 0;
@@ -2081,7 +2009,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       Ct.y = clamp(Ct.y + vy * sp * dt, 0, H);
       lastInput = T;
     } else keyHeld = 0;
-    // touch drag: the scope lifts above the finger
+    // touch: the scope floats above the finger so it stays visible
     if (drag) {
       const lk = Math.min(1, (T - drag.t0) / 0.18);
       const offX = lerp(drag.offX, 0, lk), offY = lerp(drag.offY, -(Rs * 0.82 + 30), lk);
@@ -2093,7 +2021,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     const a = reduceMotion ? 1 : 1 - Math.exp(-dt * (drag ? 22 : 15));
     C.x += (Ct.x - C.x) * a;
     C.y += (Ct.y - C.y) * a;
-    // breathing
     const holding = hold.size > 0;
     if (holding && breath > 0) {
       breath = Math.max(0, breath - dt / 4);
@@ -2112,7 +2039,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     amp += (ampT - amp) * ka;
     trem += (tremT - trem) * ka;
     breathAmp += (brT - breathAmp) * ka;
-    // wind wanders slowly
     windNext -= dt;
     if (windNext <= 0) {
       windNext = 7 + rand() * 9;
@@ -2120,7 +2046,6 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       windTarget = windDir * (0.5 + rand() * 3.1);
     }
     wind += (windTarget - wind) * (1 - Math.exp(-dt / 3.5));
-    // bullets arrive
     if (shots.length) {
       const due = shots.filter((sh) => T >= sh.at);
       if (due.length) {
@@ -2140,7 +2065,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       grab.style.width = grab.style.height = `${Math.round(Rs * 2)}px`;
       grab.style.transform = `translate(${Math.round(C.x - Rs)}px, ${Math.round(C.y - Rs)}px)`;
     }
-    // the card and the wind badge fade back when the glass passes under them
+    // fade the card and wind badge when the scope passes under them
     if (overlays.dirty) measureOverlays();
     for (const o of overlays.list) {
       const nx = clamp(C.x, o.x, o.x + o.w), ny = clamp(C.y, o.y, o.y + o.h);
@@ -2159,7 +2084,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       || T - lastInput < (hover || focused ? 20 : 6) || T - recoilAt < 1.3 || doneAt > 0 || Math.abs(Ct.x - C.x) + Math.abs(Ct.y - C.y) > 0.3;
   }
 
-  /** CSS flutter runs only while the canvas does */
+  // css flutter only runs while the canvas does
   let live = false;
   function setLive(on) {
     if (on === live) return;
@@ -2188,7 +2113,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     setLive(true);
   }
 
-  // ─────────────────────────── input ───────────────────────────
+  // input
   function setHold(src, on) {
     if (on) hold.add(src); else hold.delete(src);
     btnBreath.setAttribute('aria-pressed', String(hold.size > 0));
@@ -2201,10 +2126,9 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     const r = view.getBoundingClientRect();
     return { x: e.clientX - r.left, y: e.clientY - r.top };
   };
-  /** the pills and buttons along the bottom are not part of the valley */
   const inUI = (e) => !!(e.target.closest && e.target.closest('.scope-bar > *'));
 
-  // the scope is the cursor here: the page's own cursor (if it has one) steps aside while over the valley
+  // the scope is the cursor here, so hide the site cursor over the valley
   let cursorHidden = false;
   function hideSiteCursor(on) {
     if (on === cursorHidden) return;
@@ -2214,7 +2138,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     el.style.visibility = on ? 'hidden' : '';
   }
 
-  // touch help when the device is touch-first, or as soon as a finger shows up
+  // touch help on touch-first devices, or as soon as a finger shows up
   const finePointer = typeof matchMedia === 'function' && matchMedia('(hover: hover) and (pointer: fine)').matches;
   let touchSeen = mobile && !finePointer;
   function sawTouch() {
@@ -2223,7 +2147,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     root.classList.add('is-touch');
     setHelp();
   }
-  /** the help line, each "·" phrase kept whole so lines break between phrases */
+  // one span per phrase so lines only break between phrases
   function setHelp() {
     if (!helpEl) return;
     helpEl.textContent = '';
@@ -2241,7 +2165,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       if (drag && e.pointerId === drag.id) {
         const p = local(e);
         drag.x = p.x; drag.y = p.y;
-        // resting the finger steadies the breath; a real move (not a tremble) lets it go again
+        // a resting finger holds the breath, a real move (not just a tremble) lets go
         if (Math.hypot(p.x - drag.ax, p.y - drag.ay) > (drag.long ? 36 : 8)) {
           drag.ax = p.x; drag.ay = p.y; drag.still = T;
           if (drag.long) { drag.long = false; setHold('touch', false); }
@@ -2273,7 +2197,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
       const p = local(e);
       if (e.target === grab || Math.hypot(p.x - C.x, p.y - C.y) < Rs) {
         drag = { id: e.pointerId, x: p.x, y: p.y, ax: p.x, ay: p.y, offX: C.x - p.x, offY: C.y - p.y, t0: T, still: T, long: false };
-        try { grab.setPointerCapture(e.pointerId); } catch (err) { /* */ }
+        try { grab.setPointerCapture(e.pointerId); } catch (err) {}
         e.preventDefault();
       } else {
         tap = { id: e.pointerId, x: p.x, y: p.y, t: performance.now() };
@@ -2329,7 +2253,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   }
   function onFocus() { focused = true; lastInput = T; poke(); }
   function onBlur() { focused = false; keys.clear(); setHold('key', false); }
-  // Shift also steadies the rifle while the mouse is over the stage, without a click first
+  // shift works on hover too, no click needed first
   function onWinKey(e) {
     if (e.key !== 'Shift' || focused) return;
     const tag = document.activeElement && document.activeElement.tagName;
@@ -2338,8 +2262,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     else if (e.type === 'keyup') setHold('key', false);
   }
 
-  // buttons
-  // touch fires on contact (a second thumb may still be steadying the scope); the click that follows is ignored
+  // touch fires on contact (other thumb may be steadying the scope), ignore the click after
   let fireTouchAt = -1e9;
   function onFireDown(e) {
     if (e.pointerType === 'touch') { fireTouchAt = performance.now(); e.preventDefault(); fire(); }
@@ -2350,7 +2273,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   }
   function onBreathDown(e) {
     e.preventDefault();
-    try { btnBreath.setPointerCapture(e.pointerId); } catch (err) { /* */ }
+    try { btnBreath.setPointerCapture(e.pointerId); } catch (err) {}
     setHold('btn', true);
   }
   function onBreathUp() { setHold('btn', false); }
@@ -2399,7 +2322,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   if (touchSeen) root.classList.add('is-touch');
   if (reduceMotion) root.classList.add('is-still');
 
-  // a move to a screen with another pixel ratio re-sizes the canvases
+  // resize when moved to a screen with a different dpr
   function watchDpr() {
     if (typeof matchMedia !== 'function') return;
     const mq = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
@@ -2407,10 +2330,9 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
   }
   watchDpr();
 
-  // ─────────────────────────── API ───────────────────────────
   function relabel() {
     lang.dec = t('scope.decimal') === ',' ? ',' : '.';
-    // a passing remark in the old language just goes quiet
+    // drop any toast still in the old language
     clearTimeout(toastTimer);
     toastEl.classList.remove('is-on');
     toastEl.textContent = '';
@@ -2469,7 +2391,7 @@ export function createScope(root, { t = (k) => k, reduceMotion = false, mobile =
     setActive,
     relabel,
     destroy,
-    /** for tests only: where things are, in stage pixels, and a few levers */
+    // test hooks, positions in stage px
     __debug: () => world && ({
       W, H, Z, Rs, s, ox, oy, P: world.P, wind, breath, painted, T, raf, active, lastInput, busy: busy(),
       mil: world.P * s * Z,

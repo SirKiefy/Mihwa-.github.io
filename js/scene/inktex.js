@@ -1,8 +1,7 @@
-// Procedural textures painted with the ink brush (pines, a pavilion, blossoms)
-// and the ink-wash map of the Earth.
-import * as THREE from '../../vendor/three/three.module.min.js?v=774a543f68';
-import { rng, stroke, strokeGen, blossomGen, bud, wash, stamp, PROFILE, INK } from '../ink/brush.js?v=774a543f68';
-import { LAND_PATH, LAND_W, LAND_H } from '../data/land.js?v=774a543f68';
+// textures painted with the ink brush, plus the land map for the globe
+import * as THREE from '../../vendor/three/three.module.min.js?v=e0590b5d34';
+import { rng, stroke, strokeGen, blossomGen, bud, wash, stamp, PROFILE, INK } from '../ink/brush.js?v=e0590b5d34';
+import { LAND_PATH, LAND_W, LAND_H } from '../data/land.js?v=e0590b5d34';
 
 const run = (gen) => { const it = gen; while (!it.next().done); };
 
@@ -20,9 +19,7 @@ function tex(c, { srgb = true } = {}) {
   return t;
 }
 
-// ─────────────────────────── Earth ───────────────────────────
-
-/** R = land (softened), G = wide bleed around coasts. */
+// r = land, g = a wide soft bleed around the coasts
 export function makeLandTexture(scale = 1) {
   const W = Math.round(LAND_W * scale), H = Math.round(LAND_H * scale);
   const c = canvas(W, H);
@@ -32,13 +29,11 @@ export function makeLandTexture(scale = 1) {
   const p = new Path2D(LAND_PATH);
   g.save();
   g.scale(scale, scale);
-  // wide bleed into the G channel
   g.globalCompositeOperation = 'lighter';
   g.shadowColor = 'rgb(0,255,0)';
   g.shadowBlur = 26 * scale;
   g.fillStyle = 'rgb(0,150,0)';
   g.fill(p, 'evenodd');
-  // softened land into the R channel
   g.shadowColor = 'rgb(255,0,0)';
   g.shadowBlur = 3 * scale;
   g.fillStyle = 'rgb(255,0,0)';
@@ -49,15 +44,12 @@ export function makeLandTexture(scale = 1) {
   return t;
 }
 
-// ─────────────────────────── Korean pine (소나무) ───────────────────────────
-
 export function makePineTexture(seed = 1) {
   const W = 256, H = 384;
   const c = canvas(W, H);
   const ctx = c.getContext('2d');
   const R = rng(seed);
   const u = W / 256;
-  // crooked trunk
   const trunk = [[W * 0.5 + (R() - 0.5) * 20, H * 1.0]];
   let x = trunk[0][0], y = H;
   const lean = (R() - 0.5) * 1.1;
@@ -67,7 +59,6 @@ export function makePineTexture(seed = 1) {
     trunk.push([x, y]);
   }
   stroke(ctx, { pts: trunk, width: 12 * u, profile: (t) => (1 - 0.6 * t) * Math.min(1, t * 30 + 0.2), tone: 0.85, dry: 0.55, bleed: 0.1, spread: 0.6, seed });
-  // branches + needle masses
   const clusters = [];
   for (let i = 2; i < trunk.length; i++) {
     const [bx, by] = trunk[i];
@@ -94,36 +85,31 @@ export function makePineTexture(seed = 1) {
   return tex(c);
 }
 
-// ─────────────────────────── Pavilion (정자) ───────────────────────────
-
 export function makePavilionTexture() {
   const W = 256, H = 200;
   const c = canvas(W, H);
   const ctx = c.getContext('2d');
   const u = W / 256;
   const s = (pts, width, tone = 0.95, seed = 1, dry = 0.2) => stroke(ctx, { pts, width: width * u, tone, dry, bleed: 0.15, seed, profile: PROFILE.stroke });
-  // roof wash
   ctx.fillStyle = 'rgba(27,23,21,0.28)';
   ctx.beginPath();
   ctx.moveTo(W * 0.1, H * 0.4); ctx.quadraticCurveTo(W * 0.3, H * 0.47, W * 0.5, H * 0.46);
   ctx.quadraticCurveTo(W * 0.7, H * 0.47, W * 0.9, H * 0.4);
   ctx.lineTo(W * 0.5, H * 0.14); ctx.closePath(); ctx.fill();
-  // eaves: the upturned curve of a Korean roof (처마)
+  // eaves, the upturned korean roof line
   s([[W * 0.05, H * 0.34], [W * 0.14, H * 0.43], [W * 0.3, H * 0.47], [W * 0.5, H * 0.465], [W * 0.7, H * 0.47], [W * 0.86, H * 0.43], [W * 0.95, H * 0.34]], 6, 0.95, 3);
   s([[W * 0.12, H * 0.41], [W * 0.5, H * 0.14]], 4, 0.9, 4);
   s([[W * 0.88, H * 0.41], [W * 0.5, H * 0.14]], 4, 0.9, 5);
   s([[W * 0.5, H * 0.14], [W * 0.5, H * 0.07]], 3.5, 1, 6);
-  // pillars
   [0.24, 0.4, 0.6, 0.76].forEach((px, i) => s([[W * px, H * 0.47], [W * px, H * 0.82]], 3.2, 0.9, 10 + i, 0.3));
-  // railing & platform
+  // railing and platform
   s([[W * 0.2, H * 0.67], [W * 0.8, H * 0.67]], 2.2, 0.8, 20);
   s([[W * 0.14, H * 0.83], [W * 0.86, H * 0.83]], 5, 0.95, 21, 0.4);
   s([[W * 0.2, H * 0.9], [W * 0.8, H * 0.9]], 3, 0.6, 22, 0.5);
   return tex(c);
 }
 
-// ─────────────────────────── Plum blossoms (atlas 2×2) ───────────────────────────
-
+// 2x2 atlas: three blossoms, and two buds share the last cell
 export function makeBlossomAtlas() {
   const S = 256;
   const c = canvas(S * 2, S * 2);
@@ -136,8 +122,7 @@ export function makeBlossomAtlas() {
   return tex(c);
 }
 
-// ─────────────────────────── Paper grain (for CSS) ───────────────────────────
-
+// paper grain for the css background
 export function makeGrainDataURL() {
   const S = 320;
   const c = canvas(S, S);
@@ -150,7 +135,6 @@ export function makeGrainDataURL() {
     img.data[i * 4 + 3] = R() < 0.5 ? 0 : 38 + R() * 30;
   }
   g.putImageData(img, 0, 0);
-  // fibres
   g.lineCap = 'round';
   for (let i = 0; i < 260; i++) {
     const x = R() * S, y = R() * S, a = R() * Math.PI * 2, l = 6 + R() * 26;
@@ -164,7 +148,7 @@ export function makeGrainDataURL() {
   return c.toDataURL('image/png');
 }
 
-/** Deckled (torn) paper edge as an SVG data URL. */
+// torn paper edge as an svg data url
 export function makeDeckle(color = '#f2ebdd', flip = false) {
   const W = 900, H = 26;
   const R = rng(flip ? 7 : 3);

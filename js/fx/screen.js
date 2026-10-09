@@ -1,11 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  병풍 — a folding screen of her portraits, painted in ink.
-//  Silk-mounted panels unfold as you scroll; hover a panel and her colours
-//  bleed back into the ink, spreading out from the middle like a wash.
-// ─────────────────────────────────────────────────────────────────────────────
-import * as THREE from '../../vendor/three/three.module.min.js?v=774a543f68';
-import { makeNoiseTexture } from '../scene/glsl.js?v=774a543f68';
-import { sealStamp } from '../ink/brush.js?v=774a543f68';
+// folding screen of the ink portraits. unfolds on scroll, hover a panel and its colour comes back
+import * as THREE from '../../vendor/three/three.module.min.js?v=e0590b5d34';
+import { makeNoiseTexture } from '../scene/glsl.js?v=e0590b5d34';
+import { sealStamp } from '../ink/brush.js?v=e0590b5d34';
 
 const NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const PW = 1, PH = 2.75;
@@ -22,7 +18,6 @@ function captionCanvas(text, i, lang) {
   g.textBaseline = 'middle';
   if (lang === 'ko') g.font = '96px "Nanum Brush Script", "Gowun Batang", cursive';
   else g.font = 'italic 64px "Instrument Serif", "Cormorant Garamond", serif';
-  // wrap to two lines if needed
   const words = text.split(' ');
   const lines = [];
   let line = '';
@@ -76,7 +71,7 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
       varying vec2 vUv; varying vec3 vN;
       float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
       vec3 silk(vec2 uv) {
-        // woven silk with a faint repeating cloud-and-circle brocade
+        // silk weave with a faint brocade pattern
         float weave = sin(uv.x * 900.0) * sin(uv.y * 900.0 * 2.75) * 0.5 + 0.5;
         vec2 cell = fract(uv * vec2(6.0, 16.5)) - 0.5;
         float motif = smoothstep(0.26, 0.24, abs(length(cell) - 0.22)) * 0.5 + smoothstep(0.06, 0.04, length(cell)) * 0.4;
@@ -87,7 +82,6 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
         vec3 N = normalize(gl_FrontFacing ? vN : -vN);
         float light = 0.74 + 0.26 * max(dot(N, normalize(vec3(-0.45, 0.35, 0.82))), 0.0);
         vec2 uv = vUv;
-        // dark lacquered wooden rim
         float rim = step(uv.x, 0.012) + step(0.988, uv.x) + step(uv.y, 0.005) + step(0.995, uv.y);
         if (!gl_FrontFacing) {
           vec3 c = mix(silk(uv) * 0.85, vec3(0.12, 0.08, 0.06), clamp(rim, 0.0, 1.0));
@@ -100,7 +94,7 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
         if (inner.x > 0.0 && inner.x < 1.0 && inner.y > 0.0 && inner.y < 1.0) {
           vec3 paper = vec3(0.945, 0.925, 0.885) * (0.975 + 0.04 * texture2D(uNoise, inner * vec2(1.0, 2.6) * 3.0 + uSeed).b);
           col = paper;
-          // her portrait, with washed, uneven edges
+          // photo area inside the paper, ragged edges
           vec2 ir = (inner - vec2(0.07, 0.27)) / vec2(0.86, 0.69);
           float n1 = texture2D(uNoise, ir * vec2(1.6, 2.4) + uSeed).r;
           float n2 = texture2D(uNoise, ir * vec2(5.0, 7.0) + uSeed * 2.0).b;
@@ -112,22 +106,20 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
           vec3 inkC = texture2D(uInk, puv).rgb;
           vec3 colC = texture2D(uCol, puv).rgb;
           colC = mix(colC, colC * colC * (3.0 - 2.0 * colC), 0.25) * vec3(1.02, 1.0, 0.95) + 0.02;
-          // her colours spread from the middle, through the ink
+          // on hover the colour spreads out from the middle
           float rr = length((ir - 0.5) * vec2(1.0, 1.5)) + (texture2D(uNoise, ir * 2.2 + uSeed * 3.0).g - 0.5) * 0.35;
           float rev = 1.0 - smoothstep(uReveal * 1.25 - 0.28, uReveal * 1.25, rr);
           vec3 img = mix(inkC, colC, rev);
-          // pooled pigment where the colour front is
           float front = smoothstep(0.0, 0.08, rev) * (1.0 - smoothstep(0.08, 0.3, rev)) * uReveal * (1.0 - uReveal);
           img *= 1.0 - front * 0.45;
           col = mix(col, img, mask);
-          // inscription and seal below
+          // caption and seal strip at the bottom
           vec2 cu = (inner - vec2(0.05, 0.02)) / vec2(0.9, 0.22);
           if (cu.x > 0.0 && cu.x < 1.0 && cu.y > 0.0 && cu.y < 1.0) {
             float ar = (0.9 * (1.0 - 2.0 * m.x)) / (0.22 * (1.0 - 2.0 * m.y) * ${PH.toFixed(2)}) / (512.0 / 300.0);
             vec2 cuv = vec2(cu.x, (cu.y - 0.5) * ar + 0.5);
             if (cuv.y > 0.0 && cuv.y < 1.0) { vec4 cap = texture2D(uCap, cuv); col = mix(col, cap.rgb, cap.a); }
           }
-          // thin mount line around the paper
           vec2 ed = min(inner, 1.0 - inner);
           col = mix(col, vec3(0.55, 0.45, 0.32), (1.0 - smoothstep(0.0, 0.006, min(ed.x, ed.y * 2.75))) * 0.6);
         }
@@ -138,7 +130,6 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
       }`,
   });
 
-  // panels
   const group = new THREE.Group();
   scene.add(group);
   const list = photos.slice(0, 8);
@@ -154,7 +145,6 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
     return mesh;
   });
 
-  // a soft shadow on the floor
   const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
     transparent: true, depthWrite: false,
     vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
@@ -164,7 +154,6 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
   shadow.position.y = -PH / 2 - 0.005;
   scene.add(shadow);
 
-  // ── fold ──
   let progress = 0, sp = 0, portrait = false;
   function fold(theta) {
     let x = 0, z = 0;
@@ -184,7 +173,6 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
     return x;
   }
 
-  // ── captions ──
   function setCaptions(lang) {
     panels.forEach((p, i) => {
       const c = captionCanvas(list[i].meta.caption?.[lang] ?? '', i, lang);
@@ -197,7 +185,6 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
     });
   }
 
-  // ── interaction ──
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   let hovered = null;
   const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
@@ -250,7 +237,7 @@ export function createScreen(canvas, photos, { reduceMotion = false, onOpen } = 
     } else {
       dist = Math.max((PH * 0.72) / tanH, ((width * 0.5 + 0.4) / (tanH * camera.aspect)));
     }
-    // aim a little above the middle so the screen stands in the lower part of the view
+    // look a bit above centre so the screen sits low in the frame
     const lift = portrait ? 0.1 : 0.34;
     camera.position.set(camX + pointer.sx * 0.2, lift + 0.5 + pointer.sy * 0.15, dist);
     camera.lookAt(camX, lift, 0);

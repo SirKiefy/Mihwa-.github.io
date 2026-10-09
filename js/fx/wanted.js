@@ -1,15 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  WANTED. A Red Dead Redemption 2 wanted poster, reprinted as a woodblock on
-//  aged hanji: its top-left corner torn away (the scrap is still pinned under
-//  an old nail), so it now hangs from one nail and sways when you brush past.
-//  Click it and a bullet hole punches through, with ink splinters; aim at her
-//  face and the bullet turns into a cinnabar heart instead.
-//  Beside it, her two dog tags hang on ball chains from a plum branch and
-//  clink when they swing into each other, and a small field card.
-//
-//  mountWanted(root, { photo, t, reduceMotion, sound }) → { relabel, setPhoto, setActive, destroy }
-// ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, stamp, wash, stroke, dotGen, blossomGen, bud, PROFILE, INK } from '../ink/brush.js?v=774a543f68';
+// the wanted poster (woodblock print, top-left corner torn off) and the dog tags on a plum branch.
+// the poster swings when you brush past it and takes bullet holes when clicked
+import { rng, noise1, stamp, wash, stroke, dotGen, blossomGen, bud, PROFILE, INK } from '../ink/brush.js?v=e0590b5d34';
 
 const TAU = Math.PI * 2;
 const D2R = Math.PI / 180;
@@ -17,17 +8,15 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const lerp = (a, b, k) => a + (b - a) * k;
 const dprNow = () => Math.min(2, window.devicePixelRatio || 1);
 const MAX_HOLES = 6;
-const SHADE = { x: 24, t: 14, b: 50 };   // room around the poster for its painted shadow
+const SHADE = { x: 24, t: 14, b: 50 };   // room for the painted shadow
 const PRINT = [30, 24, 22];      // woodblock ink
 const RUST = [128, 70, 36];
 const SEAL_RGB = [184, 50, 42];
 
-// ─────────────────────────── markup ───────────────────────────
-
 const RETICLE = '<svg class="wanted-reticle" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="7"/><path d="M12 2v6.2M12 15.8V22M2 12h6.2M15.8 12H22"/><circle class="wanted-reticle-dot" cx="12" cy="12" r="1.15"/></svg>';
 const RULE = `<p class="wanted-rule" aria-hidden="true"><span></span>${RETICLE}<span></span></p>`;
 
-/** The inside of the fragment (the outer element is `<div class="wanted" id="wanted">`). */
+// fragment contents, WANTED_HTML wraps it in the outer div
 export const WANTED_INNER = `
   <svg class="wanted-defs" width="0" height="0" aria-hidden="true" focusable="false">
     <defs>
@@ -117,10 +106,7 @@ export const WANTED_INNER = `
   </div>
 `;
 
-/** The complete fragment to put in the page. */
 export const WANTED_HTML = `<div class="wanted" id="wanted">${WANTED_INNER}</div>`;
-
-// ─────────────────────────── small canvas helpers ───────────────────────────
 
 function sizeCanvas(c, w, h, dpr) {
   const W = Math.max(1, Math.round(w * dpr)), H = Math.max(1, Math.round(h * dpr));
@@ -147,20 +133,16 @@ const pathOf = (pts, close = true) => {
   if (close) p.closePath();
   return p;
 };
-/** offset of el inside an ancestor, in layout pixels (ignores transforms) */
+// offset in layout px, ignores transforms
 function offsetIn(el, anc) {
   let x = 0, y = 0;
   while (el && el !== anc) { x += el.offsetLeft; y += el.offsetTop; el = el.offsetParent; }
   return [x, y];
 }
 
-// ─────────────────────────── the sheet: geometry ───────────────────────────
+// --- the sheet ---
 
-/**
- * A slightly ragged rectangle with the top-left corner torn off along a
- * fibrous line. Returns Path2Ds for the poster, the torn-off scrap and the
- * whole sheet, plus the tear line itself.
- */
+// ragged rectangle with the top-left corner torn off. returns paths for the poster, the scrap and the whole sheet
 function sheetGeometry(W, H, seed) {
   const R = rng(seed);
   const wear = (d) => 2.6 * Math.pow(Math.max(0, 1 - d / 14), 2);
@@ -172,8 +154,7 @@ function sheetGeometry(W, H, seed) {
   for (let x = W; x >= 0; x -= step) bottom.push([x, H - off(x, 3, Math.min(x, W - x))]);
   for (let y = H; y >= 0; y -= step) left.push([off(y, 4, Math.min(y, H - y)), y]);
 
-  // Two tears: the poster's own edge, and nearer the corner the edge of the
-  // little scrap still pinned under the old nail. Between them, nothing.
+  // two tears: the poster's edge, and the edge of the scrap still under the old nail. nothing in between
   const tearLine = (tx, ty, k) => {
     const T1 = [tx, off(tx, 1, tx)], T2 = [off(ty, 4, ty), ty];
     const dx = T2[0] - T1[0], dy = T2[1] - T1[1], len = Math.hypot(dx, dy);
@@ -204,8 +185,6 @@ function sheetGeometry(W, H, seed) {
   };
 }
 
-// ─────────────────────────── the sheet: painting ───────────────────────────
-
 let grainTile = null, woodTile = null;
 function grain() {
   if (grainTile) return grainTile;
@@ -222,7 +201,7 @@ function grain() {
   g.putImageData(img, 0, 0);
   return (grainTile = c);
 }
-/** where a woodblock fails to print: streaks along the grain, and specks */
+// streaks and specks where the block didn't print
 function woodGrain() {
   if (woodTile) return woodTile;
   const c = document.createElement('canvas');
@@ -243,7 +222,7 @@ function woodGrain() {
   return (woodTile = c);
 }
 
-/** a printed rule: a band whose two edges wander independently, like a cut block */
+// both edges wander on their own, like a hand cut block
 function roughBand(g, x0, y0, x1, y1, w, seed) {
   const len = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / len, uy = (y1 - y0) / len;
   const px = -uy, py = ux;
@@ -264,7 +243,7 @@ function roughRect(g, x, y, w, h, lw, seed) {
   roughBand(g, x + w + lw / 2, y + h, x - lw / 2, y + h, lw, seed + 6);
   roughBand(g, x, y + h, x, y, lw, seed + 9);
 }
-/** a carved corner block: solid ink with a five-petal flower cut out of it */
+// corner block with a five petal flower cut out
 function cornerBlock(g, cx, cy, b, seed) {
   const R = rng(seed);
   g.fillStyle = `rgb(${PRINT})`;
@@ -294,7 +273,6 @@ function inkLayer(W, H, dpr, seed) {
   roughRect(g, m + gap, m + gap, W - 2 * (m + gap), H - 2 * (m + gap), lw2, seed + 20);
   const b = W * 0.056;
   [[m, m], [W - m, m], [W - m, H - m], [m, H - m]].forEach(([x, y], i) => cornerBlock(g, x, y, b, seed + 40 + i));
-  // where the block failed to print
   g.globalCompositeOperation = 'destination-out';
   g.globalAlpha = 0.85;
   g.fillStyle = g.createPattern(woodGrain(), 'repeat');
@@ -328,29 +306,24 @@ function crease(g, x0, y0, x1, y1, seed) {
   line(px * 1.1, py * 1.1, 'rgba(105,74,42,0.16)', 0.9);
 }
 
-/** the whole sheet, before it is split into the poster and the scrap */
 function paintSheet(geo, dpr, seed) {
   const { W, H } = geo;
   const [c, g] = offCanvas(W, H, dpr);
   const R = rng(seed);
   g.save();
   g.clip(geo.outer);
-  // aged, yellowed hanji
   const base = g.createRadialGradient(W * 0.52, H * 0.42, 0, W * 0.5, H * 0.46, Math.hypot(W, H) * 0.6);
   base.addColorStop(0, '#f2e8d0');
   base.addColorStop(0.55, '#ecdcbc');
   base.addColorStop(1, '#dcc49b');
   g.fillStyle = base;
   g.fillRect(0, 0, W, H);
-  // tea and rain stains, with tide lines
   const stains = [[0.8, 0.82, 0.3], [0.16, 0.6, 0.2], [0.86, 0.2, 0.13], [0.36, 0.95, 0.16], [0.62, 0.5, 0.1]];
   stains.forEach(([x, y, r], i) => wash(g, W * x, H * y, W * r, { rgb: [150, 104, 52], alpha: 0.045 + R() * 0.05, seed: seed + i * 7, wobble: 0.34, rim: 0.9, sx: 1, sy: 0.8 + R() * 0.4, rot: R() * 3 }));
-  // paper grain
   g.globalAlpha = 0.5;
   g.fillStyle = g.createPattern(grain(), 'repeat');
   g.fillRect(0, 0, W, H);
   g.globalAlpha = 1;
-  // hanji fibres: long, thin, wandering
   g.lineCap = 'round';
   const nf = Math.round((W * H) / 900);
   for (let i = 0; i < nf; i++) {
@@ -368,10 +341,9 @@ function paintSheet(geo, dpr, seed) {
     const cx = R() * W, cy = R() * H, k = 1 + Math.floor(R() * 4);
     for (let j = 0; j < k; j++) stamp(g, cx + (R() - 0.5) * 10, cy + (R() - 0.5) * 10, 0.6 + R() * R() * 3, [140, 92, 44], 0.08 + R() * 0.22, 0.5);
   }
-  // it was folded in quarters once
+  // folded in quarters once
   crease(g, 0, H * 0.49, W, H * 0.5, seed + 3);
   crease(g, W * 0.505, 0, W * 0.495, H, seed + 4);
-  // age creeping in from the edges
   g.shadowColor = 'rgba(132,88,40,0.55)';
   g.shadowBlur = W * 0.07 * dpr;
   const ring = new Path2D();
@@ -381,11 +353,9 @@ function paintSheet(geo, dpr, seed) {
   g.fill(ring, 'evenodd');
   g.shadowBlur = 0;
   g.shadowColor = 'transparent';
-  // rust bleeding down from the nails
   rustStreak(g, W / 2, W * 0.03, H * 0.12, seed + 8);
   rustStreak(g, W * 0.085, W * 0.03, W * 0.07, seed + 9);
   g.restore();
-  // the woodblock frame, printed on top
   g.save();
   g.globalCompositeOperation = 'multiply';
   g.shadowColor = 'rgba(30,24,22,0.4)';
@@ -396,7 +366,7 @@ function paintSheet(geo, dpr, seed) {
   return c;
 }
 
-/** the freshly torn edge: paler, with loose fibres sticking out */
+// fresh tear: paler, with loose fibres sticking out
 function tearEdge(g, { pts: tear, nx, ny }, side, seed) {
   const R = rng(seed);
   const ox = -nx * side, oy = -ny * side; // outward, away from this piece
@@ -421,15 +391,14 @@ function tearEdge(g, { pts: tear, nx, ny }, side, seed) {
   }
 }
 
-// ─────────────────────────── bullet holes ───────────────────────────
+// --- bullet holes ---
 
 function holeSprite(r, seed, dpr) {
   const S = Math.ceil(r * 11);
   const [c, g] = offCanvas(S, S, dpr);
   const R = rng(seed);
   const cx = S / 2, cy = S / 2;
-  // the ink on the bullet soaks into the hanji: a soft bloom, with the
-  // pigment pooling in a tide line at its edge
+  // ink soaks into the paper, soft bloom with a tide line at the edge
   for (let i = 0; i < 6; i++) stamp(g, cx + (R() - 0.5) * r * 1.6, cy + (R() - 0.5) * r * 1.6, r * (1.5 + R() * 1.3), INK, 0.03 + R() * 0.03, 0.3);
   const tide = r * (2 + R() * 0.6), ns0 = seed % 997, sq = 0.82 + R() * 0.25, tr = R() * TAU;
   for (let i = 0, n = 110; i < n; i++) {
@@ -438,10 +407,8 @@ function holeSprite(r, seed, dpr) {
     const px = Math.cos(a) * rr, py = Math.sin(a) * rr * sq;
     stamp(g, cx + px * Math.cos(tr) - py * Math.sin(tr), cy + px * Math.sin(tr) + py * Math.cos(tr), 0.9 + R() * 0.8, INK, 0.035 + R() * 0.035, 0.45);
   }
-  // a scorch
   stamp(g, cx + (R() - 0.5) * r * 0.6, cy + (R() - 0.5) * r * 0.6, r * 2.1, [86, 52, 30], 0.2, 0.35);
-  // splinters of ink, flicked out like a dry brush: pressed at the hole,
-  // lifting to a point, and breaking up where the brush ran dry
+  // ink splinters, like flicks from a dry brush
   const n = 8 + Math.floor(R() * 5);
   for (let k = 0; k < n; k++) {
     const a = (k / n) * TAU + (R() - 0.5) * 0.7;
@@ -454,7 +421,7 @@ function holeSprite(r, seed, dpr) {
     const p = new Path2D();
     p.moveTo(x1, y1); p.quadraticCurveTo(qx - sa * w * 0.2, qy + ca * w * 0.2, x2, y2); p.quadraticCurveTo(qx + sa * w * 0.2, qy - ca * w * 0.2, x3, y3); p.closePath();
     g.fillStyle = `rgba(22,17,15,${0.08 + R() * 0.07})`;
-    g.save(); g.translate(ca * 0.7, sa * 0.7); g.fill(p); g.restore(); // a soft wet fringe
+    g.save(); g.translate(ca * 0.7, sa * 0.7); g.fill(p); g.restore();
     g.fillStyle = `rgba(22,17,15,${0.62 + R() * 0.36})`;
     g.fill(p);
     g.save();
@@ -467,7 +434,6 @@ function holeSprite(r, seed, dpr) {
     }
     g.restore();
   }
-  // torn lips of paper around the hole, catching the light
   for (let k = 0; k < 7; k++) {
     const a = R() * TAU, d = r * (0.85 + R() * 0.3), w = r * (0.35 + R() * 0.3);
     const ca = Math.cos(a), sa = Math.sin(a);
@@ -478,7 +444,6 @@ function holeSprite(r, seed, dpr) {
     g.lineTo(cx + ca * d + sa * w, cy + sa * d - ca * w);
     g.fill();
   }
-  // the hole
   const pts = [];
   for (let i = 0; i < 22; i++) {
     const a = (i / 22) * TAU, rr = r * (0.82 + 0.3 * noise1(i * 0.9, seed) + (R() - 0.5) * 0.12);
@@ -490,11 +455,9 @@ function holeSprite(r, seed, dpr) {
   grd.addColorStop(1, 'rgba(40,28,22,0.92)');
   g.fillStyle = grd;
   g.fill(pathOf(pts));
-  // a glint of paper thickness on the far rim
   g.strokeStyle = 'rgba(230,214,186,0.22)';
   g.lineWidth = Math.max(0.5, r * 0.09);
   g.beginPath(); g.arc(cx, cy, r * 0.8, 0.18 * Math.PI, 0.4 * Math.PI); g.stroke();
-  // spatter
   const ns = 5 + Math.floor(R() * 7);
   for (let i = 0; i < ns; i++) {
     const a = R() * TAU, d = r * (1.8 + R() * 3);
@@ -503,10 +466,6 @@ function holeSprite(r, seed, dpr) {
   return c;
 }
 
-/**
- * Aimed at her face, the bullet lands as a cinnabar heart: pressed like a
- * seal, with a carved inner line, uneven paste and specks where it missed.
- */
 function heartSprite(r, seed, dpr) {
   const S = Math.ceil(r * 8);
   const [c, g] = offCanvas(S, S, dpr);
@@ -522,19 +481,16 @@ function heartSprite(r, seed, dpr) {
     }
     return pathOf(pts);
   };
-  stamp(g, cx, cy, r * 2.6, SEAL_RGB, 0.08, 0.25); // oil from the paste, soaking out
+  stamp(g, cx, cy, r * 2.6, SEAL_RGB, 0.08, 0.25);
   g.fillStyle = `rgba(${SEAL_RGB},0.93)`;
   g.fill(heart(1, 0.03));
   g.save();
   g.globalCompositeOperation = 'destination-out';
-  // the carved line
   g.lineJoin = 'round';
   g.lineWidth = Math.max(0.75, r * 0.085);
   g.strokeStyle = '#000';
   g.stroke(heart(0.72, 0.015));
-  // uneven pressure: paler patches
   for (let i = 0; i < 4; i++) stamp(g, cx + (R() - 0.5) * r * 2.4, cy + (R() - 0.5) * r * 2.2, r * (0.5 + R() * 0.7), INK, 0.12 + R() * 0.18, 0.2);
-  // specks where the paste missed the paper
   for (let i = 0; i < r * 6; i++) {
     g.globalAlpha = 0.3 + R() * 0.7;
     g.beginPath(); g.arc(cx + (R() - 0.5) * r * 3.6, cy + (R() - 0.5) * r * 3.2, 0.2 + R() * R() * r * 0.11, 0, TAU); g.fill();
@@ -543,10 +499,9 @@ function heartSprite(r, seed, dpr) {
   return c;
 }
 
-// ─────────────────────────── dog tags: geometry ───────────────────────────
-// Everything on the tag stage is laid out in units of a 300 × 350 box.
+// --- dog tags, everything in a 300x350 box ---
 
-const TW = 116, TH = 206, HY = 18;           // tag size and its hole, from the top
+const TW = 116, TH = 206, HY = 18;           // tag size, and the hole y from the top
 const BRANCH = [[318, 52], [262, 47], [206, 41], [150, 38], [96, 33], [48, 25], [14, 14]];
 const BRANCH_W = 12;
 function branchTop(x) {
@@ -561,15 +516,12 @@ function branchTop(x) {
 function paintBranch(canvas, s, dpr) {
   const g = sizeCanvas(canvas, 300 * s, 80 * s, dpr);
   g.setTransform(dpr * s, 0, 0, dpr * s, 0, 0);
-  // the old branch, then the young twigs
   stroke(g, { pts: BRANCH, width: BRANCH_W, profile: PROFILE.twig, tone: 0.9, dry: 0.5, bleed: 0.3, spread: 0.55, seed: 41 });
   stroke(g, { pts: [[170, 39], [152, 25], [134, 14], [119, 6]], width: 4.6, profile: PROFILE.twig, tone: 0.86, dry: 0.4, seed: 43 });
   stroke(g, { pts: [[258, 46], [266, 33], [281, 19]], width: 4, profile: PROFILE.twig, tone: 0.85, dry: 0.4, seed: 44 });
   stroke(g, { pts: [[60, 28], [47, 37], [33, 44]], width: 2.8, profile: PROFILE.twig, tone: 0.8, dry: 0.35, seed: 45 });
   stroke(g, { pts: [[128, 37], [138, 52], [146, 60]], width: 2.4, profile: PROFILE.twig, tone: 0.8, dry: 0.35, seed: 46 });
-  // moss dots
   [[196, 36, 1.5], [120, 31, 1.3], [66, 25, 1.2], [240, 41, 1.2]].forEach(([x, y, r], i) => { const it = dotGen(g, x, y, r, { seed: 50 + i, tone: 0.9 }); while (!it.next().done); });
-  // plum blossoms and buds
   [[118, 9, 10.5, 0.95], [281, 18, 10, 1], [24, 15, 8.5, 0.9], [149, 61, 8, 0.85], [177, 31, 6.5, 0.7], [246, 58, 6, 0.75]].forEach(([x, y, r, open], i) => {
     const it = blossomGen(g, x, y, r, { seed: 60 + i, open });
     while (!it.next().done);
@@ -577,7 +529,7 @@ function paintBranch(canvas, s, dpr) {
   [[138, 17, 2.8], [268, 28, 2.5], [44, 37, 2.2], [232, 36, 2.4], [36, 21, 2]].forEach(([x, y, r], i) => bud(g, x, y, r, 70 + i));
 }
 
-// ─────────────────────────── mount ───────────────────────────
+// --- mount ---
 
 export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, sound = {} } = {}) {
   if (!root.querySelector('.wanted-board')) {
@@ -599,7 +551,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   const ac = new AbortController();
   const opt = { signal: ac.signal };
 
-  // ── poster state ──
   const P = { W: 0, H: 0, dpr: 0, rest: -2.2, ang: 0, vel: 0, pivotY: 0, geo: null, photo: null, holes: [], parts: [], puffs: [] };
 
   function applyPoster() {
@@ -617,9 +568,8 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     applyPoster();
     const geo = (P.geo = sheetGeometry(W, H, 7));
     const sheet = paintSheet(geo, dpr, 7);
-    // the poster, with its shadow on the wall painted in once. (A CSS
-    // drop-shadow on the swinging poster would be re-blurred on every frame.)
-    // On a phone the margin is narrower, so the canvas never pokes past the screen.
+    // shadow is baked in, a css drop-shadow would re-blur every frame while it swings.
+    // smaller margin on phones so the canvas doesn't poke off screen
     const narrow = W < 400, sx = narrow ? 12 : SHADE.x, k = narrow ? 0.75 : 1;
     let g = sizeCanvas(paperC, W + sx * 2, H + SHADE.t + SHADE.b, dpr);
     paperC.style.left = `${-sx}px`;
@@ -636,7 +586,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     g.restore();
     g.save(); g.clip(geo.paper); g.drawImage(sheet, 0, 0, W, H); g.restore();
     tearEdge(g, geo.tear, 1, 3);
-    // the scrap left behind under the old nail, unrotated, where the corner used to be
+    // scrap left under the old nail, not rotated
     g = sizeCanvas(scrapC, geo.scrapW, geo.scrapH, dpr);
     g.save(); g.clip(geo.scrap); g.drawImage(sheet, 0, 0, W, H); g.restore();
     tearEdge(g, geo.tear2, -1, 4);
@@ -644,7 +594,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     scrapC.style.top = `${poster.offsetTop}px`;
     oldNail.style.left = `${poster.offsetLeft + W * 0.085}px`;
     oldNail.style.top = `${poster.offsetTop + W * 0.03}px`;
-    // holes keep their place on the sheet; their sprites follow the new size
+    // holes keep their spot, sprites get rebuilt at the new size
     measurePhoto();
     sizeCanvas(holesC, W, H, dpr);
     if (resprite) P.holes.forEach(makeHoleSprite);
@@ -670,7 +620,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     const [x, y] = offsetIn(portrait, poster);
     return [x, y, portrait.offsetWidth, portrait.offsetHeight];
   }
-  /** her photo inside the frame: no hole or splinter is ever drawn over it */
   function measurePhoto() {
     const [x, y] = offsetIn(img, poster);
     P.photo = [x, y, img.offsetWidth, img.offsetHeight];
@@ -680,7 +629,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   function addHole(x, y) {
     if (!P.geo) return;
     const now = performance.now();
-    // she's bulletproof: a shot on her portrait turns into a heart
+    // a shot on the portrait turns into a heart
     const kind = inBox(x, y, portraitBox(), holeR()) ? 'heart' : 'hole';
     const h = { u: x / P.W, v: y / P.H, kind, seed: (Math.random() * 1e6) | 0, born: now, fading: 0 };
     makeHoleSprite(h);
@@ -689,7 +638,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     if (live.length > MAX_HOLES) live[0].fading = now;
     play('shot', { gain: 0.42, pan: clamp((x / P.W - 0.5) * 0.6, -0.5, 0.5) });
     if (!reduceMotion) {
-      // a jolt on the nail, a puff of ink, splinters and flakes of paper
       P.vel = clamp(P.vel + (x / P.W - 0.5) * 7 + (Math.random() - 0.5) * 5, -9, 9);
       P.puffs.push({ x, y, t0: now, r: h.r, kind });
       const n = kind === 'heart' ? 6 : 12;
@@ -711,7 +659,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     return [P.W * 0.8, P.H * 0.86];
   }
 
-  /** returns true while something is still moving */
+  // true while something's still moving
   function drawHoles(now, dt) {
     const { W, H, dpr } = P;
     if (!W || !P.geo) return false;
@@ -719,7 +667,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, W, H);
     let busy = false;
-    // puffs of ink where the bullet went through
     P.puffs = P.puffs.filter((p) => {
       const k = (now - p.t0) / 520;
       if (k >= 1) return false;
@@ -727,7 +674,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
       stamp(g, p.x, p.y, p.r * (1.6 + k * 4), p.kind === 'heart' ? SEAL_RGB : INK, 0.2 * (1 - k) * (1 - k), 0.25);
       return true;
     });
-    // holes stay on the paper and off her photo; hearts may sit on it
+    // holes stay off the photo, hearts can go on it
     const holeClip = new Path2D();
     holeClip.addPath(P.geo.paper);
     if (P.photo) holeClip.rect(...P.photo);
@@ -751,7 +698,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     g.globalAlpha = 1;
     g.globalCompositeOperation = 'source-over';
     P.holes = P.holes.filter((h) => !h.dead);
-    // splinters and paper flakes in flight
     P.parts = P.parts.filter((p) => {
       p.life += dt;
       if (p.life >= p.max) return false;
@@ -786,7 +732,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     return true;
   }
 
-  // pointer brushing past the poster
+  // brushing past the poster swings it
   let lastPt = null;
   board.addEventListener('pointermove', (e) => {
     if (reduceMotion || !active || !P.geo) return;
@@ -805,12 +751,11 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     if (e.detail === 0 || (!e.clientX && !e.clientY)) [x, y] = randomSpot();
     else {
       [x, y] = toLocal(e.clientX, e.clientY);
-      if (!onPaper(x, y)) return; // the missing corner: nothing to hit
+      if (!onPaper(x, y)) return; // torn off corner
     }
     addHole(x, y);
   }, opt);
 
-  // ── dog tags ──
   const T = {
     a: { px: 92, L: 104, th: 0, thv: 0, ph: 1.2, phv: 0, kth: 34, kph: 26, hx: 0, hy: 0 },
     b: { px: 214, L: 46, th: 0, thv: 0, ph: -1.4, phv: 0, kth: 52, kph: 28, hx: 0, hy: 0 },
@@ -839,7 +784,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     }
     chainD.setAttribute('d', chainLoop(T.a) + chainLoop(T.b));
   }
-  // a tag's frame: origin at its hole, y down the tag
+  // tag space: origin at the hole, y down the tag
   const toTag = (tg, x, y) => {
     const a = -tg.ph * D2R, dx = x - tg.hx, dy = y - tg.hy;
     return [dx * Math.cos(a) - dy * Math.sin(a), dx * Math.sin(a) + dy * Math.cos(a)];
@@ -848,7 +793,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     const a = tg.ph * D2R;
     return [tg.hx + x * Math.cos(a) - y * Math.sin(a), tg.hy + x * Math.sin(a) + y * Math.cos(a)];
   };
-  /** the right edge of A against the left edge of B: how deep, where, how fast */
+  // overlap of A's right edge with B's left edge, and where along each tag
   function contact() {
     const A = T.a, B = T.b;
     let best = null;
@@ -885,10 +830,10 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     if (c) {
       const A = T.a, B = T.b;
       const dA = Math.max(30, c.dA), dB = Math.max(30, c.dB);
-      // push apart: A swings left (angle up), B swings right (angle down)
+      // push apart, A swings left and B right
       A.ph += ((c.pen * 0.5) / dA) / D2R;
       B.ph -= ((c.pen * 0.5) / dB) / D2R;
-      const vA = -A.phv * D2R * dA, vB = -B.phv * D2R * dB; // sideways speed at the contact, px/s, + = right
+      const vA = -A.phv * D2R * dA, vB = -B.phv * D2R * dB; // sideways speed at contact, px/s, positive is right
       const rel = vA - vB;
       if (rel > 0) {
         const e = 0.45, j = ((1 + e) / 2) * rel;
@@ -914,7 +859,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     layoutTags();
   }
 
-  // brushing past the tags, from anywhere near them
+  // brushing anywhere near the tags swings them
   let lastTagPt = null;
   root.addEventListener('pointermove', (e) => {
     if (reduceMotion || !active) return;
@@ -960,14 +905,14 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     kick();
   }, opt);
 
-  // ── the loop: runs only while something moves ──
+  // loop only runs while something moves
   function frame(now) {
     raf = 0;
     if (!active || destroyed || document.hidden) return;
     const dt = Math.min(0.1, Math.max(0.001, (now - last) / 1000));
     last = now;
     let busy = false;
-    // fixed small substeps keep the springs stable at any frame rate
+    // small fixed substeps so the springs don't blow up at low fps
     const n = Math.ceil(dt * 240), h = dt / n;
     for (let i = 0; i < n; i++) {
       busy = stepPoster(h) || busy;
@@ -983,7 +928,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   }
   document.addEventListener('visibilitychange', () => { if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else kick(); }, opt);
 
-  // ── text ──
   function fitTags() {
     for (const el of root.querySelectorAll('.wanted-tag-text')) {
       el.style.fontSize = '';
@@ -1010,7 +954,6 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     if (src) img.src = src; else img.removeAttribute('src');
   }
 
-  // ── sizing ──
   let sizeQueued = false;
   const ro = new ResizeObserver(() => {
     if (sizeQueued || !painted) return;
@@ -1030,7 +973,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
     document.fonts.ready.then(onFonts);
     document.fonts.addEventListener('loadingdone', onFonts, opt);
   }
-  // a new device pixel ratio (browser zoom, another screen): repaint the canvases sharp
+  // dpr changed (zoom or another screen), repaint so it stays sharp
   const checkDpr = () => {
     if (destroyed || !painted || (dprNow() === P.dpr && dprNow() === stageDpr)) return;
     buildPaper();
@@ -1045,7 +988,7 @@ export function mountWanted(root, { photo, t = (k) => k, reduceMotion = false, s
   relabel(false);
   setPhoto(photo);
   applyPoster();
-  // painting the paper and the branch takes a moment: do it when the page is idle
+  // painting the paper and branch is a bit slow, wait for idle
   const idle = window.requestIdleCallback || ((f) => setTimeout(f, 30));
   idle(() => {
     if (destroyed) return;

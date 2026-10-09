@@ -1,9 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  A gayageum-ish pluck (Karplus–Strong) with 농현 — the gentle pitch vibrato
-//  a player presses into the string after plucking. Off until the visitor asks.
-// ─────────────────────────────────────────────────────────────────────────────
+// gayageum-ish pluck (karplus-strong) and some little sound effects. silent until sound is switched on
 
-// 평조 pentatonic: sol · la · do · re · mi
+// pentatonic, sol la do re mi, in Hz
 const SCALE = [196.0, 220.0, 261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25];
 
 let ctx = null;
@@ -44,7 +41,7 @@ function pluckBuffer(freq) {
   const out = buf.getChannelData(0);
   const period = Math.max(2, Math.round(rate / freq));
   const ring = new Float32Array(period);
-  // a slightly bright, finger-plucked excitation
+  // brighter in the middle, a bit like a finger pluck
   for (let i = 0; i < period; i++) ring[i] = (Math.random() * 2 - 1) * (0.6 + 0.4 * Math.sin((Math.PI * i) / period));
   let idx = 0;
   const decay = 0.9965;
@@ -68,14 +65,14 @@ export function setSound(on) {
 
 export function soundOn() { return enabled; }
 
-/** Play a note. `i` indexes the pentatonic scale (wraps). */
+// i is an index into SCALE, wraps around
 export function pluck(i = Math.floor(Math.random() * SCALE.length), { gain = 0.22, pan = 0 } = {}) {
   if (!enabled || !ctx) return;
   const freq = SCALE[((i % SCALE.length) + SCALE.length) % SCALE.length];
   const now = ctx.currentTime;
   const src = ctx.createBufferSource();
   src.buffer = pluckBuffer(freq);
-  // 농현: settle, then a slow, widening vibrato
+  // nonghyeon: let it settle, then a slow vibrato that gets wider
   const rate = src.playbackRate;
   rate.setValueAtTime(1.0, now);
   const vib = new Float32Array(64);
@@ -96,12 +93,10 @@ export function pluck(i = Math.floor(Math.random() * SCALE.length), { gain = 0.2
   src.stop(now + 3.1);
 }
 
-/** A short rising phrase. */
 export function phrase(start = 2) {
   [0, 1, 2, 4].forEach((d, k) => setTimeout(() => pluck(start + d, { gain: 0.16 }), k * 140));
 }
 
-/** A soft mechanical shutter: two short, filtered clicks. */
 export function shutter({ gain = 0.35 } = {}) {
   if (!enabled || !ctx) return;
   const now = ctx.currentTime;
@@ -131,7 +126,7 @@ function noiseBuffer(seconds, shape = 4) {
   return buf;
 }
 
-/** A rifle shot heard from behind the scope: a sharp crack, then the boom rolling off the hills. */
+// crack, thump, then the echo rolling off the hills
 export function shot({ gain = 0.5, pan = 0 } = {}) {
   if (!enabled || !ctx) return;
   const now = ctx.currentTime;
@@ -140,14 +135,12 @@ export function shot({ gain = 0.5, pan = 0 } = {}) {
   let node = out;
   if (ctx.createStereoPanner) { const p = ctx.createStereoPanner(); p.pan.value = pan; out.connect(p); node = p; }
   node.connect(master);
-  // the crack
   const crack = ctx.createBufferSource();
   crack.buffer = noiseBuffer(0.12, 7);
   const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900;
   const cg = ctx.createGain(); cg.gain.value = 0.9;
   crack.connect(hp).connect(cg).connect(out);
   crack.start(now);
-  // the body of the shot
   const thump = ctx.createOscillator();
   thump.type = 'sine';
   thump.frequency.setValueAtTime(110, now);
@@ -157,7 +150,6 @@ export function shot({ gain = 0.5, pan = 0 } = {}) {
   tg.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
   thump.connect(tg).connect(out);
   thump.start(now); thump.stop(now + 0.4);
-  // the echo off distant hills
   const roll = ctx.createBufferSource();
   roll.buffer = noiseBuffer(1.6, 2.2);
   const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 420;
@@ -169,7 +161,7 @@ export function shot({ gain = 0.5, pan = 0 } = {}) {
   roll.start(now + 0.03);
 }
 
-/** A bullet ringing a steel plate far away. */
+// bullet ringing a steel plate somewhere far off
 export function ping({ gain = 0.22, delay = 0 } = {}) {
   if (!enabled || !ctx) return;
   const now = ctx.currentTime + delay;
@@ -186,7 +178,6 @@ export function ping({ gain = 0.22, delay = 0 } = {}) {
   });
 }
 
-/** A glass bottle breaking, far off. */
 export function glass({ gain = 0.25, delay = 0 } = {}) {
   if (!enabled || !ctx) return;
   const now = ctx.currentTime + delay;
@@ -204,7 +195,7 @@ export function glass({ gain = 0.25, delay = 0 } = {}) {
   }
 }
 
-/** A cat's purr: a low rumble pulsing about 25 times a second. */
+// purr: low rumble pulsing ~25 times a second
 export function purr({ gain = 0.22, seconds = 1.4 } = {}) {
   if (!enabled || !ctx) return;
   const now = ctx.currentTime;
@@ -227,7 +218,6 @@ export function purr({ gain = 0.22, seconds = 1.4 } = {}) {
   src.start(now);
 }
 
-/** A small, polite 야옹. */
 export function meow({ gain = 0.16 } = {}) {
   if (!enabled || !ctx) return;
   const now = ctx.currentTime;

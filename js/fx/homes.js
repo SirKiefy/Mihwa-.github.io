@@ -1,17 +1,10 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  두 집 — Seoul and Paris on a live globe.
-//  A 2.5D stage after 일월오봉도, the royal screen of the sun, the moon and the
-//  five peaks: a red sun and tonight's real moon in the sky, ink peaks behind,
-//  waves and white clouds in front, gold leaf drifting through all of it.
-//  In the middle, the Earth, lit by where the sun actually is right now, with
-//  the cities glowing on its night side. A paper crane flies the red thread
-//  between her two homes. Scroll flies the camera from one home to the other.
-// ─────────────────────────────────────────────────────────────────────────────
-import * as THREE from '../../vendor/three/three.module.min.js?v=774a543f68';
-import { makeNoiseTexture, NOISE } from '../scene/glsl.js?v=774a543f68';
-import { makeLandTexture } from '../scene/inktex.js?v=774a543f68';
-import { CITIES } from '../data/cities.js?v=774a543f68';
-import { sunPosition, moonPhase } from './live.js?v=774a543f68';
+// seoul and paris on a live globe, staged like the old sun, moon and five peaks screen.
+// globe is lit from where the sun actually is right now. scroll moves the camera between the two cities
+import * as THREE from '../../vendor/three/three.module.min.js?v=e0590b5d34';
+import { makeNoiseTexture, NOISE } from '../scene/glsl.js?v=e0590b5d34';
+import { makeLandTexture } from '../scene/inktex.js?v=e0590b5d34';
+import { CITIES } from '../data/cities.js?v=e0590b5d34';
+import { sunPosition, moonPhase } from './live.js?v=e0590b5d34';
 
 const DEG = Math.PI / 180;
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
@@ -45,7 +38,6 @@ vec4 over(vec4 s, vec4 d) {
   return vec4((s.rgb * s.a + d.rgb * d.a * (1.0 - s.a)) / max(a, 1e-4), a);
 }`;
 
-// ─────────────────────────── the Earth ───────────────────────────
 const GLOBE_FS = NOISE + /* glsl */ `
 uniform sampler2D uLand; uniform vec3 uSun; uniform float uTime;
 uniform vec3 uPaper; uniform vec3 uPaperLight; uniform vec3 uInk; uniform vec3 uNight; uniform vec3 uSeal;
@@ -68,26 +60,23 @@ void main() {
   float grid = (1.0 - min(min(gf.x, gf.y), 1.0)) * 0.07;
   float dens = clamp(inkLand + coast * 0.62 + bleed + ocean + grid, 0.0, 1.0);
   vec3 day = mix(uPaper, uInk, dens);
-  // where the sun is right now: day on paper, night in indigo ink
+  // day/night from the real sun
   float sd = dot(nrm, uSun);
   float edge = sd + (fbm3(vObj * 3.0 + 11.0, nrm) - 0.5) * 0.18 + (fbm3(vObj * 9.0, nrm) - 0.5) * 0.05;
   float night = 1.0 - smoothstep(-0.12, 0.05, edge);
   vec3 nightCol = mix(uNight, uInk, clamp(dens * 0.9 + 0.12, 0.0, 1.0));
   nightCol = mix(nightCol, uNight * 1.35, (1.0 - land) * smoothstep(0.86, 1.0, waves) * 0.5);
   vec3 col = mix(day, nightCol, night * 0.94);
-  // dawn and dusk: a thin vermilion wash along the edge of the night
+  // thin red wash along the terminator
   float dusk = smoothstep(-0.08, 0.01, edge) * (1.0 - smoothstep(0.01, 0.2, edge));
   col = mix(col, mix(uSeal, uPaperLight, 0.4), dusk * 0.3);
-  // warm, bright paper where the sun is high
   col = mix(col, uPaperLight, smoothstep(0.55, 1.0, sd) * (1.0 - dens) * 0.6);
-  // a brush-drawn rim
   float rimN = fbm3(vObj * 4.5 + uTime * 0.04, nrm);
   float rim = smoothstep(0.62 + 0.16 * rimN, 0.985, 1.0 - facing);
   col = mix(col, uInk, rim * 0.62);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-// ─────────────────────────── the sky: red sun and tonight's moon ───────────────────────────
 const SKY_FS = NOISE + OVER + /* glsl */ `
 uniform float uAspect; uniform float uCover; uniform float uTime; uniform float uPhase;
 uniform vec2 uSunPos; uniform vec2 uMoonPos; uniform float uR;
@@ -96,10 +85,9 @@ varying vec2 vUv;
 void main() {
   vec2 s = (vUv - 0.5) * uCover + 0.5;
   vec2 a = vec2(uAspect, 1.0);
-  // an uneven wash pulled down from the top
   float wn = fbmL(vec2(s.x * 1.2 + uTime * 0.002, s.y * 1.6));
   vec4 col = vec4(uInk, smoothstep(0.55, 1.1, s.y + (wn - 0.5) * 0.35) * 0.07);
-  // the moon, left as paper while the sky around it is washed (홍운탁월)
+  // moon stays bare paper, only the sky around it gets washed
   vec2 pm = (s - uMoonPos) * a / uR;
   float rm = length(pm);
   float hn = fbm(pm * 0.8 + vec2(uTime * 0.01, 0.0));
@@ -112,7 +100,6 @@ void main() {
   moon = mix(moon, uInk, smoothstep(0.52, 0.78, fbm(pm * 1.5 + 5.0)) * 0.07);
   moon = mix(moon, uInk, smoothstep(0.88, 0.99, rm) * 0.28);
   col = over(vec4(moon, inMoon), col);
-  // the red sun, a disc of cinnabar soaking into the paper
   vec2 ps = (s - uSunPos) * a / uR;
   float en = (fbm(ps * 2.2 + 3.0) - 0.5) * 0.07;
   float rs = length(ps) + en;
@@ -123,10 +110,9 @@ void main() {
   gl_FragColor = col;
 }`;
 
-// ─────────────────────────── the five peaks ───────────────────────────
 const PEAKS_FS = NOISE + OVER + /* glsl */ `
 uniform float uAspect; uniform float uCover; uniform float uTime;
-uniform vec4 uP[5];   // x, height, half-width, tone
+uniform vec4 uP[5];   // x, height, half width, tone
 uniform vec3 uPaper; uniform vec3 uInk;
 varying vec2 vUv;
 vec4 peak(vec2 s, vec4 P, float seed) {
@@ -135,18 +121,16 @@ vec4 peak(vec2 s, vec4 P, float seed) {
   float prof = pow(max(0.0, 1.0 - abs(dx)), 1.35);
   float ridge = (fbm(vec2(s.x * 9.0 + seed, seed)) - 0.5) * 0.05 + (fbm(vec2(s.x * 30.0 + seed, 2.0 * seed)) - 0.5) * 0.012;
   float crest = 0.1 + P.y * prof + ridge * prof;
-  float dq = crest - s.y;                       // depth below the crest
+  float dq = crest - s.y;                       // depth below crest
   float px = fwidth(s.y);
   float body = smoothstep(-px, px, dq);
   float line = 1.0 - smoothstep(px * 1.5, px * 1.5 + 0.004 + 0.004 * fbm(vec2(s.x * 20.0, seed)), dq);
   float wash = exp(-dq / (0.07 + 0.08 * fbm(vec2(s.x * 3.0, s.y * 2.0 + seed))));
-  // texture strokes down the slopes (준법)
+  // cun = texture strokes down the slopes, like in ink landscapes
   float cun = smoothstep(0.55, 0.8, fbm(vec2(s.x * 70.0 + dx * 8.0, s.y * 4.0 + seed))) * wash;
   float d = clamp(line * 0.55 + wash * 0.34 + cun * 0.2, 0.0, 1.0) * P.w;
   vec3 c = mix(uPaper, uInk, d);
-  // mineral green-blue at the crests
   c = mix(c, vec3(0.2, 0.31, 0.3), wash * 0.18 * P.w);
-  // the feet dissolve into mist
   float mist = smoothstep(0.03, 0.2, s.y + (fbm(vec2(s.x * 4.0 + uTime * 0.004, seed)) - 0.5) * 0.08);
   return vec4(c, body * mist);
 }
@@ -157,7 +141,6 @@ void main() {
   gl_FragColor = col;
 }`;
 
-// ─────────────────────────── waves ───────────────────────────
 const WAVES_FS = NOISE + OVER + /* glsl */ `
 uniform float uAspect; uniform float uCover; uniform float uTime; uniform float uTop;
 uniform vec3 uPaper; uniform vec3 uInk;
@@ -179,7 +162,6 @@ void main() {
     float dq = crest - s.y;
     float px = fwidth(s.y);
     float body = smoothstep(-px, px, dq);
-    // combed lines following the crest
     float k = dq / (amp * 0.9);
     float lines = smoothstep(0.42, 0.5, abs(fract(k * 5.0) - 0.5)) * (1.0 - smoothstep(0.6, 1.2, k));
     float outline = 1.0 - smoothstep(px, px * 2.5 + 0.002, dq);
@@ -189,12 +171,10 @@ void main() {
     c = mix(c, uPaper * 1.04, foam);
     col = over(vec4(c, body), col);
   }
-  // the band fades out at its top edge into mist
   col.a *= smoothstep(uTop * 1.35, uTop * 0.9, s.y);
   gl_FragColor = col;
 }`;
 
-// ─────────────────────────── drifting mist ───────────────────────────
 const CLOUD_FS = NOISE + /* glsl */ `
 uniform float uTime; uniform float uSeed; uniform float uOpacity; uniform vec3 uPaperLight;
 varying vec2 vUv;
@@ -208,7 +188,6 @@ void main() {
   gl_FragColor = vec4(uPaperLight, band * ends * (0.45 + 0.55 * n2) * uOpacity);
 }`;
 
-// ─────────────────────────── a paper crane (종이학) ───────────────────────────
 function makeCrane() {
   const V = (x, y, z) => [x, y, z];
   const geo = (tris) => {
@@ -239,7 +218,7 @@ function makeCrane() {
   const B0 = V(0, 0.05, 0.3), B1 = V(0, 0.05, -0.3), KL = V(-0.07, -0.2, 0), KR = V(0.07, -0.2, 0);
   const NT = V(0, 0.46, 0.6), HT = V(0, 0.38, 0.78), TT = V(0, 0.42, -0.66);
   crane.add(withEdges(geo([B0, KL, B1, B0, B1, KR, B0, V(0, 0.05, 0.12), NT, B1, V(0, 0.05, -0.12), TT]), mat));
-  crane.add(new THREE.Mesh(geo([NT, V(0, 0.41, 0.64), HT]), red)); // the red crown of a 두루미
+  crane.add(new THREE.Mesh(geo([NT, V(0, 0.41, 0.64), HT]), red)); // red crown, it's a red-crowned crane
   const wingL = withEdges(geo([V(0, 0.05, 0.2), V(0, 0.05, -0.16), V(-0.82, 0.1, -0.08)]), mat);
   const wingR = withEdges(geo([V(0, 0.05, 0.2), V(0.82, 0.1, -0.08), V(0, 0.05, -0.16)]), mat);
   crane.add(wingL, wingR);
@@ -247,7 +226,6 @@ function makeCrane() {
   return crane;
 }
 
-// ─────────────────────────── a red seal standing over a city ───────────────────────────
 function sealTexture(chars, seed) {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 208;
@@ -266,7 +244,7 @@ function sealTexture(chars, seed) {
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   [...chars].forEach((ch, i) => g.fillText(ch, 64, 64 + i * 80));
-  // worn edges and speckles, like a real stamp
+  // chip the edges and speckle it so it looks stamped
   g.globalCompositeOperation = 'destination-out';
   for (let i = 0; i < 140; i++) {
     g.globalAlpha = 0.3 + rand() * 0.7;
@@ -297,7 +275,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   camera.position.set(0, 0, D);
   const U = { uTime: { value: 0 }, uNoise: { value: makeNoiseTexture() } };
 
-  // ── painted layers, far to near ──
   const layers = [];
   function layer(z, fs, extra = {}) {
     const u = {
@@ -312,8 +289,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     layers.push(m);
     return m;
   }
-  // layers that never move are painted once into a texture (again on resize)
-  // rather than recomputed every frame
+  // layers that never move get baked to a texture once (and on resize), not every frame
   const bakeCam = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0, 1);
   const bakeScene = new THREE.Scene();
   const bakeQuad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1));
@@ -325,7 +301,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
       uniforms: { uMap: { value: rt.texture } }, vertexShader: VS_UV,
       fragmentShader: 'uniform sampler2D uMap; varying vec2 vUv; void main(){ gl_FragColor = texture2D(uMap, vUv); }',
       transparent: true, depthWrite: false,
-      // the texture holds premultiplied colour
+      // baked texture is premultiplied
       blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
       blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
     });
@@ -354,7 +330,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   const peaksU = makeBaked(peaks).uniforms;
   let bakedPhase = -1;
 
-  // clouds drift in front of everything
   const clouds = [0, 1, 2].map((i) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
       uniforms: { uTime: U.uTime, uNoise: U.uNoise, uSeed: { value: i * 7.3 + 1.1 }, uOpacity: { value: 1 }, uPaperLight: { value: PAPER_LIGHT } },
@@ -367,7 +342,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     return m;
   });
 
-  // gold leaf (금박) through every depth
   const FLECKS = mobile ? 70 : 130;
   const fPos = new Float32Array(FLECKS * 3), fSeed = new Float32Array(FLECKS);
   for (let i = 0; i < FLECKS; i++) {
@@ -410,7 +384,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   }));
   scene.add(flecks);
 
-  // ── the globe ──
   const world = new THREE.Group();
   const spin = new THREE.Group();
   spin.rotation.order = 'XYZ';
@@ -438,7 +411,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   );
   spin.add(globe);
 
-  // mist around the globe, so the peaks behind fall away
+  // mist ring so the peaks behind the globe fall away
   const mist = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
     uniforms: { uTime: U.uTime, uNoise: U.uNoise, uPaper: { value: PAPER }, uInk: { value: INK } },
     transparent: true, depthWrite: false, vertexShader: VS_UV,
@@ -446,7 +419,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
       uniform float uTime; uniform vec3 uPaper; uniform vec3 uInk; varying vec2 vUv;
       void main() {
         vec2 p = vUv * 2.0 - 1.0;
-        float r = length(p) / 0.6;       // 1.0 at the globe's edge
+        float r = length(p) / 0.6;       // 1.0 at the globe edge
         float n = fbm(p * 2.0 + uTime * 0.01);
         float glow = exp(-max(r - 1.0, 0.0) * (3.2 - n)) * step(0.98, r);
         float ring = (1.0 - smoothstep(1.0, 1.06, r)) * step(0.99, r);
@@ -454,10 +427,9 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
       }`,
   }));
   world.add(mist);
-  // painted layers are sorted by hand: sky, peaks, mist, (globe things), waves, clouds
+  // order set by hand: sky, peaks, mist, globe stuff, waves, clouds
   sky.renderOrder = -3; peaks.renderOrder = -2; mist.renderOrder = -1; waves.renderOrder = 1;
 
-  // city lights on the night side
   const lightPts = [], lightSize = [], lightSeed = [];
   const addLight = (lat, lon, size) => {
     const v = latLonToVec3(lat, lon, 1.004);
@@ -498,7 +470,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
       }`,
   })));
 
-  // ── her two homes: a seal on a stem, a ripple on the ground ──
+  // city markers: a seal on a stem plus a ripple on the ground
   const HANJA = { seoul: '首爾', paris: '巴里' };
   const markers = places.map((p, i) => {
     const n = latLonToVec3(p.lat, p.lon);
@@ -523,7 +495,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     return { place: p, n, seal, ring, top, phase: i * 0.5 };
   });
 
-  // ── the red thread, and its shadow on the ground ──
+  // red thread between the two, and its dashed shadow on the ground
   const vS = latLonToVec3(places[0].lat, places[0].lon), vP = latLonToVec3(places[1].lat, places[1].lon);
   const arcPts = [], groundPts = [], flightPts = [];
   for (let i = 0; i <= 120; i++) {
@@ -557,7 +529,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   spin.add(crane);
   const craneState = { u: 0, dir: 1, hold: 0 };
 
-  // ── layout ──
   let vw = 1, vh = 1, aspect = 1, portrait = false;
   const lay = { fx: 0.62, fy: 0.5, R: 300 };
   function size() {
@@ -583,7 +554,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     skyU.uR.value = portrait ? 0.042 : 0.068;
     const P = peaksU.uP.value;
     const cx = lay.fx;
-    // back to front: outer, middle, then the tallest in the middle behind the globe
+    // [x, height, half width, tone], back to front. tallest goes last, right behind the globe
     const spec = portrait
       ? [[0.0, 0.1, 0.42, 0.45], [1.0, 0.11, 0.42, 0.45], [0.22, 0.15, 0.4, 0.6], [0.78, 0.16, 0.4, 0.6], [0.5, 0.22, 0.46, 0.8]]
       : [[cx - 0.55, 0.22, 0.2, 0.45], [cx + 0.36, 0.24, 0.18, 0.45], [cx - 0.33, 0.32, 0.2, 0.6], [cx + 0.2, 0.36, 0.2, 0.6], [cx - 0.04, 0.5, 0.24, 0.8]];
@@ -592,7 +563,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     bake(peaks, vw * q, vh * q);
     bake(sky, vw * q * 0.75, vh * q * 0.75);
     waves.material.uniforms.uTop.value = portrait ? 0.12 : 0.16;
-    // clouds: size and height in the view at their depth
     clouds.forEach((c) => {
       const dist = D - c.position.z;
       const h = 2 * dist * TAN;
@@ -606,7 +576,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   new ResizeObserver(size).observe(canvas);
   size();
 
-  // ── choreography: both → Paris → along the thread → Seoul → both ──
+  // scroll tour: both cities, paris, along the thread to seoul, then both again
   const BOTH = latLonToVec3(46, 62);
   const KEYS = [
     { p: 0.0, v: BOTH, s: 0.88 },
@@ -625,7 +595,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   let progress = 0, focus = null;
   const cur = { rx: 0, ry: 0, s: 1, init: false };
 
-  // drag to turn; it eases back to the tour when let go
+  // drag to spin, it eases back to the tour after you let go
   const dragOff = { x: 0, y: 0, idle: 0 };
   let drag = null;
   canvas.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); canvas.classList.add('is-dragging'); });
@@ -641,7 +611,7 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
   canvas.addEventListener('pointerup', endDrag);
   canvas.addEventListener('pointercancel', endDrag);
 
-  // the whole stage leans a little towards the pointer
+  // whole stage leans a bit towards the mouse (parallax)
   const lean = { x: 0, y: 0, tx: 0, ty: 0 };
   addEventListener('pointermove', (e) => {
     if (reduceMotion || e.pointerType !== 'mouse') return;
@@ -675,7 +645,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     sunClock -= dt;
     updateSun(false);
 
-    // where the tour wants us
     const k = keyAt(progress);
     if (!drag) {
       dragOff.idle += dt;
@@ -691,7 +660,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     cur.s = lerp(cur.s, k.s, reduceMotion ? 1 : damp(dt, 3));
     spin.rotation.set(cur.rx, cur.ry, 0);
 
-    // place the globe on the stage
     const H0 = 2 * D * TAN;
     const gs = (lay.R / vh) * H0 * cur.s;
     world.scale.setScalar(gs);
@@ -699,13 +667,11 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
     mist.scale.setScalar(1 / 0.6 * 2);
     mist.quaternion.copy(camera.quaternion);
 
-    // lean: the camera drifts, the layers part (2.5D)
     lean.x = lerp(lean.x, lean.tx, damp(dt, 2.5));
     lean.y = lerp(lean.y, lean.ty, damp(dt, 2.5));
     camera.position.set(lean.x * 0.45, -lean.y * 0.28 - (progress - 0.5) * 0.7, D);
     camera.lookAt(0, 0, 0);
 
-    // clouds drift across
     clouds.forEach((c) => {
       const d = c.userData;
       d.x += d.speed * dt * (reduceMotion ? 0.2 : 1);
@@ -715,7 +681,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
       c.material.uniforms.uOpacity.value = 0.75;
     });
 
-    // the seals always face us; their ripples breathe
     markers.forEach((m) => {
       m.seal.quaternion.copy(spin.getWorldQuaternion(q).invert().multiply(camera.quaternion));
       const rt = ((t * 0.5 + m.phase) % 1);
@@ -723,7 +688,6 @@ export function createHomes(canvas, places, { mobile = false, reduceMotion = fal
       m.ring.material.uniforms.uT.value = rt;
     });
 
-    // the thread draws itself, then the crane flies it, there and back
     const draw = thread.material.uniforms.uDraw;
     draw.value = Math.min(1, draw.value + dt * 0.5);
     ground.material.uniforms.uDraw.value = draw.value;

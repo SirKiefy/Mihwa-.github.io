@@ -1,5 +1,5 @@
-// Her palette: the dominant colours across all her photos (k-means in RGB).
-import { rng } from '../ink/brush.js?v=774a543f68';
+// main colours across all the photos, k-means in rgb
+import { rng } from '../ink/brush.js?v=e0590b5d34';
 
 export function extractPalette(photos, k = 6) {
   const px = [];
@@ -13,7 +13,7 @@ export function extractPalette(photos, k = 6) {
       g.drawImage(src, 0, 0, w, h);
       const d = g.getImageData(0, 0, w, h).data;
       for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 200) px.push([d[i], d[i + 1], d[i + 2]]);
-    } catch { /* a tainted image: skip it */ }
+    } catch { /* tainted image, skip */ }
   }
   if (!px.length) return [];
   const R = rng(5);

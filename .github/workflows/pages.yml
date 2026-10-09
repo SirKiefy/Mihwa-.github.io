@@ -22,7 +22,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      # stamp script and stylesheet addresses with a version, so browsers never mix old and new files
+      # version-stamp the js/css urls
       - run: node tools/stamp.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

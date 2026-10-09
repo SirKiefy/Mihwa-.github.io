@@ -1,11 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Turn a photo into a Korean ink painting (수묵화).
-//  Brush outlines come from a difference of Gaussians (dark lines where a
-//  region is darker than its surroundings, broken by a dry brush); tones are
-//  laid in as three or four washes whose edges wander, granulate and pool
-//  darker at their rims; finally the ink bleeds a little into the hanji.
-// ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=774a543f68';
+// photo -> ink painting. lines from a difference of gaussians, tone from a few
+// washes with wobbly edges, then a little bleed into the paper
+import { noiseData } from './noise.js?v=e0590b5d34';
 
 const PAPER = [241, 235, 224];
 const INK = [24, 19, 17];
@@ -54,7 +49,7 @@ function gauss(src, w, h, sigma) {
   }
   return out;
 }
-/** Kuwahara filter via integral images: painterly, edge-preserving flattening. */
+// kuwahara using integral images. flattens into painterly patches but keeps edges
 function kuwahara(src, w, h, r) {
   const W = w + 1;
   const S = new Float64Array(W * (h + 1)), Q = new Float64Array(W * (h + 1));
@@ -88,12 +83,7 @@ function kuwahara(src, w, h, r) {
 
 const sm = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 
-/**
- * @param source  image or canvas
- * @param opts.max     longest side of the result
- * @param opts.color   0 = pure ink, 1 = a light wash of the photo's own colours
- * @param opts.seed    varies the noise so no two paintings share their washes
- */
+// color: 0 is pure ink, 1 lets the photo's own colours tint the wash
 export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
   const sw = source.naturalWidth || source.width, sh = source.naturalHeight || source.height;
   const s = Math.min(1, max / Math.max(sw, sh));
@@ -106,7 +96,7 @@ export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
   const d = img.data;
   const n = w * h;
 
-  // luminance, stretched between the 2nd and 98th percentiles
+  // luminance, stretched to the 2nd..98th percentile
   const L = new Float32Array(n);
   const hist = new Uint32Array(256);
   for (let i = 0; i < n; i++) {
@@ -122,13 +112,11 @@ export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
   for (let i = 0; i < n; i++) L[i] = Math.max(0, Math.min(1, (L[i] - off) / span));
 
   const k = Math.max(0.45, w / 900);
-  // flatten into painterly regions first, then soften their edges a touch
   const K = kuwahara(gauss(L, w, h, 0.7 * k), w, h, Math.max(2, Math.round(5 * k)));
   const G1 = gauss(K, w, h, 0.8 * k + 0.35);
   const G2 = gauss(K, w, h, 2.6 * k);
   const Gw = gauss(K, w, h, 1.6 * k);
 
-  // noise (tileable, bilinear)
   const nd = noiseData(256).data;
   const N = (x, y, sc, ch) => {
     const fx = (x * sc + seed * 37.1) % 256, fy = (y * sc + seed * 19.7) % 256;
@@ -139,7 +127,7 @@ export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
     return ((a + (b - a) * tx) * (1 - ty) + (cc + (dd - cc) * tx) * ty) / 255;
   };
 
-  // washes: mostly continuous, with two soft wet edges, uneven like a real brush
+  // washes: smooth base plus three soft steps with wobbly edges
   const hash = (x, y) => { const v = Math.sin(x * 127.1 + y * 311.7 + seed * 74.7) * 43758.5453; return v - Math.floor(v); };
   const wash = new Float32Array(n);
   const inv = 1 / k;
@@ -151,16 +139,15 @@ export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
              + 0.12 * sm(0.3 + j, 0.36 + j, t)
              + 0.16 * sm(0.52 + j, 0.58 + j, t)
              + 0.22 * sm(0.74 + j, 0.8 + j, t);
-      // the darkest washes are laid with a drier, streaky brush
       const streak = N(x * inv * 0.5, y * inv * 4, 1.3, 2);
       dv *= 1 - sm(0.7, 0.95, t) * sm(0.55, 0.8, streak) * 0.35;
-      dv *= 0.84 + 0.32 * N(x * inv, y * inv, 0.22, 3);   // uneven loading of the brush
-      dv *= 0.95 + 0.1 * hash(x, y);                        // fine granulation
+      dv *= 0.84 + 0.32 * N(x * inv, y * inv, 0.22, 3);   // uneven brush load
+      dv *= 0.95 + 0.1 * hash(x, y);
       wash[i] = dv;
     }
   }
   const washB = gauss(wash, w, h, 3 * k);
-  // lines: a dry brush along the darker side of edges
+  // lines on the dark side of edges, broken up like a dry brush
   const dens = new Float32Array(n);
   for (let y = 0, i = 0; y < h; y++) {
     for (let x = 0; x < w; x++, i++) {
@@ -172,7 +159,6 @@ export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
       dens[i] = Math.min(1, wash[i] + pool + line * 0.82);
     }
   }
-  // ink bleeds into the fibres
   const bleed = gauss(dens, w, h, 1.1 * k);
   const fib = (x, y) => N(x * 0.9, y * 0.9, 1, 2);
   for (let y = 0, i = 0; y < h; y++) {
@@ -183,7 +169,6 @@ export function inkify(source, { max = 1000, color = 0.12, seed = 0 } = {}) {
       for (let ch = 0; ch < 3; ch++) {
         const base = PAPER[ch] * paper;
         const inked = base + (INK[ch] - base) * D;
-        // a whisper of the photo's own colour, carried by the wash
         const tint = base * (d[o + ch] / 255) * 0.95 + base * 0.05;
         const tinted = tint + (INK[ch] - tint) * D;
         d[o + ch] = inked + (tinted - inked) * color * (1 - D * 0.6);

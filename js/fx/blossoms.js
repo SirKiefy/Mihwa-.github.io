@@ -1,25 +1,6 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Why I love you: a branch of red plum (홍매) painted in ink.
-//
-//  Her name, 美花, means "beautiful flower", so every flower here is a reason.
-//  An old trunk enters from the edge of the page, split and dry-brushed, with
-//  moss dots (태점); limbs are painted knuckle by knuckle, the way a painter
-//  lifts the brush at every node; thin twigs and a few young shoots reach up.
-//  It grows in stroke by stroke the first time the section is seen.
-//
-//  Along the twigs sit N fat buds, one per reason. Each is a real <button>
-//  laid over the painting. Opening one blooms the flower on the canvas (washed
-//  petals, fine ink outlines, stamens), lets a few petals drift down, plucks a
-//  string, and writes the reason on a card of poem paper (시전지).
-//
-//  Layers: .love-canvas holds the branch (painted once per layout),
-//  .love-overlay holds buds, flowers and falling petals (redrawn only while
-//  something moves). Both span the full width of the viewport so the trunk can
-//  come in from the edge of the page.
-//
-//  createBlossoms(root, { reasons, t, reduceMotion, mobile, sound }) → { relabel, setActive, destroy }
-// ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, stamp, strokeGen, wash, samplePath, sealStamp, Painter, PROFILE, PLUM } from '../ink/brush.js?v=774a543f68';
+// plum branch for the reasons section. every reason is a bud, a real <button> laid over the canvas
+// .love-canvas = branch (painted once per layout), .love-overlay = buds, flowers, petals. both are full viewport width so the trunk can come in from the edge
+import { rng, noise1, stamp, strokeGen, wash, samplePath, sealStamp, Painter, PROFILE, PLUM } from '../ink/brush.js?v=e0590b5d34';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -36,7 +17,7 @@ const HEART = [218, 186, 98];
 const TINTS = [PINK, ROSE, PINK, CINNABAR, PINK, ROSE];
 const NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二', '十三', '十四', '十五', '十六'];
 
-const TALL_BELOW = 640; // content width (px) under which the branch is composed upright
+const TALL_BELOW = 640; // below this content width (px) the branch is drawn upright
 const BLOOM_MS = 1150;
 const APPEAR_MS = 520;
 
@@ -49,9 +30,7 @@ function canvasOf(w, h) {
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${clamp(a).toFixed(3)})`;
 const fmt = (s, o) => String(s).replace(/\{(\w+)\}/g, (m, k) => (k in o ? o[k] : m));
 
-// ─────────────────────────── fine brush lines (구륵: outlines, stamens) ───────────────────────────
-
-/** A thin, tapered line drawn as one filled ribbon, so it stays smooth and crisp. */
+// thin tapered line drawn as one filled ribbon so it stays crisp. outlines, stamens etc
 function fineLine(g, ctrl, w, rgb, alpha, seed = 1, { press = 0.3, lift = 0.75 } = {}) {
   const S = samplePath(ctrl, 0.7);
   if (S.length < 2) return;
@@ -71,26 +50,18 @@ function fineLine(g, ctrl, w, rgb, alpha, seed = 1, { press = 0.3, lift = 0.75 }
   g.fill();
 }
 
-// ─────────────────────────── the flowers ───────────────────────────
-
-/**
- * An open plum flower centred on (0, 0): five washed petals with pigment
- * pooling at their rims, each outlined with two fine strokes that meet at its
- * edge, a pale heart and a spray of stamens tipped with ink dots.
- * `base` is the direction of the twig it grows from (sepals peek out there).
- */
+// open plum flower at (0,0). base = direction of the twig it grows from, the sepals peek out on that side
 function paintBlossom(g, R, { seed = 1, tint = PINK, tilt = 0.9, rot = 0, base = Math.PI / 2, paper = false } = {}) {
   const rand = rng(seed);
   const ca = Math.cos(rot), sa = Math.sin(rot);
   const P = (x, y) => [x * ca - y * tilt * sa, x * sa + y * tilt * ca];
-  // the paper drinks a little colour around it
   stamp(g, 0, 0, R * 1.3, tint, 0.07, 0.2);
   const a0 = rand() * TAU;
   const petals = [];
   for (let k = 0; k < 5; k++) {
     petals.push({ ang: a0 + (k * TAU) / 5 + (rand() - 0.5) * 0.22, d: R * (0.5 + rand() * 0.05), pr: R * (0.5 + rand() * 0.06) });
   }
-  // sepals, dark, behind the petals: only their tips show in the gaps on the twig side
+  // sepal tips, only in the two gaps facing the twig
   const gaps = petals.map((p, k) => a0 + ((k + 0.5) * TAU) / 5);
   const toTwig = (a) => Math.abs(Math.atan2(Math.sin(a - base), Math.cos(a - base)));
   gaps.sort((x, y) => toTwig(x) - toTwig(y)).slice(0, 2).forEach((a, k) => {
@@ -98,7 +69,7 @@ function paintBlossom(g, R, { seed = 1, tint = PINK, tilt = 0.9, rot = 0, base =
     fineLine(g, [p0, p1], R * 0.2, INKC, 0.82, seed + k, { press: 1, lift: 0.8 });
   });
   if (paper) {
-    // a painter leaves the branch out behind a flower: lay paper under the petals
+    // paper under the petals so the branch doesn't show through the flower
     g.save();
     g.fillStyle = 'rgba(240,234,223,0.86)';
     g.shadowColor = 'rgba(240,234,223,0.9)';
@@ -119,9 +90,8 @@ function paintBlossom(g, R, { seed = 1, tint = PINK, tilt = 0.9, rot = 0, base =
     const [px, py] = P(Math.cos(ang) * d, Math.sin(ang) * d);
     wash(g, px, py, pr, { rgb: tint, alpha: 0.17 + rand() * 0.08, seed: seed * 13 + k, wobble: 0.12, rim: 0.95, sx: 1, sy: tilt, rot });
   }
-  // colour gathers where the petals meet the heart
   stamp(g, 0, 0, R * 0.55, tint, 0.2, 0.3);
-  // outlines: two strokes per petal, meeting near its outer edge, never quite closed
+  // two outline strokes per petal, left a little open at the tip
   for (let k = 0; k < 5; k++) {
     const { ang, d, pr } = petals[k];
     const cx = Math.cos(ang) * d, cy = Math.sin(ang) * d;
@@ -139,10 +109,9 @@ function paintBlossom(g, R, { seed = 1, tint = PINK, tilt = 0.9, rot = 0, base =
     fineLine(g, arc(ang - 1.68, ang - gapA), lw, INKC, 0.5 + rand() * 0.2, seed * 3 + k);
     fineLine(g, arc(ang + 1.68, ang + gapB), lw * 0.9, INKC, 0.45 + rand() * 0.2, seed * 5 + k);
   }
-  // heart
   stamp(g, 0, 0, R * 0.26, HEART, 0.6, 0.35);
   stamp(g, 0, 0, R * 0.11, [140, 150, 70], 0.45, 0.4);
-  // stamens and their anthers (the dots that make a plum flower)
+  // stamens. the ink dots on the ends are what make it read as plum
   const ns = 18 + Math.floor(rand() * 7);
   for (let k = 0; k < ns; k++) {
     const a = (k / ns) * TAU + (rand() - 0.5) * 0.3;
@@ -159,12 +128,10 @@ function paintBlossom(g, R, { seed = 1, tint = PINK, tilt = 0.9, rot = 0, base =
     g.fillStyle = rand() < 0.16 ? 'rgba(176,128,44,0.85)' : 'rgba(26,20,18,0.85)';
     g.fill();
   }
-  // the pistil
   const pe = P(Math.cos(a0 + 0.6) * R * 0.2, Math.sin(a0 + 0.6) * R * 0.2);
   fineLine(g, [[0, 0], pe], Math.max(0.55, R * 0.032), [118, 128, 62], 0.75, seed, { press: 1, lift: 0.3 });
 }
 
-/** A fat closed bud centred on (0, 0), pointing along `dir`. */
 function paintBud(g, r, { seed = 1, tint = ROSE, dir = -Math.PI / 2 } = {}) {
   const rand = rng(seed);
   const ca = Math.cos(dir), sa = Math.sin(dir);
@@ -174,7 +141,6 @@ function paintBud(g, r, { seed = 1, tint = ROSE, dir = -Math.PI / 2 } = {}) {
   wash(g, c[0], c[1], r, { rgb: tint, alpha: 0.46, seed, wobble: 0.08, rim: 1, sx: 1.1, sy: 0.9, rot: dir });
   const cap = at(r * 0.38, (rand() - 0.5) * r * 0.2);
   stamp(g, cap[0], cap[1], r * 0.62, PLUM, 0.26, 0.35);
-  // outline, open towards the calyx
   const pts = [];
   for (let j = 0; j <= 12; j++) {
     const th = lerp(-2.15, 2.15, j / 12);
@@ -182,9 +148,7 @@ function paintBud(g, r, { seed = 1, tint = ROSE, dir = -Math.PI / 2 } = {}) {
   }
   fineLine(g, pts.slice(0, 7), Math.max(0.8, r * 0.11), INKC, 0.62, seed * 3);
   fineLine(g, pts.slice(6).reverse(), Math.max(0.75, r * 0.1), INKC, 0.55, seed * 5);
-  // where the petals fold over each other
   fineLine(g, [at(r * 0.9, -r * 0.1), at(r * 0.55, r * 0.2), at(r * 0.15, r * 0.4)], Math.max(0.5, r * 0.06), INKC, 0.2, seed * 7);
-  // calyx: dark sepals cupping the bud where it meets the twig
   for (const k of [-1, 1]) {
     const p0 = at(-r * 1.02, k * r * 0.18), p1 = at(-r * 0.78, k * r * 0.62);
     fineLine(g, [p0, p1], r * 0.3, INKC, 0.78, seed + k, { press: 1, lift: 0.8 });
@@ -192,7 +156,7 @@ function paintBud(g, r, { seed = 1, tint = ROSE, dir = -Math.PI / 2 } = {}) {
   fineLine(g, [at(-r * 1.2, 0), at(-r * 0.92, 0)], r * 0.34, INKC, 0.85, seed + 5, { press: 1, lift: 0.5 });
 }
 
-/** One loose petal, for the ones that drift down: a cupped oval, narrower where it was attached. */
+// single loose petal for the falling ones
 function paintPetal(g, r, { seed = 1, tint = PINK } = {}) {
   const rand = rng(seed);
   const pts = [];
@@ -221,7 +185,6 @@ function paintPetal(g, r, { seed = 1, tint = PINK } = {}) {
   fineLine(g, arc, Math.max(0.55, r * 0.07), INKC, 0.32, seed);
 }
 
-/** A tiny bud that is only scenery. */
 function tinyBud(g, x, y, r, dir, seed) {
   const ca = Math.cos(dir), sa = Math.sin(dir);
   fineLine(g, [[x - ca * r * 0.95, y - sa * r * 0.95], [x - ca * r * 0.2, y - sa * r * 0.2]], r * 0.95, INKC, 0.85, seed, { press: 1, lift: 0.4 });
@@ -229,12 +192,9 @@ function tinyBud(g, x, y, r, dir, seed) {
   stamp(g, x + ca * r * 0.45, y + sa * r * 0.45, r * 0.6, PLUM, 0.32, 0.4);
 }
 
-// ─────────────────────────── composing the branch ───────────────────────────
+// --- composing the branch ---
 
-/**
- * Builds the whole painting for one size: the branches, the order they are
- * painted in, where the reason buds sit, the scenery buds and the moss dots.
- */
+// works out the whole painting for one size. nothing gets drawn here
 function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
   const rand = rng(seed);
   const cw = bx1 - bx0;
@@ -275,7 +235,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     addOcc(b);
     return b;
   }
-  /** a limb through key points, broken into the angular zigzag of a plum branch */
+  // plum branches zigzag at the joints, so break the line up between the keys
   function limb(keys, w0, w1, depth, kind, parent = null, at = 0, zig = 1) {
     const nodes = [];
     let sign = rand() < 0.5 ? -1 : 1;
@@ -296,14 +256,14 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     nodes.push({ x: e[0], y: e[1] });
     return finish(nodes, w0, w1, depth, kind, parent, at);
   }
-  /** a twig from node `ni` of `parent`, zigzagging outward; stops at edges and crowding */
+  // twig off node ni, stops at the edges or when it gets crowded
   function twig(parent, ni, side, len, depth, hang = 0) {
     const nd = parent.nodes;
     const p = nd[ni];
     const a = nd[Math.max(0, ni - 1)], c = nd[Math.min(nd.length - 1, ni + 1)];
     const pdir = Math.atan2(c.y - a.y, c.x - a.x);
     let ang = pdir + side * (0.55 + rand() * 0.55);
-    // plum twigs reach up and outward; only a few hang
+    // mostly up and out, only a few hang
     if (Math.sin(ang) > 0.45 && rand() > hang * 0.8) ang = pdir - side * (0.55 + rand() * 0.55);
     if (Math.sin(ang) > 0.75 + hang * 0.2) return null;
     const nseg = depth >= 3 ? 1 + (rand() < 0.5 ? 1 : 0) : 2 + Math.floor(rand() * 2);
@@ -322,7 +282,6 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
       x = nx; y = ny;
     }
     if (nodes.length < 2) return null;
-    // fine, firm twigs: thin where they leave the limb and only slowly finer
     const w0 = Math.min(p.w * 0.5, depth >= 3 ? S * 0.0058 : S * 0.0088);
     return finish(nodes, Math.max(1.3, w0), Math.max(0.8, w0 * 0.42), depth, 'twig', parent, ni);
   }
@@ -340,7 +299,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
   const nearest = (b, x, y) => { let bi = 0, bd = Infinity; b.nodes.forEach((n, i) => { const d = Math.hypot(n.x - x, n.y - y); if (d < bd) { bd = d; bi = i; } }); return bi; };
   const nodeAt = (b, i) => [b.nodes[i].x, b.nodes[i].y];
 
-  // ── the skeleton, by hand; everything smaller grows from it ──
+  // main skeleton is placed by hand, everything smaller grows off it
   let trunk, limbs = [], shoots = [];
   const tone = (b, v) => { b.tone = v; return b; };
   if (!tall) {
@@ -349,8 +308,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     const end = trunk.nodes.length - 1;
     const A = tone(limb([nodeAt(trunk, end), jit([X(0.24), Y(0.32)]), jit([X(0.34), Y(0.27)]), jit([X(0.45), Y(0.23)]), [X(0.55), Y(0.19)]], S * 0.058, S * 0.024, 1, 'limb', trunk, end), 0.93);
     const A1 = tone(limb([nodeAt(A, A.nodes.length - 1), jit([X(0.63), Y(0.12)]), jit([X(0.74), Y(0.085)]), [X(0.86), Y(0.05)]], S * 0.023, S * 0.004, 1, 'limb', A, A.nodes.length - 1), 0.9);
-    // the second limb reaches right above the card; on a short stage, where the card
-    // stands nearly as tall as the painting, there is no room for it there, so it rises instead
+    // second limb normally runs above the card. on a short stage the card is nearly as tall as the painting so it goes up instead
     const dy = Math.min(0.36, ay - 0.15);
     const A2 = tone(ay < 0.26
       ? limb([nodeAt(A, A.nodes.length - 1), jit([X(0.575), Y(0.11)]), [X(0.585), Y(0.025)]], S * 0.016, S * 0.004, 1, 'limb', A, A.nodes.length - 1)
@@ -377,11 +335,10 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     const ka = nearest(A, X(0.46), Y(0.34));
     shoots.push(tone(limb([nodeAt(A, ka), [X(0.49), Y(0.2)], [X(0.51), Y(0.07)]], S * 0.0088, S * 0.0026, 2, 'shoot', A, ka, 0.4), 0.85));
   }
-  // twigs
   for (const b of limbs) sprout(b, 0.62, S * (tall ? 0.15 : 0.16), 2);
   for (const b of shoots) sprout(b, 0.4, S * 0.08, 3);
 
-  // ── where the reason buds can sit ──
+  // possible spots for the reason buds
   const cands = [];
   const marginX = Math.max(26, R * 1.3), marginY = Math.max(26, R * 1.4);
   const okSite = (x, y) => x > bx0 + marginX && x < bx1 - marginX && y > marginY && y < H - marginY && !inAvoid(x, y, R * 1.8);
@@ -401,7 +358,6 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
       if (ny > 0 && rand() < 0.75) { nx = -nx; ny = -ny; }
       const off = w * 0.5 + R * 0.42;
       const px = x + nx * off, py = y + ny * off;
-      // (never on top of another branch: a bud grows beside the wood, not over it)
       if (okSite(px, py) && !crowded(px, py, [b.id], R * 0.62)) cands.push({ x: px, y: py, dir: Math.atan2(ny, nx) + (rand() - 0.5) * 0.5, base: Math.atan2(-ny, -nx), b, tip: false });
     }
     const tip = nd[nd.length - 1], pre = nd[nd.length - 2];
@@ -409,7 +365,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     const tx = tip.x + Math.cos(ta) * R * 0.45, ty = tip.y + Math.sin(ta) * R * 0.45;
     if (okSite(tx, ty) && !crowded(tx, ty, [b.id], R * 0.62)) cands.push({ x: tx, y: ty, dir: ta, base: ta + Math.PI, b, tip: true });
   }
-  // spread them out: greedy farthest-point, starting near the middle of the branch
+  // greedy farthest point so they spread out, starting near the middle
   const sites = [];
   if (cands.length) {
     let cx = 0, cy = 0;
@@ -431,7 +387,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
       for (let i = 0; i < cands.length; i++) md[i] = Math.min(md[i], Math.hypot(cands[i].x - c.x, cands[i].y - c.y));
     }
   }
-  // (in the unlikely case there were too few places, double up gently)
+  // not enough spots (rare), just double up
   while (sites.length < N && sites.length) {
     const s = sites[sites.length % Math.max(1, sites.length)];
     sites.push({ ...s, x: s.x + R * 1.4, y: s.y - R * 0.6 });
@@ -449,7 +405,6 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     s.b.sites.push(i);
   });
 
-  // scenery: a few tiny buds where no reason sits
   const tiny = [];
   const farFromSites = (x, y, d) => sites.every((s) => Math.hypot(s.x - x, s.y - y) > d);
   for (const b of branches) {
@@ -470,7 +425,7 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
     }
   }
 
-  // moss dots (태점) on the old wood: on top of the trunk and limbs, near the knuckles
+  // moss dots on top of the old wood, near the knuckles
   const moss = [];
   for (const b of [trunk, ...limbs]) {
     const nd = b.nodes;
@@ -493,17 +448,10 @@ function compose({ W, H, bx0, bx1, avoid, tall, N, seed }) {
   return { S, R, branches, trunk, limbs, shoots, sites, tiny, moss };
 }
 
-// ─────────────────────────── an ink stroke ───────────────────────────
+// --- ink stroke ---
 
-/**
- * One stroke of a loaded brush, made of three things painted together:
- *   body   – a smooth ribbon with softly wobbling edges (opaque on its own
- *            layer, laid down at the stroke's tone, so it never shows seams)
- *   hairs  – long continuous bristle streaks that run dry and skip (비백)
- *   rims   – ink pooling along both edges, as it does on absorbent paper
- * It paints itself a few samples at a time (for the growing animation) and is
- * finally committed to the branch canvas with a faint bleed around it.
- */
+// one brush stroke = body (smooth ribbon on its own layer, so no seams) + dry hair streaks + dark rims.
+// paints a few samples at a time while growing, then gets stamped onto the branch canvas with a faint bleed
 class InkStroke {
   constructor(spec, dpr) {
     const {
@@ -518,7 +466,7 @@ class InkStroke {
     if (this.done) return;
     const rand = rng(seed);
     this.rand = rand;
-    // how much paper a dry brush lets through its body (flying white, 비백)
+    // flying white: how much paper shows through a dry stroke
     this.fw = smooth(0.45, 0.9, dry);
     const w = S.map((p) => Math.max(0, width * prof(p.t)));
     const L = [], Rr = [], BL = [], BR = [];
@@ -526,7 +474,6 @@ class InkStroke {
     S.forEach((p, i) => {
       const eL = 1 + (noise1(p.s * 0.045 + seed * 3.1, 2) - 0.5) * 0.24 + (noise1(p.s * 0.23 + seed, 5) - 0.5) * 0.06;
       const eR = 1 + (noise1(p.s * 0.045 + seed * 7.7, 2) - 0.5) * 0.24 + (noise1(p.s * 0.23 + seed + 9, 5) - 0.5) * 0.06;
-      // a dry brush leaves the body a little narrower than the hairs towards its end
       const kb = 1 - dry * 0.16 * smooth(0.15, 1, p.t) - dry * 0.08 * noise1(p.s * 0.05 + seed, 6);
       const hw = w[i] * 0.5;
       L.push([p.x + p.nx * hw * eL, p.y + p.ny * hw * eL]);
@@ -537,7 +484,7 @@ class InkStroke {
       y0 = Math.min(y0, p.y - hw * 1.3); y1 = Math.max(y1, p.y + hw * 1.3);
     });
     this.w = w; this.L = L; this.R = Rr; this.BL = BL; this.BR = BR;
-    // knots: the brush is lifted and pressed again here (a plum branch's joints)
+    // knots = the joints, where the brush lifts and presses again
     this.knot = new Int8Array(this.n);
     this.near = new Uint8Array(this.n);
     for (const kt of knots) {
@@ -552,8 +499,7 @@ class InkStroke {
     this.cw = Math.ceil((x1 + pad) * dpr) - this.ox; this.ch = Math.ceil((y1 + pad) * dpr) - this.oy;
     const nbr = nb ?? clamp(Math.round(width / 1.7), 3, 34);
     this.hairs = [];
-    // a broad brush splits into a few clumps of hair that run dry together,
-    // which is what gives an old trunk its long white streaks
+    // big brushes split into clumps that run dry together, that's what gives the trunk its long white streaks
     const nClump = nbr >= 10 ? 3 + Math.floor(rand() * 3) : 1;
     const clumps = Array.from({ length: nClump }, () => ({ jit: rand() * 1000, ink: 0.75 + rand() * 0.45, rate: 0.5 + rand() * 1.1 }));
     for (let j = 0; j < nbr * hair; j++) {
@@ -572,7 +518,6 @@ class InkStroke {
         jit: rand() * 1000, px: null, py: null, white: [],
       });
     }
-    // the dark pooled edges: thinner on a broad brush, and broken more the drier it runs
     const rlw = Math.max(0.55, Math.min(width * 0.05 + 0.25, 1.1 + width * 0.022));
     this.rims = [-1, 1].map((sd) => ({ sd, a: tone * rim * (0.45 + rand() * 0.25), lw: rlw, jit: rand() * 1000, px: null, py: null, dry }));
     this.press = press;
@@ -591,25 +536,22 @@ class InkStroke {
     this.gb.lineCap = 'butt';
     this.gb.lineJoin = 'round';
     if (this.press > 0) {
-      // the brush pressed down at a node leaves a darker, rounder blot
       const p = this.S[0], w0 = this.w[Math.min(this.n - 1, 2)];
       stamp(this.gb, p.x, p.y, w0 * 0.62, this.rgb, this.tone * 0.3 * this.press, 0.55);
     }
   }
-  /** paint the next `count` samples; returns how many were painted */
   step(count) {
     if (this.done) return 0;
     this.alloc();
     const i0 = this.i, i1 = Math.min(this.n - 1, i0 + Math.max(1, count));
     const { ga, gb, S, L, R, BL, BR, w } = this;
     const [r, g, b] = this.rgb;
-    // presses at the knots
     for (let i = i0; i <= i1; i++) {
       if (!this.knot[i] || i === 0) continue;
       const p = S[i];
       stamp(gb, p.x, p.y, w[i] * 0.66, this.rgb, this.tone * 0.2 * (this.press || 0.6), 0.5);
     }
-    // body, overlapping the previous piece by one sample
+    // overlap the last piece by one sample so there's no seam
     const a0 = Math.max(0, i0 - 1);
     if (i0 === 0 && (this.caps === true || this.caps === 'start')) this.cap(0);
     ga.beginPath();
@@ -618,8 +560,7 @@ class InkStroke {
     for (let i = i1; i >= a0; i--) ga.lineTo(BR[i][0], BR[i][1]);
     ga.closePath();
     ga.fill();
-    // hairs: long streaks that skip where the hair runs dry (low-frequency
-    // noise, so the gaps are long like real 비백 rather than short dashes)
+    // low freq noise so the dry gaps come out long, not short dashes
     const fw = this.fw > 0.02;
     for (const h of this.hairs) {
       let pen = false, any = false;
@@ -637,7 +578,6 @@ class InkStroke {
           gb.lineTo(x, y);
           any = true;
         } else pen = false;
-        // where a dry hair skips inside the body, the paper shows through it
         if (fw && skip && h.px !== null && i > 0 && ww > 2 && Math.abs(h.o) < 0.82) h.white.push(h.px, h.py, x, y, i);
         h.px = x; h.py = y;
         if (i > 0) h.ink -= h.rate / this.n;
@@ -649,9 +589,8 @@ class InkStroke {
       }
     }
     const last = i1 >= this.n - 1;
-    // (the next piece of body overlaps this one by a sample, so the newest bit of white waits for it)
+    // hold back the newest white, the next body piece overlaps it
     if (fw) this.flyWhite(last ? Infinity : i1 - 1);
-    // rims: broken runs, each with its own weight and darkness
     for (const m of this.rims) {
       const E = m.sd < 0 ? BR : BL;
       let pen = false;
@@ -686,7 +625,6 @@ class InkStroke {
     this.gb.strokeStyle = `rgba(${r},${g},${b},${clamp(m.ra).toFixed(3)})`;
     this.gb.stroke();
   }
-  /** wipe the dry streaks out of the body, up to sample `limit` */
   flyWhite(limit) {
     const g = this.ga;
     g.save();
@@ -715,11 +653,10 @@ class InkStroke {
     }
     g.restore();
   }
-  /** a rounded end: where two knuckle strokes overlap, the joint darkens as it does on paper */
+  // round end cap. where two strokes overlap at a joint it goes darker, like on real paper
   cap(i) {
     const p = this.S[i], r = this.w[i] * 0.5 * (i ? 0.9 : 0.8);
     if (r < 0.6) return;
-    // a slightly irregular blot, a little longer along the stroke than across it
     const g = this.ga, a = Math.atan2(p.ny, p.nx), ca = Math.cos(a), sa = Math.sin(a);
     const seed = this.rand() * 100;
     g.beginPath();
@@ -734,13 +671,13 @@ class InkStroke {
     g.fill();
   }
   finish() { while (!this.done) this.step(400); }
-  /** composite onto a canvas whose transform is the identity (device pixels) */
+  // target canvas needs an identity transform (device px)
   drawTo(g, withHalo = false) {
     if (!this.A) return;
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
     if (withHalo && this.halo > 0) {
-      // ink bleeding a little into the paper: the body, blurred by scaling it down and up
+      // bleed into the paper. cheap blur: scale the body down and back up
       const k = 7;
       const tiny = canvasOf(this.cw / k, this.ch / k);
       const tg = tiny.getContext('2d');
@@ -760,13 +697,11 @@ class InkStroke {
   release() { this.A = this.B = this.ga = this.gb = null; }
 }
 
-/** a moss dot (태점): a short fat dab with a soft bleed */
 function mossDot(g, x, y, r, a, seed) {
   const rand = rng(seed);
   const rx = r * (0.95 + rand() * 0.75), ry = r * (0.55 + rand() * 0.35);
   stamp(g, x, y, r * 2.2, INKC, 0.14, 0.4);
   if (rand() < 0.3) {
-    // a smaller companion dot
     const d = r * (1.8 + rand()), th = a + (rand() - 0.5) * 1.4;
     g.beginPath();
     g.ellipse(x + Math.cos(th) * d, y + Math.sin(th) * d, r * 0.45, r * 0.38, a, 0, TAU);
@@ -787,9 +722,9 @@ function mossDot(g, x, y, r, a, seed) {
   g.fill();
 }
 
-// ─────────────────────────── turning the composition into brushwork ───────────────────────────
+// --- brushwork ---
 
-/** Strokes in painting order, each { make(), ms } (ms: how long it takes to paint). */
+// pushes strokes in painting order. ms = how long each one takes to paint
 function brushwork(seed, push) {
   const rand = rng(seed * 7 + 1);
   let sd = Math.floor(seed * 1000);
@@ -807,7 +742,6 @@ function brushwork(seed, push) {
     return [-(c.y - a.y) / L, (c.x - a.x) / L];
   });
 
-  // the old trunk: pale and dry inside, dark broken edges, a fissure, a few scars
   function trunk(b) {
     const nd = b.nodes;
     const wmax = Math.max(...nd.map((n) => n.w));
@@ -815,14 +749,12 @@ function brushwork(seed, push) {
     const prof = (t) => (widthAt(nd, t) / wmax) * (1 - 0.2 * smooth(0.92, 1, t));
     add({ pts, width: wmax, prof, tone: 0.92, body: 0.42, dry: 0.82, rim: 1.1, seed: sd++, halo: 0.16, hair: 1, caps: 'end' }, 0.55);
     const nm = normals(nd);
-    // the shadow side, a second drier pass so the old wood has some roundness
+    // second, drier pass on the shadow side so the trunk looks round
     const down = nm[Math.floor(nm.length / 2)][1] > 0 ? 1 : -1;
     const sh = nd.map((n, i) => [n.x + nm[i][0] * n.w * 0.24 * down, n.y + nm[i][1] * n.w * 0.24 * down]);
     add({ pts: sh, width: wmax * 0.46, prof, tone: 0.9, body: 0.22, dry: 0.92, rim: 0.25, seed: sd++, halo: 0, nb: 10 }, 0.9);
-    // a fissure running along the trunk
     const fis = nd.map((n, i) => [n.x + nm[i][0] * n.w * 0.14, n.y + nm[i][1] * n.w * 0.14]);
     add({ pts: fis.slice(0, Math.max(3, Math.ceil(fis.length * 0.75))), width: wmax * 0.2, prof: (t) => Math.sin(Math.PI * clamp(t)) * 0.9 + 0.1, tone: 0.9, body: 0.38, dry: 0.9, rim: 0.5, seed: sd++, halo: 0, nb: 6 }, 0.9);
-    // scars across the knuckles
     for (let i = 1; i < nd.length - 1; i++) {
       if (rand() < 0.6) continue;
       const n = nd[i], [nx, ny] = nm[i];
@@ -834,16 +766,13 @@ function brushwork(seed, push) {
       add({ pts: [p0, p1], width: n.w * 0.08, prof: PROFILE.stroke, tone: 0.8, body: 0.55, dry: 0.6, rim: 0.1, seed: sd++, halo: 0, nb: 3 }, 0.6);
     }
   }
-  // limbs and twigs: one stroke through angular joints; at each joint the brush
-  // is pressed again (a soft darker blot, fresh ink in the hairs, a break in the rim)
+  // limbs and twigs: one stroke through all the joints, re-pressing the brush at each
   function knuckled(b) {
     const nd = b.nodes;
     const isLimb = b.depth === 1;
     const pts = [];
     const nodeIdx = [];
-    // a branch that leaves the side of its parent starts at the parent's edge
-    // (painted across the old wood it would leave a dark band); one that
-    // carries on from the parent's end starts where the parent stopped
+    // side branches start at the parent's edge, painting across the old wood leaves a dark band
     const par = b.parent;
     const fromSide = !!par && b.at < par.nodes.length - 1;
     for (let i = 0; i < nd.length - 1; i++) {
@@ -860,7 +789,7 @@ function brushwork(seed, push) {
         const off = Math.min(L * 0.4, (pn[k].w * 0.36) / Math.max(0.45, sinA));
         pts.push([a.x + ux * off, a.y + uy * off]);
       } else if (i === 0) {
-        // carrying on from the end of the parent: the brush touches down inside its end, narrow, then presses
+        // continuing off the parent's end: touch down just inside it, narrow, then press
         const back = par ? Math.min(a.w * 0.45, 12) : Math.min(a.w * 0.3, 5);
         pts.push([a.x - ux * back, a.y - uy * back]);
       }
@@ -870,7 +799,6 @@ function brushwork(seed, push) {
       if (i < nd.length - 2) pts.push([c.x - ux * epsC, c.y - uy * epsC]);
       else pts.push([c.x, c.y]);
     }
-    // arc length of the control polygon, and where each node falls on it
     const cum = [0];
     for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
     const total = cum[cum.length - 1] || 1;
@@ -884,7 +812,7 @@ function brushwork(seed, push) {
       let k = 1;
       while (k < ns.length - 1 && ns[k] < sx) k++;
       const f = clamp((sx - ns[k - 1]) / Math.max(1e-3, ns[k] - ns[k - 1]));
-      // limbs taper all along their last joint; twigs hold their width and lift late
+      // limbs taper over their whole last joint, twigs keep their width and lift late
       const wb = k === ns.length - 1 ? lerp(ws[k - 1], tipW, isLimb || b.kind === 'shoot' ? Math.pow(f, 0.8) : smooth(0.3, 1, f)) : lerp(ws[k - 1], ws[k], f);
       let bulge = 0;
       for (let j = 1; j < ns.length - 1; j++) bulge += Math.exp(-Math.pow((sx - ns[j]) / Math.max(2, ws[j] * 0.7), 2));
@@ -907,7 +835,7 @@ function polyLen(pts) {
   return L;
 }
 
-// ─────────────────────────── the part ───────────────────────────
+// --- the section ---
 
 export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceMotion = false, mobile = false, sound = {} } = {}) {
   const $ = (s) => root.querySelector(s);
@@ -941,7 +869,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   let pips = [];
   const st = []; // per reason: { appearAt, bloomAt, nudgeAt }
   let bloomed = 0;
-  let current = -1; // reason on the card, -1 = the introduction
+  let current = -1; // reason on the card, -1 = intro
   let faceOn = 0;
   let painter = null, growScale = 1, avoidTop = null;
   let grown = false, growStarted = false, seen = false;
@@ -954,7 +882,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   if (reduceMotion) root.classList.add('is-still');
   if (mobile) root.classList.add('is-touch');
 
-  // the card's paper is printed with a faint sprig of plum (once)
+  // faint plum sprig printed on the card paper
   try {
     const pc = canvasOf(232, 184);
     const pg = pc.getContext('2d');
@@ -967,15 +895,14 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     at(80, 78, () => paintBlossom(pg, 9, { seed: 8, tint: ROSE, tilt: 0.7, rot: 2.1, base: -1.2 }));
     at(28, 14, () => paintBud(pg, 4, { seed: 2, tint: ROSE, dir: -2.2 }));
     at(38, 86, () => paintBud(pg, 3.5, { seed: 6, tint: ROSE, dir: 2.9 }));
-    // printed in a single pale cinnabar, as the motifs on old poem paper were, so writing can run over it
+    // all one pale red like old printed poem paper, so the text can sit on top
     pg.setTransform(1, 0, 0, 1, 0, 0);
     pg.globalCompositeOperation = 'source-in';
     pg.fillStyle = 'rgb(184,50,42)';
     pg.fillRect(0, 0, pc.width, pc.height);
     root.style.setProperty('--love-print', `url(${pc.toDataURL('image/png')})`);
-  } catch (e) { /* only decoration */ }
+  } catch (e) { /* just decoration */ }
 
-  // ── reasons, buttons, pips ──
   function syncReasons() {
     const list = (typeof reasons === 'function' ? reasons() : reasons) || [];
     texts = list.map((s) => String(s));
@@ -986,7 +913,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
       bloomed = st.filter((s) => s.bloomAt).length;
       if (current >= N) current = -1;
       buildButtons();
-      // the branch may have grown a bud since the last flower opened (or lost one)
+      // count changed, so the finale may need undoing or showing
       if (doneShown && bloomed < N) { doneShown = false; root.classList.remove('is-done'); doneEl.setAttribute('aria-hidden', 'true'); }
       else if (!doneShown && N && bloomed === N) later(finale, 400);
       return true;
@@ -1021,7 +948,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     buttons.forEach((b, i) => b.setAttribute('aria-label', fmt(t('love.bud'), { i: i + 1, n: N })));
   }
 
-  // ── sizes and layout ──
   function measure() {
     const sr = stage.getBoundingClientRect();
     const vw = document.documentElement.clientWidth || innerWidth;
@@ -1036,7 +962,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     if (!tall) {
       const rr = reading.getBoundingClientRect();
       const pad = 10;
-      // one spare line above the card, so another language's longer reasons still fit
+      // spare line above the card so longer translations still fit
       const lh = parseFloat(getComputedStyle(faces[faceOn].querySelector('.love-text')).lineHeight) || 40;
       avoid = { x0: rr.left - pad, y0: rr.top - sr.top - pad, x1: rr.right + pad, y1: h + 20, room: Math.min(lh, h * 0.08) };
     }
@@ -1052,8 +978,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     const maxPx = 9e6;
     if (m.w * m.h * d * d > maxPx) d = Math.sqrt(maxPx / (m.w * m.h));
     const key = [m.w, m.h, m.bx.x0, m.bx.x1, tall, N, d].join('|');
-    // (a card that grew past the room left for it, e.g. after a change of language, needs a new branch;
-    //  one that shrank keeps the old one, so the painting does not change under her)
+    // card grew past its space (language switch), recompose. if it shrank keep the old branch so the painting doesn't jump
     const outgrown = !!(m.avoid && avoidTop !== null && m.avoid.y0 < avoidTop - 0.5);
     if (!force && key === layout.key && !outgrown) return;
     layout.key = key;
@@ -1067,7 +992,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     comp = compose({ W, H, bx0: box.x0, bx1: box.x1, avoid, tall, N, seed: SEED });
     placeButtons();
     makeSprites();
-    // the branch: grow it the first time, otherwise repaint it at once
     bg.setTransform(1, 0, 0, 1, 0, 0);
     bg.clearRect(0, 0, canvas.width, canvas.height);
     painter = null;
@@ -1089,7 +1013,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
       if (!s) return;
       b.style.setProperty('--x', `${s.x.toFixed(1)}px`);
       b.style.setProperty('--y', `${s.y.toFixed(1)}px`);
-      // an open flower is bigger than a bud: a larger target, and a focus ring that clears its petals
+      // open flowers are bigger, so bigger hit area and focus ring
       b.style.setProperty('--hit-open', `${Math.max(48, s.R * 2.2).toFixed(0)}px`);
       b.style.setProperty('--ring', `${Math.max(48, s.R * 2.7).toFixed(0)}px`);
     });
@@ -1125,9 +1049,8 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     pause(180);
     for (const b of comp.limbs) { paintTree(b); pause(100); }
     for (const b of comp.shoots) paintTree(b);
-    for (const b of comp.branches) paintTree(b); // anything left over
+    for (const b of comp.branches) paintTree(b);
     pause(160);
-    // scenery buds, then the moss dots, last of all as a painter would
     comp.tiny.forEach((u, k) => timed(45, () => { bg.setTransform(dpr, 0, 0, dpr, 0, 0); tinyBud(bg, u.x, u.y, u.r, u.dir, 300 + k); }));
     comp.moss.forEach((m, k) => timed(32, () => { bg.setTransform(dpr, 0, 0, dpr, 0, 0); mossDot(bg, m.x, m.y, m.r, m.a, 500 + k); }));
     timed(1, () => { for (let i = 0; i < N; i++) showBud(i); });
@@ -1150,11 +1073,11 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   function startGrowth() {
     growStarted = true;
     if (reduceMotion) { paintAll(); root.classList.add('is-painted'); drawOverlay(performance.now()); return; }
-    // (if a resize restarted the growth, buds that have not opened wait for their twig again)
+    // a resize restarted the growth, unopened buds wait for their twig again
     for (let i = 0; i < N; i++) if (!st[i].bloomAt) { st[i].appearAt = 0; if (buttons[i]) buttons[i].classList.remove('is-shown'); }
     const { p, total } = queue();
     painter = p;
-    // the whole branch takes about five seconds, however much there is of it
+    // ~5s total however big the branch is
     growScale = total / (tall ? 4600 : 5400);
     root.classList.add('is-painted');
     poke();
@@ -1182,7 +1105,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     if (b && !b.classList.contains('is-shown')) b.classList.add('is-shown');
   }
 
-  // ── sprites for buds, flowers and loose petals ──
   function makeSprites() {
     sprites = comp.sites.map((s) => {
       const size = s.R * 3.1;
@@ -1208,7 +1130,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     });
   }
 
-  // ── the overlay: buds, flowers, falling petals ──
   function drawOverlay(now) {
     og.setTransform(1, 0, 0, 1, 0, 0);
     og.clearRect(0, 0, overlay.width, overlay.height);
@@ -1233,7 +1154,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
       const kn = s.nudgeAt ? clamp((now - s.nudgeAt) / 700) : 1;
       if (kb < 1 || kn < 1) busy = true;
       if (kb < 1 && !reduceMotion) {
-        // the bud swells and gives way; colour bleeds out into the wet paper
         og.globalAlpha = 1 - smooth(0, 0.42, kb);
         const bs = 1 + 0.35 * kb;
         og.drawImage(sp.bud, site.x - (sp.budSize * bs) / 2, site.y - (sp.budSize * bs) / 2, sp.budSize * bs, sp.budSize * bs);
@@ -1245,7 +1165,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
         og.drawImage(sp.bloom, site.x - sp.bloomSize / 2, site.y - sp.bloomSize / 2, sp.bloomSize, sp.bloomSize);
         og.globalAlpha = 1;
       } else {
-        // a little nod when it is chosen again
         const nod = kn < 1 && !reduceMotion ? Math.sin(kn * Math.PI) * (1 - kn) : 0;
         if (nod) {
           og.save();
@@ -1276,7 +1195,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     return busy;
   }
 
-  /** the flower opens from its heart outward, like colour spreading on wet hanji */
+  // opens from the middle out, like colour spreading on wet paper
   function drawReveal(sp, site, k) {
     const src = sp.bloom;
     if (!sp.tmp) sp.tmp = canvasOf(src.width, src.height);
@@ -1344,7 +1263,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     return petals.length > 0;
   }
 
-  // ── the card ──
   function fillFace(face, i) {
     const num = face.querySelector('.love-num');
     const kick = face.querySelector('.love-kick-text');
@@ -1379,7 +1297,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     faceOn = 1 - faceOn;
     buttons.forEach((b, k) => b.classList.toggle('is-current', k === i));
   }
-  /** keep the card one size whatever it says, so nothing jumps */
+  // size the card for its longest text so nothing jumps
   function measureCard() {
     if (!facesEl) return;
     const probe = faces[0].cloneNode(true);
@@ -1410,7 +1328,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     pips.forEach((p, i) => p.classList.toggle('is-on', !!(st[i] && st[i].bloomAt)));
   }
 
-  // ── opening a bud ──
   function activate(i) {
     const s = st[i];
     if (!s || !s.appearAt || !comp) return;
@@ -1443,7 +1360,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     doneEl.setAttribute('aria-hidden', 'false');
     stampSeal();
     if (!reduceMotion) {
-      // a last breeze through the whole branch
       for (let i = 0; i < N; i++) spawnPetals(i, 1 + (i % 2), 0.15 + (i % 5) * 0.3);
     }
     [0, 2, 4, 7].forEach((n, k) => later(() => pluck(n + 2, { gain: 0.16 }), 400 + k * 170));
@@ -1467,7 +1383,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     else draw();
   }
 
-  // ── input ──
   function onClick(e) {
     const b = e.target.closest('.love-bud');
     if (!b || !budsEl.contains(b)) return;
@@ -1492,7 +1407,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   budsEl.addEventListener('click', onClick);
   budsEl.addEventListener('keydown', onKey);
 
-  // ── the loop: runs only while something is moving ──
+  // raf loop, only runs while something is moving
   function frame(now) {
     raf = 0;
     if (!active || destroyed || document.hidden) return;
@@ -1511,7 +1426,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   const onVis = () => { if (!document.hidden) poke(); };
   document.addEventListener('visibilitychange', onVis);
 
-  // start painting once the branch is really on screen, not just near it
+  // wait until it's properly on screen, not just close
   let io = null;
   if (typeof IntersectionObserver !== 'undefined') {
     io = new IntersectionObserver((es) => es.forEach((e) => {
@@ -1521,7 +1436,6 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
   } else seen = true;
   function maybeGrow() {
     if (!active || !seen || !fontsReady || growStarted || destroyed) return;
-    // nothing is painted yet, so compose afresh with the card's final size
     layout(true);
     startGrowth();
   }
@@ -1531,23 +1445,21 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     clearTimeout(resizeT);
     resizeT = setTimeout(() => {
       if (destroyed) return;
-      // offscreen, only keep the section's height right; repaint when it is shown again
+      // offscreen: just keep the height right, repaint when it's shown
       if (active) layout(); else { measureCard(); measure(); }
     }, 140);
   };
   const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(onResize) : null;
   if (ro) ro.observe(root);
   addEventListener('resize', onResize);
-  // the card's size (and so the space the branch leaves for it) depends on the fonts
+  // card size depends on the fonts, and the branch layout depends on the card
   let fontsReady = !(document.fonts && document.fonts.ready) || document.fonts.status === 'loaded';
   const onFonts = () => { if (destroyed || fontsReady) return; fontsReady = true; onResize(); maybeGrow(); };
   if (!fontsReady) { document.fonts.ready.then(onFonts, onFonts); later(onFonts, 2500); }
 
-  // ── API ──
   function relabel() {
     const focused = buttons.indexOf(document.activeElement);
     const changed = syncReasons();
-    // the last announcement was in the old language; clear it quietly
     liveEl.textContent = '';
     budsEl.setAttribute('aria-label', t('love.branch'));
     if (keysEl) keysEl.textContent = t('love.keys');
@@ -1613,7 +1525,7 @@ export function createBlossoms(root, { reasons = () => [], t = (k) => k, reduceM
     relabel,
     setActive,
     destroy,
-    /** for tests */
+    // for tests
     __debug: () => ({
       W, H, dpr, tall, N, bloomed, grown, growStarted, painting: !!painter, current, petals: petals.length, raf: !!raf, seen, active, fontsReady,
       sites: comp ? comp.sites.map((s) => ({ x: s.x, y: s.y, R: s.R })) : [],

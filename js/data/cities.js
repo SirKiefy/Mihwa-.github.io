@@ -1,4 +1,4 @@
-// Big cities, as [lat, lon]: the lights on the night side of the globe.
+// [lat, lon] of big cities, these are the lights on the night side of the globe
 export const CITIES = [
   [35.68, 139.69], [34.69, 135.5], [35.18, 129.08], [39.9, 116.4], [31.23, 121.47], [22.32, 114.17], [25.03, 121.56],
   [14.6, 120.98], [13.76, 100.5], [21.03, 105.85], [10.82, 106.63], [1.35, 103.82], [-6.21, 106.85], [3.14, 101.69],

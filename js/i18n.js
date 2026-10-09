@@ -1,4 +1,4 @@
-// Interface text in English, French and Korean. (Her own words live in her.js.)
+// ui text in en / fr / ko. her own words are in her.js
 export const LANGS = ['en', 'fr', 'ko'];
 
 export const STRINGS = {
@@ -164,7 +164,7 @@ export const STRINGS = {
     "love.count": "{n} / {total} in bloom",
     "love.done": "…and a thousand more that would not fit on one branch.",
     "love.keys": "Tab or the arrow keys move between the buds; Enter or Space opens one.",
-    // her baby
+    // cat
     "nav.baby": "Her baby",
     "baby.title": "Her baby",
     "baby.sub": "Her favourite creature in the world, and the only one who agrees with her about avocado.",
@@ -354,7 +354,7 @@ export const STRINGS = {
     "love.count": "{n} / {total} en fleur",
     "love.done": "…et mille autres qui ne tiendraient pas sur une seule branche.",
     "love.keys": "Tab ou les flèches pour passer d’un bouton à l’autre ; Entrée ou Espace pour le faire éclore.",
-    // her baby
+    // cat
     "nav.baby": "Son bébé",
     "baby.title": "Son bébé",
     "baby.sub": "Sa créature préférée au monde, et le seul qui partage son avis sur l’avocat.",
@@ -544,7 +544,7 @@ export const STRINGS = {
     "love.count": "{total}송이 중 {n}송이 피었어",
     "love.done": "…그리고 한 가지에 다 피울 수 없는 천 가지 이유가 더 있어.",
     "love.keys": "Tab 키나 방향키로 봉오리 사이를 옮겨 다니고, Enter나 스페이스 키로 꽃을 피울 수 있어.",
-    // her baby
+    // cat
     "nav.baby": "아기",
     "baby.title": "미화네 아기",
     "baby.sub": "그녀가 세상에서 제일 아끼는 존재. 아보카도에 대해선 그녀와 생각이 완전히 같아요.",

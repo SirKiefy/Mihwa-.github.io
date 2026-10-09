@@ -1,11 +1,5 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  A small ink-brush engine for 2D canvas.
-//  Strokes are rendered as a wet body (soft stamps that bleed into the paper)
-//  plus a bundle of bristles that each carry their own ink load — when a
-//  bristle runs dry it skips, which gives the “flying white” (비백) of a real
-//  brush. Tone can differ across the brush, like a brush loaded with pale ink
-//  and dipped in dark ink at the tip.
-// ─────────────────────────────────────────────────────────────────────────────
+// little ink brush for canvas. soft wet body + a bunch of bristles that each
+// carry their own ink, so dry ones skip and you get the flying white look
 
 export const INK = [27, 23, 21];
 export const PLUM = [196, 58, 86];
@@ -27,15 +21,12 @@ const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
 export const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 export const bump = (t, c, w) => Math.exp(-((t - c) * (t - c)) / (2 * w * w));
 
-// 1D value noise (for wobble)
 export function noise1(x, seed = 0) {
   const i = Math.floor(x), f = x - i;
   const h = (n) => { const s = Math.sin((n + seed * 131.7) * 127.1) * 43758.5453; return s - Math.floor(s); };
   const u = f * f * (3 - 2 * f);
   return lerp(h(i), h(i + 1), u);
 }
-
-// ─────────────────────────── soft stamp sprites ───────────────────────────
 
 const spriteCache = new Map();
 function softSprite(rgb, hardness = 0.35) {
@@ -64,9 +55,7 @@ export function stamp(ctx, x, y, r, rgb, alpha, hardness) {
   ctx.globalAlpha = 1;
 }
 
-// ─────────────────────────── path sampling ───────────────────────────
-
-/** Catmull–Rom through control points, resampled at ~`spacing` px. */
+// catmull-rom through the points, then resampled every ~spacing px
 export function samplePath(ctrl, spacing = 1.5) {
   if (ctrl.length < 2) return ctrl.map(([x, y]) => ({ x, y, t: 0 }));
   const pts = [ctrl[0], ...ctrl, ctrl[ctrl.length - 1]];
@@ -84,7 +73,7 @@ export function samplePath(ctrl, spacing = 1.5) {
     }
   }
   dense.push(ctrl[ctrl.length - 1]);
-  // resample at even arc length
+  // even arc length
   const out = [{ x: dense[0][0], y: dense[0][1], s: 0 }];
   let acc = 0, total = 0;
   for (let i = 1; i < dense.length; i++) {
@@ -95,7 +84,6 @@ export function samplePath(ctrl, spacing = 1.5) {
   const last = dense[dense.length - 1];
   if (out.length < 2 || Math.hypot(out[out.length - 1].x - last[0], out[out.length - 1].y - last[1]) > 0.3) out.push({ x: last[0], y: last[1], s: total });
   for (const p of out) p.t = total > 0 ? p.s / total : 0;
-  // normals
   for (let i = 0; i < out.length; i++) {
     const a = out[Math.max(0, i - 1)], b = out[Math.min(out.length - 1, i + 1)];
     let dx = b.x - a.x, dy = b.y - a.y; const l = Math.hypot(dx, dy) || 1;
@@ -105,30 +93,20 @@ export function samplePath(ctrl, spacing = 1.5) {
   return out;
 }
 
-// ─────────────────────────── width profiles ───────────────────────────
-
+// width along the stroke, t is 0..1
 export const PROFILE = {
-  /** pressed start, even body, lifted end */
   stroke: (t) => smooth(0, 0.08, t) * (1 - 0.85 * smooth(0.82, 1, t)) * (0.85 + 0.15 * Math.sin(t * Math.PI)),
-  /** bamboo segment: firm press at both ends */
+  // bamboo joint, pressed at both ends
   segment: (t) => 0.86 + 0.28 * Math.exp(-t * 16) + 0.24 * Math.exp(-(1 - t) * 16),
-  /** leaf: swell early, long taper to a sharp point */
   leaf: (t) => Math.pow(Math.sin(Math.PI * Math.pow(clamp(t), 0.62)), 0.95) * (t < 0.04 ? 0.5 + t * 12 : 1),
-  /** orchid leaf: mantis-belly swell, twist, second swell, fine tip */
+  // orchid leaf: fat belly, twist, smaller swell, fine tip
   orchid: (t) => clamp(0.18 + 0.82 * bump(t, 0.3, 0.14) + 0.45 * bump(t, 0.68, 0.09) + 0.12) * (1 - smooth(0.8, 1, t) * 0.97) * smooth(0, 0.05, t),
-  /** petal: round */
   petal: (t) => Math.pow(Math.sin(Math.PI * clamp(t)), 0.7),
-  /** twig: thick base tapering to a point */
   twig: (t) => (1 - 0.8 * t) * smooth(0, 0.04, t),
   flat: () => 1,
 };
 
-// ─────────────────────────── the stroke generator ───────────────────────────
-
-/**
- * Yields after each chunk so strokes can be animated.
- * spec: { pts, width, profile, tone, rgb, dry, bleed, side, spread, bristles, seed, alpha }
- */
+// yields every chunk of samples so the painter can animate it
 export function* strokeGen(ctx, spec) {
   const {
     pts, width = 10, profile = PROFILE.stroke, tone = 0.9, rgb = INK,
@@ -148,7 +126,7 @@ export function* strokeGen(ctx, spec) {
     bristles.push({
       o,
       ink: 1 + rand() * 0.4 - edge * 0.25 * dry,
-      // total ink a bristle loses over the whole stroke
+      // ink lost over the whole stroke
       rate: dry * (1.2 + 0.03 * aspect) * (0.55 + rand() * 0.9) * (1 + 0.9 * edge),
       tone: 1 - spread * clamp((o * side + 1) / 2),
       jit: rand() * 1000,
@@ -161,13 +139,13 @@ export function* strokeGen(ctx, spec) {
   const bodyAlpha = tone * alpha * body * (0.07 + 0.17 * (1 - dry));
   const bleedAlpha = tone * alpha * bleed * 0.03;
 
-  // initial press: a small wet blot
+  // wet blot where the brush lands
   const w0 = width * Math.max(0.35, profile(0.03));
   stamp(ctx, S[0].x, S[0].y, w0 * (0.6 + bleed * 0.5), rgb, tone * alpha * (0.12 + bleed * 0.1));
 
   for (let i0 = 0; i0 < S.length; i0 += chunk) {
     const i1 = Math.min(S.length - 1, i0 + chunk);
-    // wet body + bleed (each sample once; chunks share their boundary sample)
+    // chunks share their last sample, only draw it once
     const bEnd = i1 === S.length - 1 ? i1 : i1 - 1;
     for (let i = i0; i <= bEnd; i++) {
       const p = S[i];
@@ -185,7 +163,7 @@ export function* strokeGen(ctx, spec) {
       }
     }
     ctx.globalAlpha = 1;
-    // bristles (butt caps: round caps would double up where chunks meet)
+    // butt caps, round ones double up where chunks meet
     ctx.lineCap = 'butt';
     ctx.lineJoin = 'round';
     const wMid = width * profile(S[Math.min(S.length - 1, (i0 + i1) >> 1)].t);
@@ -221,15 +199,12 @@ export function* strokeGen(ctx, spec) {
   }
 }
 
-/** Draw a stroke immediately. */
 export function stroke(ctx, spec) {
   const it = strokeGen(ctx, spec);
   while (!it.next().done);
 }
 
-// ─────────────────────────── dots, washes, blossoms ───────────────────────────
-
-/** An ink dot (점) — moss dots, stamens, orchid hearts. */
+// moss dots, orchid hearts etc
 export function* dotGen(ctx, x, y, r, { tone = 0.95, rgb = INK, seed = 1, angle = 0 } = {}) {
   const rand = rng(seed);
   const pts = [];
@@ -241,7 +216,7 @@ export function* dotGen(ctx, x, y, r, { tone = 0.95, rgb = INK, seed = 1, angle 
   yield* strokeGen(ctx, { pts, width: r * 1.9, profile: (t) => Math.pow(Math.sin(Math.PI * clamp(t * 0.9 + 0.05)), 0.5), tone, rgb, dry: 0.05, bleed: 0.5, seed, bristles: 8, chunk: 50, spacing: 0.6 });
 }
 
-/** A watercolour blob with pigment pooling at the rim. */
+// watercolour blob, pigment pools at the rim
 export function wash(ctx, x, y, r, { rgb = PLUM, alpha = 0.35, seed = 1, wobble = 0.22, rim = 0.6, sx = 1, sy = 1, rot = 0 } = {}) {
   const rand = rng(seed);
   const n = 28;
@@ -274,7 +249,6 @@ export function wash(ctx, x, y, r, { rgb = PLUM, alpha = 0.35, seed = 1, wobble 
   ctx.restore();
 }
 
-/** A red-plum blossom: five washed petals, stamens, a heart. Animated. */
 export function* blossomGen(ctx, x, y, r, { seed = 1, rgb = PLUM, open = 1, rot, alpha = 1 } = {}) {
   const rand = rng(seed);
   const a0 = rot ?? rand() * Math.PI * 2;
@@ -289,10 +263,9 @@ export function* blossomGen(ctx, x, y, r, { seed = 1, rgb = PLUM, open = 1, rot,
     wash(ctx, px, py, r * (0.52 + rand() * 0.08), { rgb, alpha: (0.28 + rand() * 0.14) * alpha, seed: seed * 7 + k, wobble: 0.18, rim: 0.9, sy: tilt * 0.9 + 0.1, rot: a0 });
     yield 4;
   }
-  // heart
+  // heart and stamens
   stamp(ctx, x, y, r * 0.3, [224, 170, 70], 0.55 * alpha, 0.4);
   stamp(ctx, x, y, r * 0.18, [150, 40, 50], 0.5 * alpha, 0.4);
-  // stamens
   const ns = 6 + Math.floor(rand() * 4);
   for (let k = 0; k < ns; k++) {
     const ang = rand() * Math.PI * 2;
@@ -309,15 +282,12 @@ export function* blossomGen(ctx, x, y, r, { seed = 1, rgb = PLUM, open = 1, rot,
   yield 4;
 }
 
-/** A small red bud. */
 export function bud(ctx, x, y, r, seed = 1) {
   wash(ctx, x, y, r, { rgb: PLUM, alpha: 0.55, seed, wobble: 0.15, rim: 1, sx: 0.8, sy: 1 });
   stamp(ctx, x, y + r * 0.9, r * 0.45, INK, 0.7, 0.6);
 }
 
-// ─────────────────────────── seal (낙관) ───────────────────────────
-
-/** Stamp a cinnabar seal with 1–4 characters. */
+// red seal, 1 to 4 characters
 export function sealStamp(ctx, x, y, size, chars = '美花', { seed = 5, rot = 0, font = '"Noto Serif KR", serif', alpha = 0.92, white = true } = {}) {
   const rand = rng(seed);
   const n = chars.length;
@@ -329,29 +299,27 @@ export function sealStamp(ctx, x, y, size, chars = '美花', { seed = 5, rot = 0
   c.width = Math.ceil(w + pad * 2); c.height = Math.ceil(h + pad * 2);
   const g = c.getContext('2d');
   const [sr, sg, sb] = SEAL;
-  // body
   g.fillStyle = `rgb(${sr},${sg},${sb})`;
   g.beginPath();
   const rr = size * 0.06;
   g.roundRect ? g.roundRect(pad, pad, w, h, rr) : g.rect(pad, pad, w, h);
   g.fill();
-  // characters (white = 백문, carved out)
+  // white means the characters are carved out of the red
   g.globalCompositeOperation = white ? 'destination-out' : 'source-over';
   g.fillStyle = white ? '#000' : `rgb(${sr},${sg},${sb})`;
   const cell = Math.min(w / cols, h / rows);
   g.font = `900 ${cell * 0.78}px ${font}`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  // traditional order: right column first, top to bottom
+  // right column first, top to bottom
   for (let i = 0; i < n; i++) {
     const col = cols - 1 - Math.floor(i / rows);
     const row = i % rows;
     g.fillText(chars[i], pad + (col + 0.5) * (w / cols), pad + (row + 0.54) * (h / rows));
   }
-  // inner border line
   g.lineWidth = Math.max(1, size * 0.03);
   g.strokeRect(pad + size * 0.05, pad + size * 0.05, w - size * 0.1, h - size * 0.1);
-  // erosion speckles
+  // wear it down: speckles, then ragged edges
   g.globalCompositeOperation = 'destination-out';
   for (let i = 0; i < size * 1.4; i++) {
     g.globalAlpha = 0.3 + rand() * 0.7;
@@ -359,7 +327,6 @@ export function sealStamp(ctx, x, y, size, chars = '美花', { seed = 5, rot = 0
     g.arc(pad + rand() * w, pad + rand() * h, rand() * size * 0.018 + 0.3, 0, Math.PI * 2);
     g.fill();
   }
-  // ragged edges
   for (let i = 0; i < 60; i++) {
     const t = rand();
     const e = Math.floor(rand() * 4);
@@ -380,8 +347,7 @@ export function sealStamp(ctx, x, y, size, chars = '美花', { seed = 5, rot = 0
   ctx.restore();
 }
 
-// ─────────────────────────── painter (animation queue) ───────────────────────────
-
+// runs queued generators a bit each frame
 export class Painter {
   constructor(ctx, { speed = 60 } = {}) {
     this.ctx = ctx;
@@ -394,7 +360,7 @@ export class Painter {
   add(genOrFn) { this.queue.push(genOrFn); return this; }
   pause(frames) { const self = this; this.queue.push(function* () { for (let i = 0; i < frames; i++) yield self.speed; }); return this; }
   clear() { this.queue = []; this.current = null; this.token++; }
-  /** process up to `budget` units; returns true while work remains */
+  // false once the queue is empty
   step(budget = this.speed) {
     let spent = 0;
     while (spent < budget) {

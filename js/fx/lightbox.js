@@ -1,5 +1,4 @@
-// Full-screen viewer on hanji. Opens from where you clicked; shows her photo
-// in colour or as its ink painting.
+// fullscreen viewer, grows out from wherever you clicked
 export function mountLightbox(el, photos, { caption, onChange } = {}) {
   const ink = el.querySelector('.lb-img--ink');
   const col = el.querySelector('.lb-img--col');

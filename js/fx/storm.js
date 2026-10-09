@@ -1,41 +1,12 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  폭풍 · a gentle storm at the edge of a cliff, behind the closing letter.
-//
-//  One WebGL2 fragment shader paints the whole section as a 수묵화 (ink-wash
-//  painting) on hanji, top to bottom:
-//    sky      – heavy billowing clouds in grey-indigo washes, lobes left pale
-//               on top and darker beneath; near the horizon they thin, and
-//               one soft opening in their base lets a faint apricot light
-//               down through the rain onto a low island and the water
-//    veils    – rain hanging from the cloud base to the sea
-//    cliffs   – headlands receding into mist on the left, each paler and
-//               flatter than the last; on the shoulder of the near one, a
-//               pine bent out over the sea by the wind (소나무)
-//    sea      – slate-teal swells rolling in, crests left as white paper
-//    rocks    – dark angular rocks at the cliff foot (axe-cut strokes, moss
-//               dots); each swell washes up them and throws spray up from
-//               behind, which hangs, drifts with the wind and falls back
-//    edge     – the grassy cliff edge the viewer stands on: tufts of grass
-//               and a few stems of silver grass (억새) streaming in the wind
-//    rain     – fine slanted rain in three depths
-//  The top and bottom of the painting dissolve into the page's paper.
-//  Everything is drawn from the baked tileable noise texture (noise.js).
-//
-//  It renders at a reduced resolution (the browser upscales it; it is soft by
-//  nature) and only the band of the section that is on screen is repainted
-//  each frame. The shader is linked in the background where the driver allows
-//  it; should it fail later (after a lost context, say), the canvas is given
-//  the .storm-fallback class (the CSS wash) and the storm retires itself.
-//
-//  createStorm(canvas, { reduceMotion, mobile, card }) → { setActive, destroy, renderAt } | null
-// ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=774a543f68';
+// the storm behind the letter: sky, cliffs, sea, rocks, grass and rain, all in one fragment shader.
+// drawn at reduced res and only the visible strip is redrawn each frame. falls back to the css wash if the shader dies later
+import { noiseData } from './noise.js?v=e0590b5d34';
 
-// the swell, and the big rock at the cliff foot: shared by the shader and the JS that times the still frame
+// shared with the shader, and used to time the still frame
 const WK = 6;         // swells per unit of depth
-const WSPD = 0.15;    // swells per second reaching any point
+const WSPD = 0.15;    // swells per second
 const BIG = { x: 0.12, seed: 1.3 };
-// on a phone held upright the rocks move in from the left edge, so the spray opens into the frame
+// portrait phones: push the rocks in from the left so the spray isn't cut off
 const rockX = (x, narrow) => x + narrow * (0.18 + 0.1 * x);
 const f1 = (v) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
 
@@ -47,42 +18,40 @@ const FRAG = `#version 300 es
 precision highp float;
 uniform sampler2D uN;
 uniform vec2 uRes;       // drawing buffer (px)
-uniform vec2 uSize;      // canvas (CSS px)
-uniform float uPx;       // CSS px per buffer px
-uniform float uV;        // view unit: the viewport height (CSS px)
-uniform float uS;        // object unit for rocks and grass (CSS px)
-uniform float uHz;       // horizon, CSS px from the top of the section
-uniform float uFoot;     // the water line at the cliff foot
-uniform float uNarrow;   // 0 on wide screens, 1 on a phone held upright
-uniform vec2 uBreak;     // the cloud break: centre x, half width (CSS px)
+uniform vec2 uSize;      // canvas, css px
+uniform float uPx;       // css px per buffer px
+uniform float uV;        // view unit (viewport height, clamped)
+uniform float uS;        // size unit for rocks and grass
+uniform float uHz;       // horizon y
+uniform float uFoot;     // waterline at the cliff foot
+uniform float uNarrow;   // 0 wide, 1 portrait phone
+uniform vec2 uBreak;     // gap in the clouds: centre x, half width
 uniform float uT;        // seconds
 uniform vec2 uPtr;       // pointer, smoothed, -1..1
-uniform vec4 uCard;      // the letter card (CSS px: x0 y0 x1 y1)
-uniform vec4 uFlash;     // light inside the clouds: x, y, radius, strength
-uniform vec3 uRain;      // how far each rain layer has fallen (CSS px, wrapped every 256 drops)
+uniform vec4 uCard;      // letter card rect x0 y0 x1 y1
+uniform vec4 uFlash;     // cloud flash: x, y, radius, strength
+uniform vec3 uRain;      // rain offset per layer, wrapped in js
 out vec4 o;
 
 const vec3 PAPER = vec3(0.945, 0.922, 0.878);
 const vec3 INK = vec3(0.086, 0.067, 0.059);
 const vec3 SLATE = vec3(0.2, 0.235, 0.3);
-const vec3 TEAL = vec3(0.17, 0.23, 0.28);     // the sea: ink with a cool tint, not a colour of its own
-const vec3 WARM = vec3(0.86, 0.58, 0.42);     // the light in the break: a faint apricot, an echo of the seals' cinnabar
+const vec3 TEAL = vec3(0.17, 0.23, 0.28);
+const vec3 WARM = vec3(0.86, 0.58, 0.42);     // faint apricot light through the gap
 
 float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec4 nz(vec2 p) { return texture(uN, p); }
 vec4 nzl(vec2 p) { return textureLod(uN, p, 0.0); }
-// for lookups whose coordinates jump (per wave, per cell): pick the mip level by hand,
-// so the jump does not blur a 2x2 block of pixels along every edge
+// manual mip level for lookups that jump per cell, otherwise every edge gets a blurry 2x2 block
 vec4 nzd(vec2 p, float texPerPx) { return textureLod(uN, p, log2(max(texPerPx * 256.0, 1.0))); }
 float sat(float x) { return clamp(x, 0.0, 1.0); }
-float sq(float x) { return x * x; }   // (pow() is undefined for a negative base)
-// sin(uT * k + ph), with the argument brought within one turn first: uT grows for as long as the page
-// is open, and a mobile GPU's sin() goes wrong for large arguments
+float sq(float x) { return x * x; }   // pow() breaks on negatives
+// wrap uT first, mobile gpus get sin() wrong for big args
 float tsin(float k, float ph) { return sin(6.2831853 * fract(uT * k * 0.15915494) + ph); }
-// ink at density d: pale washes keep the cool tint, heavy ink runs warm black
+// pale washes keep the tint, heavy ink goes warm black
 vec3 inkTone(float d, vec3 tint) { return mix(PAPER, mix(tint, INK, smoothstep(0.45, 1.05, d)), sat(d)); }
 
-// ── sky ─────────────────────────────────────────────────────────────────────
+// sky
 float breakMask(vec2 p) {
   vec2 d = (p - vec2(uBreak.x, uHz - 0.05 * uV)) / vec2(uBreak.y, 0.13 * uV);
   float n = nz(p / uV * vec2(0.6, 1.4) + vec2(uT * 0.0015, 0.2)).r;
@@ -91,29 +60,28 @@ float breakMask(vec2 p) {
 
 vec3 sky(vec2 p, float brk) {
   float hgt = (uHz - p.y) / uV;
-  vec2 cq = p / uV - vec2(uT * 0.0045, 0.0);                    // the sky drifts with the wind
+  vec2 cq = p / uV - vec2(uT * 0.0045, 0.0);
   vec4 w = nz(cq * 0.22 + vec2(uT * 0.0012, uT * 0.0007));
-  vec2 wq = cq + (w.rg - 0.5) * vec2(0.16, 0.1);                 // and slowly boils
+  vec2 wq = cq + (w.rg - 0.5) * vec2(0.16, 0.1);
   float gran = nz(p / uV * vec2(5.0, 6.0)).b;
   float topLine = mix(0.4, 0.2, uNarrow) + (nz(vec2(cq.x * 0.16, 0.83)).a - 0.5) * mix(0.55, 0.3, uNarrow);
-  // billows: rows of rounded lobes heaped on each other, the lower ones in front.
-  // Each lobe is pale where it swells up and shaded where it tucks under the next.
+  // billows: rows of round lobes, lower rows in front, pale on top and shaded underneath
   float bump = nz(wq * vec2(2.6, 3.2) + 0.4).g;
   float d = 0.3 * smoothstep(topLine + 0.02, topLine + 0.1, wq.y), inC = 0.0, rowY = topLine;
-  // (higher than 0.15 above the top row no lobe reaches: open sky, and the rows are not looked at)
+  // no lobe reaches this high, skip the rows
   if (wq.y > topLine - 0.16) for (int k = 0; k < 6; k++) {
     float fk = float(k);
     float r = 0.06 + 0.032 * fk;
     float sp = r * 1.3;
     float off = hash(vec2(fk, 1.3)) * sp;
     float i0 = floor((wq.x - off) / sp);
-    // the three nearest lobes of this row, painted back to front (the lower one in front)
+    // 3 nearest lobes, sorted so the lower one ends up in front
     vec3 L[3];
     float nearest = 1e3;
     for (int j = 0; j < 3; j++) {
       float i = i0 + float(j - 1);
       float h1 = hash(vec2(i, fk + 0.5)), h2 = hash(vec2(i, fk + 7.7)), h3 = hash(vec2(i, fk + 3.3));
-      // (a few lobes are missing, and they come in all sizes, so the skyline is not a scalloped border)
+      // drop a few so the top edge isn't a neat scallop
       if (fract(h3 * 7.0) < 0.15) { L[j] = vec3(1e3, 0.0, 0.0); continue; }
       float rr = r * (0.55 + 0.9 * h3) * (1.0 + 0.06 * tsin(0.09, h1 * 6.3));
       vec2 c = vec2(off + (i + 0.5 + (h1 - 0.5) * 0.55) * sp, rowY + (h2 - 0.5) * r * 0.8);
@@ -128,25 +96,24 @@ vec3 sky(vec2 p, float brk) {
     for (int j = 0; j < 3; j++) {
       float m = smoothstep(e, -e, L[j].x);
       float dl = 0.14 + 0.045 * fk + 0.28 * L[j].z * L[j].z;
-      dl += 0.05 * exp(-abs(L[j].x) / 0.006);                    // pigment pools along the lobe's edge
+      dl += 0.05 * exp(-abs(L[j].x) / 0.006);
       d = mix(d, dl, m);
     }
     if (k == 0) {
       float m0 = smoothstep(e, -e, nearest);
       inC = max(m0, smoothstep(rowY, rowY + 0.05, wq.y));
-      d += 0.06 * exp(-abs(nearest) / 0.007) * m0;                // the wash's edge against open sky
+      d += 0.06 * exp(-abs(nearest) / 0.007) * m0;
     }
     rowY += r * 0.85;
   }
-  rowY = topLine + 0.714;                                         // (below the six rows)
+  rowY = topLine + 0.714;                                         // sum of the 6 row steps
   d *= inC;
-  // the body of the cloud below the billows: one heavy, wet wash
+  // cloud body under the billows, one heavy wet wash
   float b1 = nz(wq * vec2(0.5, 0.7) + 0.17).r;
   float b2 = nz(wq * vec2(1.2, 1.5) + 0.61).g;
   float deep = smoothstep(rowY - 0.12, rowY + 0.25, wq.y + (b1 - 0.5) * 0.25);
   float baseH = 0.15 + 0.1 * nz(vec2(cq.x * 0.35, 0.37)).r;
   float body = 0.36 + 0.18 * smoothstep(0.35, 0.75, b1) + 0.06 * (b2 - 0.5);
-  // heavier towards the base, darkest along its underside
   body *= 1.0 + 0.3 * smoothstep(baseH + 0.5, baseH + 0.03, hgt);
   body += 0.1 * exp(-sq((hgt - baseH - 0.02 + (b2 - 0.5) * 0.06) / 0.035));
   float bloom = smoothstep(0.52, 0.56, b2) * (1.0 - smoothstep(0.56, 0.62, b2));
@@ -154,26 +121,24 @@ vec3 sky(vec2 p, float brk) {
   d = mix(d, body, deep);
   inC = max(inC, deep);
   d *= 0.88 + 0.24 * gran;
-  // the base frays into rain a little above the sea
+  // base frays into rain a bit above the sea
   float under = smoothstep(baseH, baseH - 0.13, hgt + (b2 - 0.5) * 0.08);
   float veilN = nz(vec2((p.x + (uHz - p.y) * 0.25) / uV * 2.6 - uT * 0.004, p.y / uV * 0.1 + 0.3)).g;
   float veil = smoothstep(0.42, 0.75, veilN);
   d = mix(d, 0.14 + 0.16 * veil * smoothstep(-0.01, 0.1, hgt), under);
-  // a breath of wash over the open sky above
   d = max(d, 0.03 + 0.04 * b2 * smoothstep(0.1 * uV, 0.4 * uV, p.y));
-  // the break: the clouds thin over the horizon, and one ragged tear in their base, wisps still
-  // crossing it, lets the light down through the rain in pale shafts
+  // the gap: clouds thin over the horizon, and a ragged hole lets light shafts down
   d *= 1.0 - 0.82 * brk;
   vec2 src = vec2(uBreak.x + 0.1 * uBreak.y, uHz - 0.19 * uV);
   vec2 hq = (p - src) / vec2(uBreak.y * 0.9, 0.065 * uV);
   float hole = 0.0;
-  if (dot(hq, hq) < 9.0) {                                   // (further off, nothing of it shows)
+  if (dot(hq, hq) < 9.0) {
     float hn = nz(p / uV * vec2(1.1, 2.0) + vec2(uT * 0.002, 0.4)).g;
     float hn2 = nz(p / uV * vec2(3.5, 5.0) + vec2(uT * 0.003, 0.7)).r;
     float hl = length(hq * vec2(1.0, 1.0 + 0.6 * smoothstep(0.0, 1.0, hq.y))) + (hn - 0.5) * 1.3 + (hn2 - 0.5) * 0.5
-             + 0.4 * smoothstep(0.0, 1.0, hq.x) * hn2;           // (closing unevenly on one side)
+             + 0.4 * smoothstep(0.0, 1.0, hq.x) * hn2;
     hole = smoothstep(1.0, 0.3, hl);
-    d *= 1.0 - 0.3 * exp(-sq((hl - 1.05) / 0.35));          // the cloud edges round it catch the light
+    d *= 1.0 - 0.3 * exp(-sq((hl - 1.05) / 0.35));
     d = mix(d, 0.1, hole * 0.75);
     d += 0.1 * smoothstep(0.55, 0.7, hn2) * hole;
   }
@@ -182,7 +147,7 @@ vec3 sky(vec2 p, float brk) {
   float fan = exp(-ang * ang / 0.3) * smoothstep(0.0, 0.05 * uV, below) * smoothstep(-0.005, 0.04, hgt);
   float shaft = fan > 0.002 ? smoothstep(0.42, 0.72, nz(vec2(ang * 2.2 + uT * 0.002, 0.21)).r) : 0.0;
   d *= 1.0 - 0.42 * shaft * fan;
-  // and a light inside the clouds now and then: a breath of warmth through the wash
+  // the occasional flash inside the clouds
   vec2 fd = (p - uFlash.xy) / uFlash.z;
   float flashK = uFlash.w * exp(-dot(fd, fd)) * (0.3 + 0.7 * inC);
   d *= 1.0 - 0.45 * flashK;
@@ -191,7 +156,7 @@ vec3 sky(vec2 p, float brk) {
   return mix(col, mix(PAPER, WARM, 0.32), sat(g) * 0.5);
 }
 
-// a low island on the horizon, beside the break, the light falling on the water next to it
+// small island on the horizon next to the gap
 vec3 island(vec3 col, vec2 p) {
   float w = min(0.17 * uV, 0.15 * uSize.x);
   float k = (p.x - (uBreak.x - uBreak.y * 0.3)) / w;
@@ -204,7 +169,7 @@ vec3 island(vec3 col, vec2 p) {
   return mix(col, inkTone(d, SLATE), m);
 }
 
-// ── sea ─────────────────────────────────────────────────────────────────────
+// sea
 const float WK = ${f1(WK)};
 const float WSPD = ${f1(WSPD)};
 float wavePhase(vec2 p, out float z, out float xw) {
@@ -213,7 +178,6 @@ float wavePhase(vec2 p, out float z, out float xw) {
   xw = (p.x - 0.5 * uSize.x) / uV * z;
   float bend = (nz(vec2(xw * 0.04, z * 0.03 + 0.3)).g - 0.5) * 1.3
              + (nz(vec2(p.x / uV * 0.45, z * 0.15 + 0.7)).r - 0.5) * 0.28
-             // and each crest line undulates a little, by about the same few pixels near and far
              + (nz(vec2(p.x / uV * 1.3, z * 0.2 + 0.5)).r - 0.5) * min(0.2, 14.0 * WK * 0.1 / ((s + 0.01) * (s + 0.01) * uV));
   return z * WK + uT * WSPD + bend;
 }
@@ -224,8 +188,7 @@ vec3 sea(vec2 p) {
   float ph = wavePhase(p, z, xw);
   vec4 n = nz(vec2(xw * 0.25, z * 0.7));
   float wv = nz(vec2(p.x / uV * 0.35, p.y / uV * 0.9) + 0.13).a;
-  // the far water is left pale under the mist and the ink gathers towards the shore; the sea begins a
-  // little below the horizon, on a wavering line
+  // far water stays pale under the mist, ink gathers toward the shore
   float d = 0.43 + 0.08 * smoothstep(0.05, 0.4, s) + (n.r - 0.5) * 0.14 + (wv - 0.5) * 0.16;
   d *= 0.3 + 0.7 * smoothstep(0.0, 0.05, s + (wv - 0.5) * 0.04);
   float aa = WK * 0.1 / ((s + 0.01) * (s + 0.01)) / uV * uPx;    // phase per buffer pixel
@@ -233,39 +196,31 @@ vec3 sea(vec2 p) {
   float near = smoothstep((uFoot - uHz) / uV - 0.2, (uFoot - uHz) / uV, s);
   float dxp = uPx / uV;                                            // per buffer pixel
   float dzp = 0.1 / ((s + 0.01) * (s + 0.01)) * dxp;
-  if (det > 0.0) {                                                 // (none of this on the far water)
-    // each swell is painted as a row of strokes, every one its own length and weight, set a little
-    // higher or lower than its neighbours and bowed like the back of a wave, tapering away at its ends:
-    // most of them short, a few running long over two cells, and about half not painted at all, the
-    // water between left as wash
-    float idc = floor(ph + 0.4);                                     // the nearest crest
+  if (det > 0.0) {
+    // each swell is a row of brush strokes, each with its own length, height and bow. about half are left unpainted
+    float idc = floor(ph + 0.4);
     float sx = xw * 2.0 + p.x / uV * 2.4 + hash(vec2(idc, 0.3)) * 3.0;   // along the crest, in cells
     float s2 = floor(sx * 0.5);
     float longK = step(hash(vec2(s2 + 3.0, idc)), 0.25);
     float si = mix(floor(sx), s2 * 2.0, longK);
     float hs = hash(vec2(si, idc)), hs2 = hash(vec2(si + 7.0, idc)), hs3 = fract(hs * 9.37), hs4 = fract(hs2 * 7.13);
-    float len = mix(0.3 + 0.7 * hs4 * hs4, 0.65 + 0.35 * hs4, longK);          // in cells
+    float len = mix(0.3 + 0.7 * hs4 * hs4, 0.65 + 0.35 * hs4, longK);
     float u = ((sx - si) / (1.0 + longK) - (1.0 - len) * fract(hs2 * 5.71)) / len;   // along the stroke, 0..1
     float tap = sin(3.14159 * sat(u));
-    float inS = smoothstep(0.0, 0.35, tap);                          // within the stroke, fading at its ends
-    float off = (hs - 0.5) * 0.2 - 0.06 * tap * tap;                 // the stroke's own height, and its bow
+    float inS = smoothstep(0.0, 0.35, tap);
+    float off = (hs - 0.5) * 0.2 - 0.06 * tap * tap;
     float f = fract(ph + off);
     float onS = step(0.35, hs2) * inS;
-    // (the lookups below only count near the crest and on the back: looked up only there)
+    // only sample these near the crest
     float g = f < 0.6 ? f : f - 1.0;                               // signed distance to the crest
-    // the back of the swell: a darker wash behind the crest, graded softly up into the next trough,
-    // dragged dry here and there. Half of it is painted under every swell, stroke or no stroke; that
-    // half follows the stroke only while within it and the swell itself between strokes, so it runs
-    // on from one cell to the next without a jump
+    // darker wash on the back of the swell. half follows the stroke, half the swell, so nothing jumps between cells
     float dry = g > -(aa * 1.6 + 0.01) ? nzd(vec2(xw * 0.3 + p.x / uV * 1.2, z * 26.0 + idc * 0.3), max((0.3 * z + 1.2) * dxp, 26.0 * dzp)).b : 0.5;
     float fw = fract(ph + off * inS);
     float back = smoothstep(0.03, 0.22, f) * (1.0 - smoothstep(0.25, 0.6, f));
     float backW = smoothstep(0.03, 0.22, fw) * (1.0 - smoothstep(0.25, 0.6, fw));
-    // (the stroke's half swells and tapers along it like the brush itself, so it never reads as a block)
     d += (0.5 * backW + 0.5 * back * step(0.35, hs2) * tap) * (0.07 + 0.06 * hs3 * tap) * det * (0.6 + 0.4 * smoothstep(0.3, 0.6, dry));
-    if (onS > 0.0) {                                               // (an unpainted stroke: wash only)
-      // the crest left as paper, swelling and thinning along the stroke, and breaking up where the
-      // brush ran dry; foam trailing on the back
+    if (onS > 0.0) {
+      // crest left as bare paper, broken where the brush runs dry, foam trailing behind
       float cw = (0.04 + 0.1 * near) * (0.5 + 0.7 * hs3) * (0.4 + 0.6 * sqrt(tap));
       float crest = (1.0 - smoothstep(cw * 0.35, cw + aa * 1.6, g)) * smoothstep(-aa * 1.6 - 0.004, 0.0, g)
                   * min(1.0, (cw + 0.002) / (aa * 1.2 + 0.002));
@@ -277,19 +232,18 @@ vec3 sea(vec2 p) {
       d *= 1.0 - (crest * 0.95 + trail * 0.45) * onS * det;
     }
   }
-  // whitecaps: short white dashes scattered over the water, riding in with the swell
+  // whitecaps
   if (s > 0.05 && s < 0.36) {
     vec2 cc = vec2(xw * 24.0, (z + uT * WSPD / WK) * 29.0);
     vec2 ci = floor(cc), cf = fract(cc) - 0.5;
     float hc = hash(ci + 0.71);
-    if (hc >= 0.78) {                                              // (most cells are empty)
+    if (hc >= 0.78) {
       float lenK = 0.1 + 0.3 * sq(hash(ci + 3.3));
       float ax = (cf.x + (hash(ci + 1.9) - 0.5) * 0.4) / lenK;
       float lens = sat(1.0 - ax * ax);
-      // a little arched stroke, thickest in the middle and tapering to points; never thinner than
-      // a pixel, only fainter, so far-off ones do not break into stair-steps
+      // never thinner than 1px, just fainter, so the far ones don't stair-step
       float cy = cf.y - (hash(ci + 5.7) - 0.5) * 0.4 + 0.06 * ax * ax;
-      float cellPx = uV * (s + 0.01) * (s + 0.01) / (0.1 * 29.0) / uPx;   // the cell's height in buffer pixels
+      float cellPx = uV * (s + 0.01) * (s + 0.01) / (0.1 * 29.0) / uPx;   // cell height in buffer px
       float th = (0.07 + 0.08 * hash(ci + 6.1)) * lens * lens;
       float tq = max(th, 0.7 / cellPx);
       float dash = (1.0 - smoothstep(tq * 0.4, tq + 0.6 / cellPx, abs(cy))) * (th / tq);
@@ -297,8 +251,7 @@ vec3 sea(vec2 p) {
       d *= 1.0 - dash * on * 0.8;
     }
   }
-  // far out the swells are only short dashes of white and grey, in a few sparse patches: one stroke
-  // to a cell, 7–24 px long and two or three tall, most cells left empty
+  // far out it's just sparse little dashes, one per cell, most cells empty
   float farK = (1.0 - smoothstep(0.03, 0.13, s)) * smoothstep(0.0, 0.006, s);
   if (farK > 0.0) {
     float row = floor(p.y / 5.0);
@@ -311,8 +264,8 @@ vec3 sea(vec2 p) {
       float lenK = 0.3 + 0.7 * fract(hf * 7.31);
       float ax = (ff.x + (fract(hf * 13.7) - 0.5) * 0.3) / (0.5 * lenK);
       float lens = sat(1.0 - ax * ax);
-      float cyp = (ff.y + (fract(hf * 5.3) - 0.5) * 0.3) * 5.0;     // px from the stroke's centre line
-      float th = (1.0 + 0.6 * fract(hf * 3.17)) * lens;              // half its height, in px
+      float cyp = (ff.y + (fract(hf * 5.3) - 0.5) * 0.3) * 5.0;
+      float th = (1.0 + 0.6 * fract(hf * 3.17)) * lens;              // half height, px
       float tq = max(th, 0.7 * uPx);
       float dash = (1.0 - smoothstep(tq * 0.5, tq + 0.7 * uPx, abs(cyp))) * (th / tq) * on;
       float white = step(0.88, hf);
@@ -320,7 +273,7 @@ vec3 sea(vec2 p) {
       d *= 1.0 - farK * 0.3 * dash * white * smoothstep(0.012, 0.03, s);
     }
   }
-  // the light of the break on the water
+  // the gap reflected on the water
   float refl = exp(-sq((p.x - uBreak.x) / (uBreak.y * 0.55))) * exp(-s / 0.07);
   if (refl > 0.002) refl *= 0.6 + 0.6 * smoothstep(0.4, 0.7, nzl(vec2(p.x / uV * 1.5, s * 40.0)).b);
   d *= 1.0 - 0.55 * refl;
@@ -328,9 +281,8 @@ vec3 sea(vec2 p) {
   return mix(col, mix(PAPER, WARM, 0.22), sat(refl) * 0.35 * smoothstep(0.0, 0.015, s));
 }
 
-// ── headlands receding into mist ───────────────────────────────────────────
-// the ridge line of a headland: it climbs inland to its summit and rounds over at the shoulder
-// above the sea. Height above the horizon (V, negative is up) at x.
+// headlands
+// ridge height above the horizon in V (negative is up). climbs inland, rounds off at the shoulder
 float ridge(float x, float faceX, float topH, float seed) {
   float xr = (x - faceX) / uV;
   float tn = nz(vec2(x / uV * 0.45 + seed, seed * 0.31)).r;
@@ -340,32 +292,26 @@ float ridge(float x, float faceX, float topH, float seed) {
   return -topH * (0.66 + 0.2 * tn + 0.2 * (tn3 - 0.5) + 0.04 * tn2 + 0.34 * rise) + topH * 0.16 * smoothstep(-0.07, 0.01, xr);
 }
 
-// faceX: where the cliff face meets the sea; topH: height above the horizon (V);
-// baseS: depth of its foot below the horizon (V); pale: 0..1; detail: 0 for a flat far
-// silhouette .. 1 for the near cliff with all its texture strokes
+// faceX: where the cliff meets the sea. topH and baseS in V. detail 0 = flat far silhouette, 1 = near cliff with texture
 vec3 headland(vec3 col, vec2 p, float faceX, float topH, float baseS, float pale, float seed, float detail) {
   float xr = (p.x - faceX) / uV;
-  if (xr > mix(0.3, 0.2, detail)) return col;      // (the nearer one's mist spill is the shorter)
+  if (xr > mix(0.3, 0.2, detail)) return col;
   float y = (p.y - uHz) / uV;
-  // (below the foot only a far one's mist is wanted, and the ridge is not needed for that; the near
-  // one's mist lies halfway up, so nothing of it reaches below its foot)
+  // below the foot only the far ones' mist matters
   if (y > baseS + (detail > 0.99 ? 0.02 : 0.2)) return col;
   float topY = y > baseS ? baseS - 0.01 : ridge(p.x, faceX, topH, seed);
   if (y < topY - 0.2) return col;
   float span = baseS - topY;
   float v = sat((y - topY) / span);
-  // the sea face: ledges, and a lean out towards the foot
   float jag = (nz(vec2(y * 1.6, seed)).g - 0.5) * 0.04 + (nz(vec2(y * 5.0, seed + 0.4)).b - 0.5) * 0.014;
   float xb = v * 0.04 + jag;
   float e = uPx / uV * 1.3;
   float m = smoothstep(xb + e, xb - e, xr) * smoothstep(topY - e, topY + e, y) * step(y, baseS + 0.02);
-  // mist: the far headlands dissolve into it from the foot up; across the near one it lies in a
-  // drifting band about halfway up, so its foot stands in wet dark ink behind the spray
+  // far ones fade into mist from the foot up, the near one gets a band halfway up
   float mn = nz(vec2(p.x / uV * 1.1 - uT * 0.004, y * 2.0 + seed)).r;
   float vm = v + (mn - 0.5) * 0.35;
   float mist = detail > 0.99 ? 0.6 * smoothstep(0.3, 0.42, vm) * (1.0 - smoothstep(0.48, 0.62, vm)) : smoothstep(0.5, 1.0, vm);
-  // outside: a faint halo in patches, so it stands clear of the clouds behind; and its mist running on
-  // out over the water, thinning away below the foot on a ragged, drifting line
+  // faint halo so it stands off the clouds, plus mist spilling out over the water
   float gap = max(max(xr - xb, topY - y), 0.0);
   float halo = 0.16 * pale * exp(-gap / 0.07) * smoothstep(baseS, topY, y) * smoothstep(0.3, 0.7, mn);
   float spill = mist * 0.85 * exp(-gap / mix(0.06, 0.035, detail)) * exp(-max(y - baseS, 0.0) / (0.025 + 0.07 * mn));
@@ -373,7 +319,7 @@ vec3 headland(vec3 col, vec2 p, float faceX, float topH, float baseS, float pale
   if (m <= 0.0) return col;
   float tn2 = nz(vec2(p.x / uV * 2.5 + seed, seed * 0.7)).b;
   float df = max(xb - xr, 0.0), dt = max(y - topY, 0.0);
-  // folds: vertical creases drawn with one dark line, the plane beyond each turning into shadow
+  // vertical creases, shadow past each one
   float shade = 0.0, lines = 0.0;
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
@@ -388,59 +334,51 @@ vec3 headland(vec3 col, vec2 p, float faceX, float topH, float baseS, float pale
   }
   float faceK = exp(-df / 0.028);
   float near = sat(shade + faceK);
-  float dd = detail * detail;                 // the far ones are flat washes: their texture fades fastest
+  float dd = detail * detail;
   float d = 0.5 + (0.26 * sat(shade) + 0.22 * faceK) * (0.3 + 0.7 * dd);
-  d += (1.0 - detail) * (0.14 - 0.3 * v);   // a flat wash, darkest along the ridge, paling downwards
+  d += (1.0 - detail) * (0.14 - 0.3 * v);
   d += 0.38 * lines * dd;
-  float brush = 1.0;                         // the brush down the face: unbroken on a far wash
+  float brush = 1.0;
   if (detail > 0.01) {
-    // the face is a few broad planes, some left nearly as paper and some wet and dark, with a ledge or
-    // two stepping across it; and over them, texture strokes: long, nearly vertical cuts (부벽준),
-    // hard-edged, dry-broken, starting and stopping, gathered by the creases and the face
+    // a few broad planes (some pale, some wet and dark), a ledge or two, and long axe cut strokes over them
     vec2 rp = vec2(p.x * 0.985 + p.y * 0.17, p.y * 0.985 - p.x * 0.17) / uV;
     float cut = nz(rp * vec2(6.0, 0.7) + seed).b;
     float cut2 = nz(rp * vec2(13.0, 1.3) + seed * 1.7).g;
     vec4 pn = nz(rp * vec2(1.2, 1.4) + seed * 0.3);
     float planeN = pn.r;
     d += (planeN - 0.5) * 0.14 * detail;
-    d -= dd * 0.3 * smoothstep(0.5, 0.6, planeN) * (1.0 - near);           // lit planes, left pale
-    d += dd * (0.14 * smoothstep(0.42, 0.32, planeN) + 0.3 * smoothstep(0.6, 0.85, v));   // wet dark towards the foot
-    // the ledges: a pale lip, and the shadow under it. Each ledge wanders across the face on a line of
-    // its own (the wander in x alone, so the step up the face is always the same few pixels tall),
-    // and the step from lip to shadow is spread over a few buffer pixels, so it does not break into
-    // stairs once the buffer is scaled up
+    d -= dd * 0.3 * smoothstep(0.5, 0.6, planeN) * (1.0 - near);
+    d += dd * (0.14 * smoothstep(0.42, 0.32, planeN) + 0.3 * smoothstep(0.6, 0.85, v));
+    // ledges: pale lip with a shadow under it. the step is spread over a few buffer px so it doesn't stair-step when upscaled
     float lg0 = v * 2.4 + hash(vec2(seed, 2.2));
-    float li = floor(lg0 + 0.5);                               // the nearest ledge
+    float li = floor(lg0 + 0.5);
     float lg = lg0 + (nzl(vec2(p.x / uV * 0.35 + seed, li * 0.37 + 0.2)).g - 0.5) * 0.24;
-    float lf = fract(lg), ls = lf < 0.5 ? lf : lf - 1.0;      // signed distance to the ledge, in ledges
-    float lpx = 2.4 * uPx / (span * uV) * 3.5;                 // three and a half buffer pixels, in ledges
+    float lf = fract(lg), ls = lf < 0.5 ? lf : lf - 1.0;      // signed dist to the ledge
+    float lpx = 2.4 * uPx / (span * uV) * 3.5;                 // 3.5 buffer px, in ledge units
     float ledge = mix(-0.06 * smoothstep(-0.2, 0.0, ls), 0.3 * exp(-max(ls - 0.5 * lpx, 0.0) / 0.035), smoothstep(-lpx, lpx, ls));
-    // (none above the first ledge's lip, which begins at lg 0.8: the gate cuts where nothing is drawn)
     d += dd * ledge * step(0.5, lg) * (1.0 - smoothstep(0.8, 0.95, v));
     float stroke = smoothstep(0.5, 0.56, cut) * smoothstep(0.35, 0.6, cut2) * smoothstep(0.35, 0.55, pn.g);
     d += dd * (0.3 * stroke * (0.4 + 0.6 * near) + 0.12 * smoothstep(0.6, 0.72, cut2) * near);
-    // grass and scrub along the top
     vec4 dn = nz(p / uV * 6.0 + seed);
     d += 0.24 * detail * exp(-dt / 0.022) * (0.6 + 0.4 * cut2);
     brush = mix(1.0, 0.25 + 0.75 * smoothstep(0.35, 0.6, dn.g), detail);
-    d += smoothstep(0.6, 0.72, dn.b) * exp(-dt / 0.026) * detail * 0.45;   // moss dots
+    d += smoothstep(0.6, 0.72, dn.b) * exp(-dt / 0.026) * detail * 0.45;
   }
-  d += 0.36 * exp(-dt / 0.005) * (0.7 + 0.3 * tn2);               // the brush along the top
-  d += 0.22 * exp(-df / 0.004) * (0.4 + 0.6 * detail) * brush;    // and down the face, dropping out here and there (비백)
+  d += 0.36 * exp(-dt / 0.005) * (0.7 + 0.3 * tn2);
+  d += 0.22 * exp(-df / 0.004) * (0.4 + 0.6 * detail) * brush;
   vec3 c = mix(inkTone(d * pale, SLATE), PAPER, mist * 0.9);
   return mix(col, c, m);
 }
 
-// a pine on the near cliff's shoulder, bent by years of wind out over the sea, its needles in
-// flat dark pads that rock a little in the gusts: steadfast in the storm (소나무)
+// wind bent pine on the near cliff's shoulder
 float pineX(float w, float seed, float sway) { return 0.08 * sin(w * 4.0 + seed) * w + 0.28 * w * w + sway * w * w; }
 vec3 pine(vec3 col, vec2 p, vec2 root, float sz, float seed) {
-  float u = (p.x - root.x) / sz, w = (root.y - p.y) / sz;   // w: height above the root, in tree heights
+  float u = (p.x - root.x) / sz, w = (root.y - p.y) / sz;   // w = height above the root, in tree heights
   if (u < -0.45 || u > 1.15 || w < -0.06 || w > 1.2) return col;
   float gust = smoothstep(0.25, 0.8, nz(vec2(root.x / uV * 0.3 - uT * 0.045, 0.5)).r);
   float sway = 0.012 * tsin(0.9, seed) + 0.025 * gust;
   float aa = uPx / sz;
-  // the trunk: a kink low down, then a long lean out to the right; dark along its edges, barked
+  // trunk: kink low down, then a long lean out to the right
   float wt = clamp(w, 0.0, 0.92);
   float tx = pineX(wt, seed, sway);
   float slope = 0.08 * (sin(wt * 4.0 + seed) + 4.0 * wt * cos(wt * 4.0 + seed)) + 0.56 * wt + 2.0 * sway * wt;
@@ -449,8 +387,7 @@ vec3 pine(vec3 col, vec2 p, vec2 root, float sz, float seed) {
   float ink = smoothstep(tw + aa, tw - aa, dx) * step(w, 0.93) * smoothstep(-0.05, -0.01, w);
   float bark = nz(vec2(u * 7.0, w * 3.0) + seed).b;
   float d = mix(0.68 + 0.3 * smoothstep(0.45, 0.68, bark), 1.05, smoothstep(tw * 0.3, tw * 0.85, dx));
-  // limbs out to the pads, mostly downwind, and the pads: flat, layered, bristling at the rim,
-  // darker underneath where the needles hang
+  // limbs out to flat needle pads, darker underneath
   float pads = 0.0, pd = 0.0;
   for (int i = 0; i < 5; i++) {
     float fi = float(i);
@@ -498,9 +435,8 @@ vec3 mistBand(vec3 col, vec2 p, float yc, float th, float k, float seed) {
   return mix(col, PAPER, sat(m * k));
 }
 
-// ── rocks at the cliff foot, and the waves breaking on them ────────────────
-// x (fraction of width), half width and height (uS), seed;
-// and how far out each one stands, as a fraction of the way from the cliff foot to the horizon
+// rocks
+// x (fraction of width), half width, height (in uS), seed. ROCKOUT is how far out each sits, foot to horizon
 const int NR = 5;
 const vec4 ROCK[5] = vec4[5](
   vec4(${f1(BIG.x)}, 0.17, 0.24, ${f1(BIG.seed)}), vec4(0.23, 0.12, 0.17, 2.9), vec4(0.31, 0.07, 0.095, 4.1),
@@ -509,20 +445,18 @@ const float ROCKOUT[5] = float[5](0.0, 0.03, 0.06, 0.1, 0.0);
 const float BIGX = ${f1(BIG.x)};
 
 float rockBase(int i) { return uFoot - ROCKOUT[i] * (uFoot - uHz); }
-// on a phone held upright the rocks move in from the left edge, so the spray opens into the frame
+// same as rockX() in the js
 float rockX(float x) { return mix(x, 0.18 + x * 1.1, uNarrow) * uSize.x; }
 
-// when the last swell reached this rock (seconds), and how hard it hit
+// returns (seconds since the last swell hit, how hard)
 vec2 rockWave(vec4 R, float cx, float baseY, out float wave) {
   float z, xw;
-  float ph = wavePhase(vec2(cx, baseY - 0.004 * uV), z, xw) + fract(R.w * 0.37) * 0.6;   // each takes it in turn
+  float ph = wavePhase(vec2(cx, baseY - 0.004 * uV), z, xw) + fract(R.w * 0.37) * 0.6;   // staggered per rock
   wave = floor(ph);
   return vec2(fract(ph) / WSPD, 0.35 + 0.65 * hash(vec2(wave, R.w)));
 }
 
-// the top edge of a rock over k = -1..1: straight cuts between six knots, the peak off centre.
-// The height (0..1) and the slope there, blended across the knots so the lit planes below do not
-// change along ruler-straight seams.
+// top edge of a rock for k in -1..1, returns (height, slope). slope is blended across knots so the planes don't seam
 vec2 rockTop(float k, float seed) {
   float u = (k * 0.5 + 0.5) * 5.0;
   float i = clamp(floor(u), 0.0, 4.0), f = u - i;
@@ -537,7 +471,7 @@ vec2 rockTop(float k, float seed) {
 }
 
 vec3 rocks(vec3 col, vec2 p) {
-  float rS = max(uS, 0.5 * uV);             // on a phone held upright the rocks keep a sensible size
+  float rS = max(uS, 0.5 * uV);             // min size on portrait phones
   for (int i = 0; i < NR; i++) {
     vec4 R = ROCK[i];
     float baseY = rockBase(i);
@@ -556,7 +490,7 @@ vec3 rocks(vec3 col, vec2 p) {
       float topY = baseY - hh * ((tp.x + jag * (1.0 - abs(k))) * side - 0.06);
       float e = uPx * 1.1;
       float m = smoothstep(topY - e, topY + e, p.y) * smoothstep(baseY + 0.012 * uV, baseY - 0.002 * uV, p.y);
-      // moss dots (태점) along the ridge, sitting on the outline
+      // moss dots on the ridge
       float cw = 0.02 * rS;
       float ci = floor(p.x / cw);
       float hd = hash(vec2(ci, R.w + 2.0));
@@ -568,20 +502,19 @@ vec3 rocks(vec3 col, vec2 p) {
         vec2 rq = vec2(p.x * 0.8 - p.y * 0.6, p.y * 0.8 + p.x * 0.6) / rS;
         float cut = nz(rq * vec2(9.0, 1.3) + R.w).b;
         float cut2 = nz(rq * vec2(20.0, 2.6) - R.w).g;
-        float lit = smoothstep(0.03, -0.08, tp.y) * (0.6 + 0.4 * smoothstep(0.4, 0.6, cut));   // a cut that falls away to the right faces the light
+        float lit = smoothstep(0.03, -0.08, tp.y) * (0.6 + 0.4 * smoothstep(0.4, 0.6, cut));   // slopes down to the right = lit
         float topK = 1.0 - smoothstep(0.08, 0.3, dt + (cut - 0.5) * 0.25);
-        float d = 0.88 + 0.14 * smoothstep(0.4, -0.8, k);         // the body, darker on the side away from the light
-        d -= topK * (0.3 + 0.26 * lit);                         // the planes on top are left pale
-        d += 0.24 * smoothstep(0.55, 0.72, cut) * (1.0 - 0.6 * topK);   // axe-cut strokes (부벽준)
+        float d = 0.88 + 0.14 * smoothstep(0.4, -0.8, k);
+        d -= topK * (0.3 + 0.26 * lit);
+        d += 0.24 * smoothstep(0.55, 0.72, cut) * (1.0 - 0.6 * topK);
         d -= 0.16 * smoothstep(0.6, 0.76, cut2) * (1.0 - topK) * (1.0 - smoothstep(0.3, 0.9, dt));
-        // a crease running down from the peak
         float pkx = (hash(vec2(R.w, 5.1)) - 0.5) * 0.9 + 0.4 * (hash(vec2(R.w, 6.3)) - 0.5) + (nz(vec2(dt * 0.6, R.w)).r - 0.5) * 0.3;
         d += 0.45 * exp(-abs(k - pkx) * hw / (1.2 * uPx + 0.8)) * smoothstep(0.02, 0.12, dt) * (1.0 - smoothstep(0.4, 0.9, dt + cut * 0.2));
-        d += 0.45 * exp(-(p.y - topY) / (1.4 * uPx + 0.8));       // the outline along the top
-        d += 0.12 * smoothstep(baseY - 0.3 * hh, baseY, p.y);     // wet at the waterline
+        d += 0.45 * exp(-(p.y - topY) / (1.4 * uPx + 0.8));
+        d += 0.12 * smoothstep(baseY - 0.3 * hh, baseY, p.y);
         d = max(d, dot1 * 1.05);
         col = mix(col, inkTone(d, SLATE), max(m, dot1));
-        // the swell washes up the rock, then drains off it in streaks
+        // water washes up, then drains off in streaks
         float wash = exp(-age / 1.3) * smoothstep(0.0, 0.3, age) * power;
         float fb = nz(p / rS * vec2(5.0, 3.5) + vec2(R.w, -age * 0.04)).r;
         float streak = nz(vec2(p.x / rS * 6.0 + R.w, p.y / rS * 0.8 - age * 0.05)).b;
@@ -592,7 +525,7 @@ vec3 rocks(vec3 col, vec2 p) {
         col = mix(col, PAPER, sat(sheet * 0.8 + drain * 0.55) * m * 0.92);
       }
     }
-    // foam round its foot, broken into lace, spreading as the swell arrives
+    // foam around the foot
     {
       float fy = (p.y - baseY) / rS;
       float swell = exp(-age / 1.6) * smoothstep(0.0, 0.4, age) * power;
@@ -608,10 +541,7 @@ vec3 rocks(vec3 col, vec2 p) {
   return col;
 }
 
-// spray: when a swell strikes a rock's seaward face, white water bursts up behind it: a lobed
-// mass with fingers at its rim, leaning with the wind. It opens into holes and clumps as it
-// falls back, flings drops and spatter (발묵) and leaves a veil drifting off to the right. White
-// paper at its heart, fraying out through a faint grey rim.
+// spray thrown up behind a rock when a swell hits: lobed blob, fingers, drops and a veil drifting off
 vec3 spray(vec3 col, vec2 p) {
   float rS = max(uS, 0.5 * uV);
   for (int i = 0; i < NR; i++) {
@@ -626,31 +556,27 @@ vec3 spray(vec3 col, vec2 p) {
     float age = ap.x, power = ap.y;
     float life = age / 4.2;
     if (life >= 1.0) continue;
-    // where the swell strikes: the rock's seaward face, near its top
     vec2 o = vec2(cx + hw * (hash(vec2(R.w, 4.0)) - 0.5) * 0.6, baseY - hh * 0.6);
     float shoot = 1.0 - pow(1.0 - sat(life * 2.4), 3.0);
     vec2 q = (p - o) / hh;
-    q.x -= (0.2 + 0.7 * life) * max(-q.y, 0.0) * 0.45;      // the higher, the further the wind has taken it
+    q.x -= (0.2 + 0.7 * life) * max(-q.y, 0.0) * 0.45;      // wind pushes the higher parts further
     float r = length(q);
     float th = atan(q.x, -q.y);                             // 0 straight up, positive to the right
-    // the outline: lobed, tallest straight up, low at the sides
     float lob = nz(vec2(th * 0.3 + wave * 0.23 + R.w, 0.37)).r;
     float lob2 = nz(vec2(th * 1.2 + wave * 0.71, R.w)).g;
     float reach = (0.5 + 0.85 * power) * shoot * (0.45 + 0.7 * lob + 0.25 * lob2) * pow(max(cos(th * 1.15), 0.0), 0.8) + 1e-3;
     float rr = r / reach;
-    // a veil of fine spray, lifting and drifting off
     vec2 vq = (q - vec2(0.25 + life * 0.9, -0.45 - 0.55 * shoot)) / vec2(0.7 + 0.8 * life, 0.5 + 0.35 * life);
     float vd = dot(vq, vq);
-    if (rr > 1.7 && vd > 5.3) continue;                     // (past the last drops and the veil: nothing)
+    if (rr > 1.7 && vd > 5.3) continue;
     float vn = vd < 5.3 ? nz(p / rS * vec2(2.0, 2.6) + vec2(-life * 0.12, wave * 0.13)).g : 0.0;
     float veil = exp(-vd) * smoothstep(0.35, 0.7, vn) * smoothstep(0.05, 0.3, life);
     float fade = (1.0 - smoothstep(0.6, 1.0, life)) * power;
-    // the mass: paper at its heart under a thin, uneven grey wash, its edge frayed and torn, and
-    // opening into clumps and holes as it falls back
+    // main mass: white paper under a thin grey wash, breaking into clumps as it falls
     float pn = nz(p / rS * vec2(4.2, 3.4) + vec2(wave * 0.37 - life * 0.12, R.w + life * 0.2)).b;
     float pn2 = nz(p / rS * vec2(10.0, 8.0) + vec2(R.w, wave * 0.19)).r;
     float pn3 = nz(p / rS * vec2(18.0, 14.0) + vec2(wave * 0.11, R.w * 0.7 - life * 0.3)).g;
-    // (the fine fraying: only at the rim and along the fingers)
+    // fine fraying, rim only
     float pn4 = rr > 0.4 && rr < 1.6 ? nz(p / rS * vec2(38.0, 30.0) + vec2(wave * 0.29, R.w * 0.4)).a : 0.5;
     float dens = (1.0 - rr) * 1.5 + (pn - 0.5) * 0.9 + (pn2 - 0.5) * 0.55 + (pn3 - 0.5) * 0.35
                + (pn4 - 0.5) * 0.3 * smoothstep(0.4, 0.9, rr);
@@ -658,8 +584,7 @@ vec3 spray(vec3 col, vec2 p) {
     float mass = smoothstep(thr, thr + 0.22, dens);
     float rim = smoothstep(thr - 0.15, thr + 0.05, dens) * (1.0 - smoothstep(thr + 0.05, thr + 0.3, dens));
     float wash = 0.7 + 0.3 * smoothstep(0.3, 0.75, pn2 * 0.6 + pn * 0.4);
-    // fingers flung out past the rim: broad and frayed, bent on by the wind, breaking where the brush
-    // ran dry
+    // fingers flung out past the rim
     float dth = 0.08;
     float thb = th - 0.16 * (0.3 + life) * max(rr - 0.7, 0.0);
     float j = floor(thb / dth);
@@ -671,8 +596,7 @@ vec3 spray(vec3 col, vec2 p) {
     float finger = 0.7 * smoothstep(aw, aw * 0.3, fe) * step(0.45, hj) * smoothstep(0.78, 0.9, rr)
                  * (1.0 - smoothstep(tip - 0.1, tip, rr)) * (1.0 - smoothstep(0.35, 0.8, life))
                  * smoothstep(0.3, 0.55, pn2) * (0.5 + 0.5 * smoothstep(0.35, 0.6, pn4));
-    // drops off the tips, drawn out along the wind, and a ring of finer spatter beyond them: on two
-    // lattices turned against each other, every drop its own size and place, so no grid shows
+    // drops and finer spatter, on two rotated grids so no grid shows
     float drop = 0.0, spat = 0.0;
     if (rr > 0.8 && rr < 1.65) {
       float ca = 0.9394, sa = 0.3429;                       // cos and sin of 0.35
@@ -697,8 +621,7 @@ vec3 spray(vec3 col, vec2 p) {
   return col;
 }
 
-// white water along the cliff foot: the roller of each swell breaking as it comes in, whitest about
-// the rocks, and the foam it leaves sliding up the shore in a few long soft lines, wash between them
+// surf at the cliff foot: the breaking roller, plus foam lines sliding up the shore
 vec3 surf(vec3 col, vec2 p) {
   float y = (p.y - uFoot) / uV;
   if (y < -0.05) return col;
@@ -710,44 +633,39 @@ vec3 surf(vec3 col, vec2 p) {
   float zone = smoothstep(top - 0.004, top + 0.004, y);
   if (zone <= 0.0) return col;
   float l2 = nz(vec2(p.x / uV * 3.2 + uT * 0.004, y * 13.0 + 0.3)).g;
-  // the roller: a white band along the front of the zone, thickest just after the swell breaks
   float roll = exp(-sq((y - top - 0.004) / (0.004 + 0.006 * surge))) * (0.5 + 0.5 * smoothstep(0.3, 0.6, l2))
              * (0.65 + 0.35 * smoothstep(0.35 * uSize.x, 0.0, abs(p.x - rockX(0.25))));
-  // the foam lines: following the shore and sliding up it with each swell (a line id that does not
-  // jump when the swell does), every one its own weight, broken along its length and fading up the shore
+  // foam lines. the line id doesn't jump when the swell does
   float ln = nz(vec2(p.x / uV * 0.9 - uT * 0.003, 0.55)).r;
   float ly = (y - top) / 0.026 + (ln - 0.5) * 1.6 - fract(ph);
   float li = floor(ly) - floor(ph);
   float hl = hash(vec2(li, 0.7)), hl2 = hash(vec2(li + 4.0, 0.3));
   float lw = 0.1 + 0.12 * hl;
-  vec4 lnz = nzd(vec2(p.x / uV * 1.5 + hl * 5.0, li * 0.37 + 0.2), 1.5 * uPx / uV);   // this line's own noise
+  vec4 lnz = nzd(vec2(p.x / uV * 1.5 + hl * 5.0, li * 0.37 + 0.2), 1.5 * uPx / uV);
   float gate = smoothstep(0.35, 0.6, lnz.b);
-  float line = exp(-sq((fract(ly + (lnz.r - 0.5) * 0.7) - 0.5) / lw)) * gate * (0.6 + 0.4 * smoothstep(0.3, 0.6, l2))   // (wandering, so no two run parallel)
+  float line = exp(-sq((fract(ly + (lnz.r - 0.5) * 0.7) - 0.5) / lw)) * gate * (0.6 + 0.4 * smoothstep(0.3, 0.6, l2))
              * (0.45 + 0.55 * hl2) * step(0.4, hl2) * (1.0 - smoothstep(0.015, 0.085, y - top));
   float lace = sat(max(line, roll));
   vec3 water = inkTone(0.48 + 0.1 * l2, TEAL);
   return mix(col, mix(water, PAPER, lace * 0.95), zone);
 }
 
-// ── the cliff edge the viewer stands on, and its grass ─────────────────────
+// foreground: the cliff edge and grass
 float edgeY(float x) {
   float u = x / uSize.x;
-  // (level 0 by hand: it is also asked per stem, where x jumps from one to the next)
+  // lod 0 by hand, this also gets called per stem where x jumps
   return uSize.y - uV * (0.155 + 0.085 * smoothstep(0.3, 1.0, u)) + (nzl(vec2(x / uV * 0.5, 0.77)).r - 0.5) * 0.05 * uV;
 }
 
 vec3 foreground(vec3 col, vec2 p) {
   float ye = edgeY(p.x);
-  // the turf: a dark stroke pressed along the lip, with flying white where the brush ran dry,
-  // then a pale wash flicked with short strokes of grass, left to fade into the paper
+  // turf: dark stroke along the lip, dry brush gaps, grass flicks fading into the paper
   if (p.y > ye - 2.0) {
     float dy = (p.y - ye) / uV;
-    // (no lookup here is stretched much more in one direction than the other: thresholding a
-    // strongly stretched, mipmapped lookup draws blocks)
+    // keep these lookups roughly square, stretched mipmapped noise thresholds into blocks
     float s1 = nz(vec2(p.x / uV * 1.4, dy * 4.0) + 0.4).b;
     float s3 = nz(vec2(p.x / uV * 0.4, 0.2)).r;
-    // short strokes of grass flicked up and to the right all through it
-    // (rotated, not sheared, into the stroke direction, so the noise lattice does not show as blocks)
+    // grass flicks. rotated not sheared, so the noise grid doesn't show
     vec2 fq = vec2(dot(p, vec2(0.88, 0.48)), dot(p, vec2(-0.48, 0.88))) / uV;
     vec2 fq2 = vec2(dot(p, vec2(0.83, 0.56)), dot(p, vec2(-0.56, 0.83))) / uV;
     float flick = nz(fq * vec2(13.0, 2.2) + 0.33).b;
@@ -755,26 +673,25 @@ vec3 foreground(vec3 col, vec2 p) {
     float mass = 1.0 - smoothstep(0.012 + 0.016 * s3, 0.075 + 0.045 * s3, dy + (s1 - 0.5) * 0.03);
     float d = (0.7 + 0.2 * smoothstep(0.4, 0.7, s1)) * mass;
     d *= 0.8 + 0.3 * smoothstep(0.45, 0.7, flick) + 0.08 * smoothstep(0.5, 0.7, flick2);
-    // flying white where the brush ran dry, more of it lower down
     d *= 1.0 - 0.7 * smoothstep(0.5, 0.64, flick2 * 0.6 + s1 * 0.4) * smoothstep(0.01, 0.07, dy);
-    d += 0.3 * exp(-(p.y - ye) / (2.0 * uPx + 1.0));                                   // pressed hard at the lip
+    d += 0.3 * exp(-(p.y - ye) / (2.0 * uPx + 1.0));
     float m = smoothstep(-uPx, uPx, p.y - ye);
     col = mix(col, inkTone(d, SLATE), m);
   }
-  // grass: tapered blades in tufts, leaning with the wind and swaying in the gusts that run along the edge
-  float gS = max(uS, 0.55 * uV);           // on a phone held upright the grass keeps a sensible size
+  // grass blades in tufts, leaning in the wind
+  float gS = max(uS, 0.55 * uV);
   float gh = (0.075 + 0.045 * smoothstep(0.4, 0.9, p.x / uSize.x)) * gS;
-  float sh = gh * 1.9;                     // the silver grass stands taller
+  float sh = gh * 1.9;
   if (p.y < ye - sh * 1.05) return col;
   float gust = smoothstep(0.25, 0.8, nz(vec2(p.x / uV * 0.3 - uT * 0.045, 0.5)).r);
   if (p.y > ye - gh * 1.15 && p.y < ye + 4.0) {
     float cw = max(0.0055 * gS, 2.5);
     float cell = floor(p.x / cw);
     float ink = 0.0;
-    for (int j = -14; j <= 1; j++) {     // (a blade leans at most 13 cells to the right)
+    for (int j = -14; j <= 1; j++) {     // blades lean up to 13 cells right
       float c = cell + float(j);
       float h1 = hash(vec2(c, 1.7)), h2 = hash(vec2(c, 9.1)), h3 = hash(vec2(c, 4.3));
-      float tuft = smoothstep(0.3, 0.72, nzl(vec2(c * cw / uV * 2.4, 0.13)).r);   // the grass grows in clumps
+      float tuft = smoothstep(0.3, 0.72, nzl(vec2(c * cw / uV * 2.4, 0.13)).r);
       float bh = gh * (0.22 + 0.78 * h2 * h2) * (0.35 + 0.8 * tuft);
       float v = (ye + 3.0 - p.y) / bh;
       if (v < 0.0 || v > 1.0) continue;
@@ -784,16 +701,16 @@ vec3 foreground(vec3 col, vec2 p) {
       float wt = max(1.4 * uPx, 0.0042 * gS) * (1.0 - v * 0.9) * (0.7 + 0.6 * h1);
       float w = max(wt, 1.1 * uPx);
       float blade = (1.0 - smoothstep(0.35, 1.0, abs(p.x - x) / w)) * (wt / w);
-      ink = max(ink, blade * (h3 > 0.7 ? 0.45 : 0.7 + 0.3 * h2));               // some stand behind, paler
+      ink = max(ink, blade * (h3 > 0.7 ? 0.45 : 0.7 + 0.3 * h2));
     }
     float tone = 0.92 - 0.3 * sat((ye - p.y) / gh);
     col = mix(col, inkTone(tone, SLATE), ink);
   }
-  // silver grass (억새): a few tall stems, their plumes streaming downwind
+  // silver grass: a few tall stems with plumes
   if (p.y < ye + 4.0) {
     float cw = 0.05 * gS * (1.0 + uNarrow);
     float cell = floor(p.x / cw);
-    for (int j = -4; j <= 0; j++) {     // (a stem and its plume reach up to four cells downwind)
+    for (int j = -4; j <= 0; j++) {     // plumes reach up to 4 cells downwind
       float c = cell + float(j);
       float h1 = hash(vec2(c, 2.3)), h2 = hash(vec2(c, 7.9));
       if (h2 < 0.5) continue;
@@ -805,16 +722,15 @@ vec3 foreground(vec3 col, vec2 p) {
       float sway = 0.04 * tsin(0.7 + 0.3 * h1, h2 * 6.28 + bx / uV * 3.0);
       float lean = (0.3 + 0.25 * gust + sway) * bh;
       float x = bx + lean * v * v;
-      // the stem
       float sw = max(0.0025 * gS, 1.0 * uPx);
       float stem = (1.0 - smoothstep(0.3, 1.0, abs(p.x - x) / sw)) * step(v, 0.98);
       col = mix(col, inkTone(0.62, SLATE), stem * 0.8);
-      // the plume: soft and silvery, drawn with fine hairs, streaming off the top of the stem
+      // plume
       float pv = (v - 0.58) / 0.46;
       if (pv > 0.0 && pv < 1.2) {
-        float slope = 2.0 * lean * v / bh;                        // the stem's lean here
+        float slope = 2.0 * lean * v / bh;
         float pw = bh * 0.055 * sin(3.14159 * sat(pv / 1.1)) + uPx;
-        float stream = (0.08 + 0.12 * gust + sway) * bh * pv * pv + pw * 0.4;  // the wind combs it out downwind
+        float stream = (0.08 + 0.12 * gust + sway) * bh * pv * pv + pw * 0.4;
         float dxp = p.x - x - stream;
         float pm = exp(-sq(dxp / pw)) * smoothstep(1.15, 0.9, pv);
         float hair = nzd(vec2(dxp / bh * 30.0 - pv * slope * 6.0, pv * 1.5 + h1), 30.0 / bh * uPx).b;
@@ -825,7 +741,7 @@ vec3 foreground(vec3 col, vec2 p) {
   return col;
 }
 
-// ── rain ───────────────────────────────────────────────────────────────────
+// rain
 float rainLayer(vec2 p, float ang, float cell, float len, float fall, float dens, float wid, float seed) {
   float c = cos(ang), s = sin(ang);
   vec2 r = vec2(c * p.x - s * p.y, s * p.x + c * p.y);
@@ -846,31 +762,31 @@ float rainLayer(vec2 p, float ang, float cell, float len, float fall, float dens
 void main() {
   vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) * uPx;
   float W = uSize.x, H = uSize.y;
-  // the painting dissolves into the page above and below
+  // fade into the page at the top and bottom
   float en = nz(px / uV * vec2(0.5, 0.3) + 0.21).r;
   float aTop = smoothstep(0.0, mix(0.3, 0.2, uNarrow) * uV, px.y + (en - 0.5) * mix(0.2, 0.12, uNarrow) * uV);
   float aBot = 1.0 - smoothstep(H - 0.12 * uV, H - 0.005 * uV, px.y + (en - 0.5) * 0.08 * uV);
   float alpha = aTop * aBot;
   if (alpha < 0.002) { o = vec4(0.0); return; }
 
-  // under the letter card only a breath of it shows through: keep it plain there
+  // keep it plain under the letter card, barely shows there anyway
   float inCard = min(min(px.x - uCard.x, uCard.z - px.x), min(px.y - uCard.y, uCard.w - px.y));
   vec3 plain = inkTone(0.12 + 0.2 * smoothstep(0.0, 0.6 * uV, px.y), SLATE);
   if (inCard > 90.0) { o = vec4(plain * alpha, alpha); return; }
 
-  // layers shift a little with the pointer, the nearer the more
+  // parallax, nearer layers move more
   vec2 par = uPtr * vec2(1.0, 0.5);
   vec2 pSky = px + par * 5.0;
   vec2 pSea = px + par * 10.0;
   vec3 col = vec3(0.0);
-  if (pSea.y < uHz + 2.0 * uPx) {                 // (the sea covers the sky below the horizon)
+  if (pSea.y < uHz + 2.0 * uPx) {
     col = sky(pSky, breakMask(pSky));
     if (px.y > uHz - 0.06 * uV) col = island(col, px + par * 7.0);
   }
   if (pSea.y > uHz) col = mix(col, sea(pSea), smoothstep(uHz, uHz + 1.5 * uPx, pSea.y));
   col = mistBand(col, px + par * 8.0, uHz - 0.004 * uV, 0.016, 0.5, 0.3);
 
-  // headlands, far to near, with mist between them
+  // headlands far to near, mist in between
   float fs = uFoot - uHz;
   vec2 pc = px + par * 7.0;
   col = headland(col, pc, W * mix(0.45, 0.6, uNarrow), 0.11, 0.012, 0.5, 5.3, 0.0);
@@ -881,22 +797,20 @@ void main() {
   pc = px + par * 14.0;
   col = headland(col, pc, W * mix(0.19, 0.22, uNarrow), 0.66, fs / uV + 0.02, 0.92, 7.7, 1.0);
   {
-    // the pine stands back from the edge, on the shoulder of the near cliff
     float nfx = W * mix(0.19, 0.22, uNarrow);
     float rx = nfx - 0.12 * uV;
     if (rx > 0.04 * uV) col = pine(col, pc, vec2(rx, uHz + (ridge(rx, nfx, 0.66, 7.7) + 0.006) * uV), 0.24 * uV, 3.7);
   }
-  // (the band of mist over the water at the cliff foot thins where the big rock throws its spray)
+  // mist at the cliff foot, thinner where the big rock throws spray
   col = mistBand(col, pc, uFoot - 0.1 * uV, 0.05, 0.3 * (0.45 + 0.55 * smoothstep(0.1 * uV, 0.45 * uV, abs(pc.x - rockX(BIGX)))), 6.1);
   {
-    // a drift of cloud across the near cliff, about halfway up
+    // cloud drifting across the near cliff
     float cxk = smoothstep(W * mix(0.19, 0.22, uNarrow) + 0.12 * uV, W * mix(0.19, 0.22, uNarrow) - 0.05 * uV, pc.x);
     vec3 mc = mistBand(col, pc + vec2(0.0, (nz(vec2(pc.x / uV * 0.9 - uT * 0.006, 0.61)).r - 0.5) * 0.12 * uV), uHz - 0.28 * uV, 0.055, 0.42, 8.3);
     col = mix(col, mc, cxk);
   }
 
-  // far and middle rain, in front of the far scene; it falls from the clouds, not above them, and
-  // shows on the pale washes rather than on the heavy ink
+  // far and mid rain. only below the clouds, and mostly on the paler bits
   float a1 = 0.2;
   float rainK = smoothstep(mix(0.4, 0.22, uNarrow) * uV, mix(0.75, 0.5, uNarrow) * uV, px.y);
   if (rainK > 0.0) {
@@ -907,11 +821,10 @@ void main() {
     col = mix(col, inkTone(0.55, SLATE), rm * 0.3 * rainK);
   }
 
-  // the rocks, the surf and the spray at the cliff foot
   vec2 pr = px + par * 18.0;
   if (pr.y > uFoot - 0.75 * uV && pr.y < uFoot + 0.1 * uV) {
     col = surf(col, pr);
-    col = spray(col, pr);       // the swells strike the seaward faces, so the spray rises from behind the rocks
+    col = spray(col, pr);       // spray goes behind the rocks
     col = rocks(col, pr);
   }
   col = foreground(col, px + par * 26.0);
@@ -923,7 +836,7 @@ void main() {
 
   col = mix(col, plain, smoothstep(30.0, 90.0, inCard));
 
-  // hanji: soft mottling and long fibres, ink settling into them
+  // paper texture: mottling and fibers
   vec2 pq = px / 640.0;
   float mott = nz(pq * 0.9).a;
   float fib = nz(vec2(pq.x * 6.0, pq.y * 6.0) + 0.3).b;
@@ -935,12 +848,11 @@ void main() {
 }`;
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
-// a stable random number per integer
+// stable random per integer
 const h1 = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 const gauss = (x, c, w) => Math.exp(-((x - c) * (x - c)) / (w * w));
 
-// ── the shader's swell timing, worked out here to choose the still frame ──
-// the noise texture as the shader reads it at mip level 0: bilinear, wrapping; channel c
+// js copy of the shader's noise lookup at lod 0 (bilinear, wrapping), used to pick the still frame
 function nzJ(u, v, c) {
   const { data, size } = noiseData(256);
   const at = (i, j) => data[((((j % size) + size) % size) * size + (((i % size) + size) % size)) * 4 + c] / 255;
@@ -950,7 +862,7 @@ function nzJ(u, v, c) {
   const b = at(x0, y0 + 1) + (at(x0 + 1, y0 + 1) - at(x0, y0 + 1)) * fx;
   return a + (b - a) * fy;
 }
-// the shader's hash(), in single precision
+// same hash() as the shader, float32 so it matches
 const fr = Math.fround;
 const fractJ = (x) => fr(x - Math.floor(x));
 function hashJ(x, y) {
@@ -968,9 +880,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
   } catch { gl = null; }
   if (!gl) return null;
 
-  // ── GL resources (built again if the context is lost and restored) ──
-  // The shader is long, and some drivers take a while over it: where they can compile it in the
-  // background (KHR_parallel_shader_compile) the link is only waited for later, off the page's boot
+  // gl setup, redone after a context restore. KHR_parallel_shader_compile lets the big shader link without blocking
   let prog = null, vao = null, vb = null, tex = null, U = {}, layoutSent = false;
   let vs = null, fs = null, par = null, ready = false, linkWait = 0;
   let lost = false, destroyed = false;
@@ -1007,12 +917,12 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     gl.generateMipmap(gl.TEXTURE_2D);
     layoutSent = false;
   }
-  // the link is done (or waited for, here): the program is usable from now on
+  // blocks until linked if it isn't yet
   function finishLink() {
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
       throw new Error([gl.getShaderInfoLog(vs), gl.getShaderInfoLog(fs), gl.getProgramInfoLog(prog)].filter(Boolean).join('\n'));
     }
-    gl.deleteShader(vs); gl.deleteShader(fs);   // freed along with the program
+    gl.deleteShader(vs); gl.deleteShader(fs);
     gl.useProgram(prog);
     U = {};
     for (let i = 0, n = gl.getProgramParameter(prog, gl.ACTIVE_UNIFORMS); i < n; i++) {
@@ -1028,7 +938,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     return null;
   }
 
-  // ── layout ──
+  // layout
   const maxRB = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) || 4096, gl.getParameter(gl.MAX_VIEWPORT_DIMS)?.[1] || 4096, 8192);
   const cardEl = card || canvas.parentElement?.querySelector('.letter') || null;
   let res = 0.5, W = 0, H = 0, V = 0, S = 0, lastIW = -1, lastIH = -1;
@@ -1036,13 +946,12 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
   const cardR = [0, 0, 0, 0];
   let dirty = true, full = true;
 
-  // true when the layout changed (and so the whole section wants repainting)
+  // returns true if the layout changed
   function measure() {
     dirty = false;
     const r = canvas.getBoundingClientRect();
     const w = Math.max(1, r.width), h = Math.max(1, r.height);
-    // the view unit follows width changes and large height changes only, so a mobile URL bar
-    // showing or hiding does not reflow the sky
+    // V only follows width changes or big height changes, so the mobile url bar doesn't reflow the sky
     let v = V;
     if (innerWidth !== lastIW || Math.abs(innerHeight - lastIH) > 160 || !V) {
       v = clamp(innerHeight, 480, 1100); lastIW = innerWidth; lastIH = innerHeight;
@@ -1052,7 +961,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
       const c = cardEl.getBoundingClientRect();
       c0 = c.left - r.left; c1 = c.top - r.top; c2 = c.right - r.left; c3 = c.bottom - r.top;
     }
-    // reduced resolution; the browser upscales it (it is soft by nature)
+    // low res on purpose, it's all soft anyway
     const dpr = Math.min(1.5, window.devicePixelRatio || 1);
     let rs = mobile ? Math.min(innerWidth < 500 ? 0.7 : 0.6, 0.45 * dpr) : Math.min(0.62, 0.5 * dpr);
     const area = w * h * rs * rs;
@@ -1065,10 +974,9 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     W = w; H = h; V = v; res = rs;
     cardR[0] = c0; cardR[1] = c1; cardR[2] = c2; cardR[3] = c3;
     S = Math.min(V, W * 0.95);
-    // the sea meets the sky a little below the card, so the whole view opens up under the letter
     hz = c3 > 0 ? c3 + 0.22 * V : H - 0.78 * V;
     hz = clamp(hz, Math.min(0.5 * V, H * 0.4), H - 0.5 * V);
-    foot = Math.max(hz + 0.22 * V, H - 0.26 * V);     // the water line, with the rocks standing clear of the grass below
+    foot = Math.max(hz + 0.22 * V, H - 0.26 * V);     // waterline, high enough that the rocks clear the grass
     narrow = clamp((1.0 - W / V) / 0.5, 0, 1);
     brkX = W * (0.84 - 0.1 * narrow);
     brkR = Math.min(0.34 * V, 0.24 * W);
@@ -1078,9 +986,8 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     return true;
   }
 
-  // the moment painted for reduced motion (and the default for renderAt): about a second after
-  // a strong swell strikes the big rock, its spray at full height. The shader's wavePhase(),
-  // at the rock, at time 0:
+  // still frame for reduced motion and renderAt(): about 1s after a big swell hits the big rock.
+  // same maths as wavePhase() in the shader, at t = 0
   function chooseStill() {
     const x = rockX(BIG.x, narrow) * W, y = foot - 0.004 * V;
     const s = Math.max((y - hz) / V, 0), z = 0.1 / (s + 0.01), xw = ((x - 0.5 * W) / V) * z;
@@ -1089,14 +996,14 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
       + (nzJ((x / V) * 1.3, z * 0.2 + 0.5, 0) - 0.5) * Math.min(0.2, (14 * WK * 0.1) / ((s + 0.01) * (s + 0.01) * V));
     const ph0 = z * WK + bend + ((BIG.seed * 0.37) % 1) * 0.6;
     const first = ((((1.1 * WSPD - ph0) % 1) + 1) % 1) / WSPD;
-    // of the first two swells, the one that strikes harder (before the first flash of light at 16 s)
+    // pick the harder of the first two hits (both before the first flash at 16s)
     const power = (tt) => hashJ(Math.floor(ph0 + tt * WSPD), BIG.seed);
     return power(first + 1 / WSPD) > power(first) ? first + 1 / WSPD : first;
   }
 
-  // ── a soft flicker of light inside the clouds, every 25–40 s (deterministic in time) ──
+  // flash in the clouds every 25-40s, deterministic so renderAt(t) is repeatable
   const flash = [0, 0, 1, 0];
-  let fT = 16, fK = 0;               // the latest flash starting within a tenth of a second of the last time asked for
+  let fT = 16, fK = 0;               // start time and index of the last flash
   function flashAt(t) {
     flash[3] = 0;
     if (t < fT - 0.1) { fT = 16; fK = 0; }
@@ -1107,7 +1014,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     }
     const T = fT, k = fK;
     const dt = t - T;
-    if (dt < -0.1 || dt > 2.5) return;    // (it breathes in from a tenth of a second before)
+    if (dt < -0.1 || dt > 2.5) return;    // fades in 0.1s early
     const e = Math.max(0.55 * gauss(dt, 0.06, 0.06), gauss(dt, 0.34, 0.09)) + 0.28 * Math.exp(-Math.max(0, dt - 0.34) / 0.55) * clamp((dt - 0.22) / 0.12, 0, 1);
     const left = h1(k + 0.31) < 0.5;
     flash[0] = W * (left ? 0.06 + 0.2 * h1(k + 0.7) : 0.74 + 0.2 * h1(k + 0.7));
@@ -1116,7 +1023,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     flash[3] = e * (0.65 + 0.35 * h1(k + 0.5));
   }
 
-  // ── pointer parallax ──
+  // parallax
   const ptr = [0, 0], ptrT = [0, 0];
   const onPtr = (e) => {
     if (e.pointerType === 'touch') return;
@@ -1125,16 +1032,15 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
   };
   if (!reduceMotion) addEventListener('pointermove', onPtr, { passive: true });
 
-  let prevTop = NaN, prevM = 0, prevY0 = 0, prevY1 = 0;   // the last band painted, and where the section was then
+  let prevTop = NaN, prevM = 0, prevY0 = 0, prevY1 = 0;
   function draw(t, whole) {
     if (lost || !ready) return;
     if (dirty) measure();
     let y0 = 0, y1 = H;
-    // only the band of the section that is on screen (and a margin) is repainted
+    // only repaint what's on screen plus a margin
     if (!whole && !full) {
       const r = canvas.getBoundingClientRect();
-      // the margin grows with the scroll speed, so a fast fling (or a long frame during one) does
-      // not reveal stale paint; and after a jump past the last band, everything between is painted too
+      // margin grows with scroll speed so fast flings don't show stale paint, and a jump past the last band repaints the gap
       const dTop = Number.isNaN(prevTop) ? 0 : Math.abs(r.top - prevTop);
       const m = 0.3 * innerHeight + 2 * dTop;
       y0 = clamp(-r.top - m, 0, H); y1 = clamp(innerHeight - r.top + m, 0, H);
@@ -1150,7 +1056,6 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     const g0 = Math.max(0, Math.floor((H - y1) * sy) - 1), g1 = Math.min(bh, Math.ceil((H - y0) * sy) + 1);
     gl.scissor(0, g0, canvas.width, g1 - g0);
     if (!layoutSent) {
-      // the layout only changes on a resize: sent once, not every frame
       gl.uniform2f(U.uRes, canvas.width, bh);
       gl.uniform2f(U.uSize, W, H);
       gl.uniform1f(U.uPx, W / canvas.width);
@@ -1166,15 +1071,15 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     gl.uniform1f(U.uT, t);
     gl.uniform2f(U.uPtr, ptr[0], ptr[1]);
     gl.uniform4f(U.uFlash, flash[0], flash[1], flash[2], flash[3]);
-    // rain: fall speed (px/s) and drop spacing per layer, wrapped here in double precision
+    // rain speed px/s and drop spacing, wrapped here in doubles so the shader floats stay small
     gl.uniform3f(U.uRain, (t * 240) % (90 * 256), (t * 400) % (160 * 256), (t * 640) % (260 * 256));
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.disable(gl.SCISSOR_TEST);
   }
 
-  // ── loop: only while active and the tab is visible ──
+  // loop, only while active and the tab is visible
   let raf = 0, active = false, t = 0, last = 0, stillQueued = false;
-  const minGap = mobile ? 1000 / 34 : 1000 / 70; // it is slow: at most ~60 fps, ~30 on phones
+  const minGap = mobile ? 1000 / 34 : 1000 / 70; // heavy shader, cap at ~60fps (~30 on phones)
   function frame(now) {
     raf = 0;
     if (!active || document.hidden || destroyed || lost) return;
@@ -1187,7 +1092,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
     ptr[0] += (ptrT[0] - ptr[0]) * k; ptr[1] += (ptrT[1] - ptr[1]) * k;
     draw(t, false);
   }
-  // reduced motion: one painted moment, repainted (once per frame at most) when the layout changes
+  // reduced motion: just the still frame, redrawn on relayout
   function still() {
     if (stillQueued) return;
     stillQueued = true;
@@ -1214,14 +1119,13 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
   if (cardEl) ro?.observe(cardEl);
   addEventListener('resize', relayout);
 
-  // the shader cannot be used after all (a driver change over a lost context, say): the CSS wash instead
+  // shader broke after all (lost context etc), switch to the css wash
   function fail(e) {
     console.warn('storm: shader failed', e);
     canvas.classList.add('storm-fallback');
     api.destroy();
   }
-  // the program is linked: paint the still moment now, so the section is never blank when it
-  // scrolls in, and let the loop carry on from there
+  // draw the still frame right away so it's never blank when scrolled to
   function onReady() {
     lost = false; dirty = true;
     draw(stillT, true);
@@ -1244,17 +1148,16 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
   canvas.addEventListener('webglcontextlost', onLost);
   canvas.addEventListener('webglcontextrestored', onRestored);
 
-  // (fail() retires the storm through api.destroy(), so the api exists before the link is waited for)
+  // api has to exist before awaitLink, fail() calls api.destroy()
   const api = {
-    /** run while the section is on screen, stop when it is not */
     setActive(on) {
       active = !!on;
       if (active) start(); else stop();
     },
-    /** paint one frame at a given time (seconds), the whole section: for stills and tests */
+    // draw one full frame at time t (secs), for stills and tests
     renderAt(seconds) {
       if (destroyed) return;
-      if (!ready) {   // (waits for the link)
+      if (!ready) {
         if (linkWait) cancelAnimationFrame(linkWait);
         linkWait = 0;
         try { finishLink(); } catch (e) { fail(e); return; }
