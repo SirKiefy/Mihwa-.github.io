@@ -31,7 +31,6 @@ const INKC = [24, 22, 22];
 const FUR_DARK = [14, 15, 20];
 const SHEEN = [172, 185, 210];
 const EAR_IN = [138, 108, 118];
-const EAR_DEEP = [52, 38, 46];
 const BEAN = [160, 114, 130];
 const WHISKER = 'rgba(238,238,244,.72)';
 const WOOD = [204, 156, 102];
@@ -88,10 +87,9 @@ const BLUSH = [232, 120, 110];
 const GLOW = [255, 250, 236];
 const MOUTH_S = 'rgb(70,26,36)';
 const TONGUE_S = 'rgb(214,124,136)';
-const NOSE_S = 'rgb(62,58,72)';
 
 // his coat, from deep shadow to where the window light catches it
-const COAT = [[0, [9, 10, 13]], [0.2, [19, 20, 26]], [0.4, [32, 35, 43]], [0.6, [50, 54, 66]], [0.8, [76, 82, 99]], [1, [114, 122, 144]]];
+const COAT = [[0, [8, 9, 12]], [0.2, [14, 15, 20]], [0.4, [22, 24, 30]], [0.6, [34, 37, 45]], [0.8, [53, 57, 69]], [1, [94, 101, 122]]];
 function coat(v, out) {
   v = clamp(v);
   let i = 1;
@@ -149,6 +147,8 @@ export const CAT_STRINGS = {
     'cat.say.bury': 'He scratches at the cushion to bury it, like something gross.',
     'cat.say.sit': 'He just sits on it. Problem solved.',
     'cat.say.wake': 'He wakes up and blinks at you.',
+    'cat.say.buck': 'Not on his back! A bounce of the hips, a lash of the tail, and off it flies.',
+    'cat.say.sleep': 'He drifts off to sleep, breathing slow and deep.',
   },
   fr: {
     'cat.label': 'Son bébé, un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
@@ -193,6 +193,8 @@ export const CAT_STRINGS = {
     'cat.say.bury': 'Il gratte le coussin pour l’enterrer, comme un truc dégoûtant.',
     'cat.say.sit': 'Il s’assoit dessus, tout simplement. Problème réglé.',
     'cat.say.wake': 'Il se réveille et cligne des yeux vers vous.',
+    'cat.say.buck': 'Pas sur son dos ! Un coup de reins, un coup de queue, et l’avocat s’envole.',
+    'cat.say.sleep': 'Il s’endort, la respiration lente et profonde.',
   },
   ko: {
     'cat.label': '미화네 아기: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
@@ -237,6 +239,8 @@ export const CAT_STRINGS = {
     'cat.say.bury': '더러운 걸 묻듯이 쿠션을 박박 긁어요.',
     'cat.say.sit': '그냥 깔고 앉아 버렸어요. 해결 완료.',
     'cat.say.wake': '잠에서 깨어 이쪽을 보며 눈을 깜빡여요.',
+    'cat.say.buck': '감히 등 위에! 엉덩이를 들썩이고 꼬리를 휙 휘두르자 아보카도가 날아가요.',
+    'cat.say.sleep': '숨소리가 느려지더니 새근새근 잠이 들었어요.',
   },
 };
 const MILESTONES = [1, 3, 5, 10, 15, 25, 40, 60, 100];
@@ -344,10 +348,32 @@ function hairs(g, path, hit, R, { box, n, flow, pick, len = [4, 9], width = [0.5
 // light it like the window is up and to the right, then lay strokes along the
 // fur's flow, coloured from that lighting so they keep the form. A fringe of
 // hairs round the edge does the silhouette, and catches the rim light on top.
+// It comes back as a few jobs, so a big part can be painted over a few idle moments.
 
 const norm3 = (x, y, z) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; };
 const KEY = norm3(0.5, -0.74, 0.46);
 const FRONT = norm3(0.12, -0.42, 0.9);
+// halfway between the window and you, for the sheen
+const HALF = norm3(KEY[0], KEY[1], KEY[2] + 1);
+// warm light bouncing up off the cream cushion
+const BOUNCE = [150, 122, 88];
+
+// smooth value noise from a small table, cheap enough per pixel
+const NT = (() => { const R = rng(97), t = new Float32Array(64 * 64); for (let i = 0; i < t.length; i++) t[i] = R(); return t; })();
+function noise2(x, y, seed = 0) {
+  x += seed * 17.3; y += seed * 7.1;
+  const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+  const x0 = xi & 63, x1 = (xi + 1) & 63, y0 = (yi & 63) << 6, y1 = ((yi + 1) & 63) << 6;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+  const a = NT[y0 + x0] + (NT[y0 + x1] - NT[y0 + x0]) * u, b = NT[y1 + x0] + (NT[y1 + x1] - NT[y1 + x0]) * u;
+  return a + (b - a) * v;
+}
+function dist2Seg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy;
+  const k = l ? clamp(((px - ax) * dx + (py - ay) * dy) / l) : 0;
+  const ex = px - ax - dx * k, ey = py - ay - dy * k;
+  return ex * ex + ey * ey;
+}
 
 function chamfer(d, W, H) {
   const B = 1.4142;
@@ -404,94 +430,146 @@ function blurF(a, W, H, r, passes) {
   }
 }
 
-const TINTS = [0, 0.3, 0.6];
-const ALPHAS = [0.26, 0.42, 0.6, 0.8];
-const WIDTHS = [0.42, 0.68, 1.0, 2.3];
+// strand colours: a tint toward the sheen (light strands), and alpha and width steps
+const TINTS = [0, 0.2, 0.34, 0.58];
+const ALPHAS = [0.22, 0.34, 0.48, 0.62];
+const WIDTHS = [0.34, 0.5, 0.72, 2.3];
 
-function fur(g, o) {
+function furJobs(g, o) {
   const [x0, y0, x1, y1] = o.box;
   const R = rng(o.seed || 7);
-  const pts = closedSpline(o.outline, 0.7);
-  const path = toPath(pts);
+  const decal = o.mask || null;
+  const pts = decal ? null : closedSpline(o.outline, 0.7);
+  const path = decal ? null : toPath(pts);
   const q = o.q || 1.6;
   const W = Math.ceil((x1 - x0) * q), H = Math.ceil((y1 - y0) * q), N = W * H;
-  const mc = document.createElement('canvas');
-  mc.width = W; mc.height = H;
-  const mg = mc.getContext('2d', { willReadFrequently: true });
-  mg.setTransform(q, 0, 0, q, -x0 * q, -y0 * q);
-  mg.fill(path);
-  const md = mg.getImageData(0, 0, W, H).data;
-  const ins = new Uint8Array(N), d = new Float32Array(N), h = new Float32Array(N);
-  let area = 0;
-  for (let i = 0; i < N; i++) { ins[i] = md[i * 4 + 3] > 127 ? 1 : 0; d[i] = ins[i]; area += ins[i]; }
-  for (let i = 0; i < N; i++) d[i] = d[i] ? 1e6 : 0;
-  chamfer(d, W, H);
-  area /= q * q;
-  const rr = (o.round || 20) * q, bumps = o.bumps || [];
-  for (let j = 0, i = 0; j < H; j++) {
-    for (let k = 0; k < W; k++, i++) {
-      if (!ins[i]) continue;
-      const t = Math.min(1, d[i] / rr);
-      let v = rr * Math.sqrt(1 - (1 - t) * (1 - t));
-      if (bumps.length) {
-        const x = x0 + (k + 0.5) / q, y = y0 + (j + 0.5) / q, fade = Math.min(1, t * 2.5);
-        for (const b of bumps) { const dx = x - b[0], dy = y - b[1]; v += b[3] * q * fade * Math.exp(-(dx * dx + dy * dy) / (2 * b[2] * b[2])); }
-      }
-      h[i] = v;
-    }
-  }
-  blurF(h, W, H, Math.max(1, Math.round(q * 1.3)), 2);
-  // a 3px apron round the shape so the clipped edge stays the right colour
-  const near = ins.slice();
-  for (let p = 0; p < 3; p++) {
-    const src = near.slice();
-    for (let i = W; i < N - W; i++) if (!src[i] && (src[i - 1] || src[i + 1] || src[i - W] || src[i + W])) near[i] = 1;
-  }
-  const [Lx, Ly, Lz] = o.light || KEY;
-  const V = new Float32Array(N), RIM = new Float32Array(N);
-  const img = mg.createImageData(W, H), px = img.data;
-  const c = [0, 0, 0];
-  const rimK = o.rim ?? 1, tone = o.tone ?? 1, amb = o.amb ?? 0.1, shade = o.shade || coat;
-  for (let j = 1; j < H - 1; j++) {
-    for (let k = 1; k < W - 1; k++) {
-      const i = j * W + k;
-      if (!near[i]) continue;
-      const gx = (h[i + 1] - h[i - 1]) * 0.5, gy = (h[i + W] - h[i - W]) * 0.5;
-      let nx = -gx, ny = -gy, nz = 1;
-      const l = Math.sqrt(nx * nx + ny * ny + 1);
-      nx /= l; ny /= l; nz /= l;
-      const dif = clamp((nx * Lx + ny * Ly + nz * Lz + 0.3) / 1.3);
-      const fil = clamp(-nx * 0.5 - ny * 0.12 + nz * 0.82);
-      const e = 1 - nz, nl = Math.sqrt(nx * nx + ny * ny) + 1e-6;
-      const rd = clamp((nx * 0.6 - ny * 0.8) / nl);
-      const x = x0 + (k + 0.5) / q, y = y0 + (j + 0.5) / q;
-      const ao = o.ao ? o.ao(x, y) : 1;
-      const v = clamp((amb + dif * 0.72 + fil * 0.2) * ao * tone);
-      const rim = clamp(e * 1.8) ** 2 * rd * rd * rimK * Math.min(1, ao * 1.15) * (o.rimAt ? o.rimAt(x, y) : 1);
-      V[i] = v; RIM[i] = rim;
-      shade(v, c);
-      const m = Math.min(0.7, rim * 0.62);
-      const p4 = i * 4;
-      px[p4] = c[0] + (SHEEN[0] - c[0]) * m;
-      px[p4 + 1] = c[1] + (SHEEN[1] - c[1]) * m;
-      px[p4 + 2] = c[2] + (SHEEN[2] - c[2]) * m;
-      px[p4 + 3] = 255;
-    }
-  }
-  mg.setTransform(1, 0, 0, 1, 0, 0);
-  mg.clearRect(0, 0, W, H);
-  mg.putImageData(img, 0, 0);
-  g.save();
-  g.clip(path);
-  g.imageSmoothingEnabled = true;
-  g.drawImage(mc, x0, y0, W / q, H / q);
-  g.restore();
-
+  const ins = new Uint8Array(N), V = new Float32Array(N), RIM = new Float32Array(N);
+  let dist = null, alpha = null, area = 0;
   const at = (x, y) => {
     const k = Math.floor((x - x0) * q), j = Math.floor((y - y0) * q);
     return k < 0 || j < 0 || k >= W || j >= H ? -1 : j * W + k;
   };
   const inside = (x, y) => { const i = at(x, y); return i >= 0 && ins[i] === 1; };
+  const c = [0, 0, 0];
+  const shade = o.shade || coat;
+
+  // the shape and its height map first, then the light on it
+  let mc = null, mg = null, h = null, near = null;
+  const form = () => {
+    mc = document.createElement('canvas');
+    mc.width = W; mc.height = H;
+    mg = mc.getContext('2d', { willReadFrequently: true });
+    h = new Float32Array(N);
+    if (decal) {
+      // a soft-edged patch laid over a part that's already painted
+      alpha = new Float32Array(N);
+      for (let j = 0, i = 0; j < H; j++) {
+        for (let k = 0; k < W; k++, i++) {
+          const m = decal(x0 + (k + 0.5) / q, y0 + (j + 0.5) / q);
+          alpha[i] = m;
+          if (m > 0.5) { ins[i] = 1; area++; }
+          h[i] = (o.base || 0) * q;
+        }
+      }
+    } else {
+      mg.setTransform(q, 0, 0, q, -x0 * q, -y0 * q);
+      mg.fill(path);
+      const md = mg.getImageData(0, 0, W, H).data;
+      dist = new Float32Array(N);
+      for (let i = 0; i < N; i++) { ins[i] = md[i * 4 + 3] > 127 ? 1 : 0; area += ins[i]; dist[i] = ins[i] ? 1e6 : 0; }
+      chamfer(dist, W, H);
+      const rr = (o.round || 20) * q;
+      for (let i = 0; i < N; i++) {
+        if (!ins[i]) continue;
+        const t = Math.min(1, dist[i] / rr);
+        h[i] = rr * Math.sqrt(1 - (1 - t) * (1 - t));
+      }
+    }
+    area /= q * q;
+    // anatomy under the fur: round bumps, softer oval ones, and grooves
+    const bumps = o.bumps || [], ovals = o.ovals || [], grooves = o.grooves || [];
+    if (bumps.length || ovals.length || grooves.length) {
+      for (let j = 0, i = 0; j < H; j++) {
+        for (let k = 0; k < W; k++, i++) {
+          if (!ins[i] && !(alpha && alpha[i] > 0)) continue;
+          const x = x0 + (k + 0.5) / q, y = y0 + (j + 0.5) / q;
+          const fade = dist ? Math.min(1, dist[i] / ((o.round || 20) * q) * 2.5) : 1;
+          let v = 0;
+          for (const b of bumps) {
+            const dx = x - b[0], dy = y - b[1], r2 = 2 * b[2] * b[2], d2 = dx * dx + dy * dy;
+            if (d2 < r2 * 4.5) v += b[3] * fade * Math.exp(-d2 / r2);
+          }
+          for (const b of ovals) {
+            const dx = (x - b[0]) / b[2], dy = (y - b[1]) / b[3], dd = 1 - dx * dx - dy * dy;
+            if (dd > 0) v += b[4] * fade * dd * dd;
+          }
+          for (const gv of grooves) {
+            let dmin = 1e9;
+            for (let n = 1; n < gv.pts.length; n++) dmin = Math.min(dmin, dist2Seg(x, y, gv.pts[n - 1][0], gv.pts[n - 1][1], gv.pts[n][0], gv.pts[n][1]));
+            v -= gv.h * Math.exp(-dmin / (gv.w * gv.w));
+          }
+          h[i] += v * q;
+        }
+      }
+    }
+    blurF(h, W, H, Math.max(1, Math.round(q * 1.3)), 2);
+    // a 3px apron round the shape so the clipped edge stays the right colour
+    near = ins.slice();
+    if (!decal) {
+      for (let p = 0; p < 3; p++) {
+        const src = near.slice();
+        for (let i = W; i < N - W; i++) if (!src[i] && (src[i - 1] || src[i + 1] || src[i - W] || src[i + W])) near[i] = 1;
+      }
+    }
+  };
+  const light = () => {
+    const [Lx, Ly, Lz] = o.light || KEY;
+    const img = mg.createImageData(W, H), px = img.data;
+    const rimK = o.rim ?? 1, tone = o.tone ?? 1, amb = o.amb ?? 0.1;
+    const kB = o.bounce ?? 0.14, kS = o.sheen ?? 0.26, seed = o.seed || 3;
+    for (let j = 1; j < H - 1; j++) {
+      for (let k = 1; k < W - 1; k++) {
+        const i = j * W + k;
+        if (decal ? alpha[i] <= 0.004 : !near[i]) continue;
+        const gx = (h[i + 1] - h[i - 1]) * 0.5, gy = (h[i + W] - h[i - W]) * 0.5;
+        let nx = -gx, ny = -gy, nz = 1;
+        const l = Math.sqrt(nx * nx + ny * ny + 1);
+        nx /= l; ny /= l; nz /= l;
+        const dif = clamp((nx * Lx + ny * Ly + nz * Lz + 0.3) / 1.3);
+        const fil = clamp(-nx * 0.5 - ny * 0.12 + nz * 0.82);
+        const e = 1 - nz, nl = Math.sqrt(nx * nx + ny * ny) + 1e-6;
+        const rd = clamp((nx * 0.6 - ny * 0.8) / nl);
+        const x = x0 + (k + 0.5) / q, y = y0 + (j + 0.5) / q;
+        const ao = o.ao ? o.ao(x, y) : 1;
+        // a soft mottle, so it reads as fur and not as airbrush
+        const mott = 0.9 + 0.2 * noise2(x / 14, y / 14, seed);
+        const v = clamp((amb + dif * 0.72 + fil * 0.2) * ao * tone * mott * (o.lum ? o.lum(x, y) : 1));
+        const rim = clamp(e * 1.8) ** 2 * rd * rd * rimK * Math.min(1, ao * 1.15) * (o.rimAt ? o.rimAt(x, y) : 1);
+        V[i] = v; RIM[i] = rim;
+        shade(v, c);
+        if (o.paint) o.paint(x, y, v, c);
+        const m = Math.min(0.7, rim * 0.62);
+        const s1 = Math.max(0, nx * HALF[0] + ny * HALF[1] + nz * HALF[2]), s2 = s1 * s1, s4 = s2 * s2, sh = s4 * s4 * s2 * kS * ao;
+        const bo = Math.max(0, ny) * (1 - nz * 0.5) * kB;
+        const p4 = i * 4;
+        for (let ch = 0; ch < 3; ch++) px[p4 + ch] = c[ch] + (SHEEN[ch] - c[ch]) * m + SHEEN[ch] * sh + BOUNCE[ch] * bo;
+        let a = 255;
+        if (decal) a = 255 * alpha[i];
+        else if (o.fade) { const fw = o.fade(x, y); if (fw > 0) a = 255 * smooth(0, fw, dist[i] / q); }
+        if (o.alphaAt) a *= o.alphaAt(x, y);
+        px[p4 + 3] = a;
+      }
+    }
+    mg.setTransform(1, 0, 0, 1, 0, 0);
+    mg.clearRect(0, 0, W, H);
+    mg.putImageData(img, 0, 0);
+    g.save();
+    if (path) g.clip(path);
+    g.imageSmoothingEnabled = true;
+    g.drawImage(mc, x0, y0, W / q, H / q);
+    g.restore();
+    h = near = null;
+  };
 
   // strokes, batched by colour so thousands of them stay cheap to paint
   const bins = new Map();
@@ -502,76 +580,119 @@ function fur(g, o) {
     if (!b) { b = { key, ti, vi, ai, wi, d: [] }; bins.set(key, b); }
     b.d.push(xa, ya, xc, yc, xb, yb);
   };
-  const hairAt = (x, y, a, L, v, ti, ai, wi) => {
-    const dx = Math.cos(a) * L, dy = Math.sin(a) * L, b = (R() - 0.5) * L * 0.4;
-    add(v, ti, ai, wi, x, y, x + dx * 0.5 - (dy / L) * b, y + dy * 0.5 + (dx / L) * b, x + dx, y + dy);
+  // one stroke is a little clump of 1 to 3 hairs side by side
+  const hairAt = (x, y, a, L, v, ti, ai, wi, clump) => {
+    const ca = Math.cos(a), sa = Math.sin(a), dx = ca * L, dy = sa * L, b = (R() - 0.5) * L * 0.4;
+    const n = 1 + Math.floor(R() * (clump || 1));
+    for (let j = 0; j < n; j++) {
+      const off = (j - (n - 1) / 2) * 0.85, sx = x - sa * off, sy = y + ca * off;
+      add(v, ti, ai, wi, sx, sy, sx + dx * 0.5 - sa * b, sy + dy * 0.5 + ca * b, sx + dx + (R() - 0.5) * 0.4, sy + dy + (R() - 0.5) * 0.4);
+    }
+  };
+  // inside strokes stay inside, so the silhouette is the fringe's job alone
+  const flush = (clip) => {
+    const order = [...bins.values()].sort((a, b) => a.key - b.key);
+    bins.clear();
+    g.save();
+    if (clip && path) g.clip(path);
+    g.lineCap = 'round';
+    const wm = o.wmul || 1;
+    for (const b of order) {
+      shade(b.vi / 40, c);
+      const t = TINTS[b.ti];
+      g.strokeStyle = rgba([lerp(c[0], SHEEN[0], t), lerp(c[1], SHEEN[1], t), lerp(c[2], SHEEN[2], t)], ALPHAS[b.ai] * (b.wi === 3 ? 0.5 : 1));
+      g.lineWidth = WIDTHS[b.wi] * wm;
+      g.beginPath();
+      const dd = b.d;
+      for (let i = 0; i < dd.length; i += 6) { g.moveTo(dd[i], dd[i + 1]); g.quadraticCurveTo(dd[i + 2], dd[i + 3], dd[i + 4], dd[i + 5]); }
+      g.stroke();
+    }
+    g.restore();
+  };
+  const ok = (x, y, i) => {
+    if (i < 0 || !ins[i]) return false;
+    if (decal && alpha[i] < 0.6) return false;
+    if (o.fade) { const fw = o.fade(x, y); if (fw > 0 && dist[i] / q < fw * 0.75) return false; }
+    return !o.keep || o.keep(x, y);
   };
   const [l0, l1] = o.len || [3, 7];
   const lenAt = o.lenAt || (() => 1);
-  // painterly clumps first
-  const nClump = Math.round(area * (o.clump ?? 0.025));
-  for (let n = 0; n < nClump; n++) {
-    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0);
-    const i = at(x, y);
-    if (i < 0 || !ins[i]) continue;
-    const v = V[i] + (R() - 0.5) * 0.16;
-    hairAt(x, y, o.flow(x, y) + (R() - 0.5) * 0.3, l1 * (1.2 + R() * 0.6) * lenAt(x, y), v, 0, 0, 3);
-  }
-  const nFine = Math.round(area * (o.density ?? 0.4));
-  for (let n = 0; n < nFine; n++) {
-    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0);
-    const i = at(x, y);
-    if (i < 0 || !ins[i]) continue;
+  const pLight = o.lightP ?? 0.36, hi = o.hi ?? 0.28;
+  // light strands lean toward the sheen, dark ones sink to about half the local colour
+  const strand = (x, y, i, L, ai0, wi, clump) => {
     const v = V[i], rim = RIM[i];
-    const light = R() < 0.06 + v * 0.4 + rim * 0.9;
-    const vv = light ? v + 0.05 + R() * 0.14 : v - 0.05 - R() * 0.14;
-    const ti = light ? (rim > 0.32 ? 2 : rim > 0.1 ? 1 : 0) : 0;
-    hairAt(x, y, o.flow(x, y) + (R() - 0.5) * 0.5, lerp(l0, l1, R()) * lenAt(x, y), vv, ti, Math.floor(R() * 3), R() < 0.6 ? 0 : 1);
-  }
-  // the fringe round the silhouette
-  if (o.fringe) {
-    const [f0, f1] = o.fringeLen || [2, 5];
-    const nPer = o.fringeN ?? 2;
-    const step = 2;
-    for (let p = 0; p < pts.length; p += step) {
-      const [x, y] = pts[p];
-      const a0 = pts[(p - 2 + pts.length) % pts.length], a1 = pts[(p + 2) % pts.length];
-      let nx = a1[1] - a0[1], ny = -(a1[0] - a0[0]);
-      const l = Math.hypot(nx, ny) || 1;
-      nx /= l; ny /= l;
-      if (inside(x + nx * 1.5, y + ny * 1.5)) { nx = -nx; ny = -ny; }
-      const fl = o.fringe(x, y, nx, ny);
-      if (!fl) continue;
-      const i = at(x - nx * 2.5, y - ny * 2.5);
-      const v = i >= 0 ? V[i] : 0.3, rim = i >= 0 ? RIM[i] : 0;
-      const an = Math.atan2(ny, nx), af = o.flow(x, y);
-      const lean = clamp(wrapA(af - an), -1.2, 1.2) * 0.75;
-      const cnt = Math.floor(nPer) + (R() < nPer % 1 ? 1 : 0);
-      for (let k = 0; k < cnt; k++) {
-        const a = an + lean + (R() - 0.5) * 0.7;
-        const L = lerp(f0, f1, R()) * fl;
-        const lit = R() < rim * 1.5;
-        const vv = lit ? v + 0.16 + R() * 0.14 : v * (0.6 + R() * 0.25);
-        const sx = x - Math.cos(a) * 1.3, sy = y - Math.sin(a) * 1.3;
-        hairAt(sx, sy, a, L + 1.3, vv, lit ? (rim > 0.3 ? 2 : 1) : 0, lit ? 2 + Math.floor(R() * 2) : 1 + Math.floor(R() * 2), R() < 0.5 ? 0 : 1);
-      }
+    const a = o.flow(x, y) + (R() - 0.5) * 0.5;
+    if (R() < pLight + rim * 0.8) {
+      const m = hi * (0.6 + R() * 0.6);
+      const ti = rim > 0.3 ? 3 : m > 0.24 ? 2 : 1;
+      hairAt(x, y, a, L, v + 0.02, ti, ai0, wi, clump);
+    } else {
+      hairAt(x, y, a, L, v * (0.42 + R() * 0.2), 0, ai0, wi, clump);
     }
-  }
-  const order = [...bins.values()].sort((a, b) => a.key - b.key);
-  g.lineCap = 'round';
-  const wm = o.wmul || 1;
-  for (const b of order) {
-    shade(b.vi / 40, c);
-    const t = TINTS[b.ti];
-    g.strokeStyle = rgba([lerp(c[0], SHEEN[0], t), lerp(c[1], SHEEN[1], t), lerp(c[2], SHEEN[2], t)], ALPHAS[b.ai] * (b.wi === 3 ? 0.55 : 1));
-    g.lineWidth = WIDTHS[b.wi] * wm;
-    g.beginPath();
-    const dd = b.d;
-    for (let i = 0; i < dd.length; i += 6) { g.moveTo(dd[i], dd[i + 1]); g.quadraticCurveTo(dd[i + 2], dd[i + 3], dd[i + 4], dd[i + 5]); }
-    g.stroke();
-  }
-  if (o.after) o.after(g, { at, V, RIM, R, path, pts, inside });
-  return { path, pts };
+  };
+  // long guard hairs over painterly clumps
+  const guard = () => {
+    const nFine = Math.round(area * (o.density ?? 0.4));
+    const nClump = Math.round(area * (o.clump ?? 0.025));
+    for (let n = 0; n < nClump; n++) {
+      const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0), i = at(x, y);
+      if (!ok(x, y, i)) continue;
+      const v = V[i] * (0.85 + R() * 0.3);
+      hairAt(x, y, o.flow(x, y) + (R() - 0.5) * 0.3, l1 * (1.2 + R() * 0.6) * lenAt(x, y), v, 0, 0, 3, 1);
+    }
+    for (let n = 0; n < nFine; n++) {
+      const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0), i = at(x, y);
+      if (!ok(x, y, i)) continue;
+      strand(x, y, i, lerp(l0, l1, R()) * lenAt(x, y), Math.floor(R() * 2), R() < 0.6 ? 0 : 1, 2);
+    }
+    flush(true);
+  };
+  // then a short soft undercoat over them
+  const under = () => {
+    const n2 = Math.round(area * (o.density ?? 0.4) * (o.under ?? 0.8));
+    for (let n = 0; n < n2; n++) {
+      const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0), i = at(x, y);
+      if (!ok(x, y, i)) continue;
+      strand(x, y, i, lerp(l0, l1, R()) * 0.55 * lenAt(x, y), Math.floor(R() * 2), 0, 2);
+    }
+    flush(true);
+  };
+  // the fringe round the silhouette, and whatever the part adds on top
+  const edge = () => {
+    if (o.fringe && pts) {
+      const [f0, f1] = o.fringeLen || [2, 5];
+      const nPer = o.fringeN ?? 2, lk = o.lean ?? 0.75;
+      for (let p = 0; p < pts.length; p += 2) {
+        const [x, y] = pts[p];
+        const a0 = pts[(p - 2 + pts.length) % pts.length], a1 = pts[(p + 2) % pts.length];
+        let nx = a1[1] - a0[1], ny = -(a1[0] - a0[0]);
+        const l = Math.hypot(nx, ny) || 1;
+        nx /= l; ny /= l;
+        if (inside(x + nx * 1.5, y + ny * 1.5)) { nx = -nx; ny = -ny; }
+        const fl = o.fringe(x, y, nx, ny);
+        if (!fl) continue;
+        const i = at(x - nx * 2.5, y - ny * 2.5);
+        const v = i >= 0 ? V[i] : 0.3, rim = i >= 0 ? RIM[i] : 0;
+        const an = Math.atan2(ny, nx), af = o.flow(x, y);
+        const lean = clamp(wrapA(af - an), -1.4, 1.4) * lk;
+        const cnt = Math.floor(nPer) + (R() < nPer % 1 ? 1 : 0);
+        for (let k = 0; k < cnt; k++) {
+          const a = an + lean + (R() - 0.5) * 0.7;
+          const L = lerp(f0, f1, R()) * fl;
+          const lit = R() < 0.25 + rim * 1.5;
+          const vv = lit ? v + 0.04 + R() * 0.1 : v * (0.5 + R() * 0.25);
+          const sx = x - Math.cos(a) * 1.3, sy = y - Math.sin(a) * 1.3;
+          hairAt(sx, sy, a, L + 1.3, vv, lit ? (rim > 0.3 ? 3 : rim > 0.1 ? 2 : 1) : 0, lit ? 2 : 1 + Math.floor(R() * 2), R() < 0.5 ? 0 : 1, 1);
+        }
+      }
+      flush();
+    }
+    if (o.after) o.after(g, { at, V, RIM, R, path, pts, inside });
+  };
+  return [form, light, guard, under, edge];
+}
+function fur(g, o) {
+  for (const f of furJobs(g, o)) f();
 }
 
 // his parts, in cat units: origin at the centre of the top platform, y down.
@@ -581,9 +702,11 @@ function fur(g, o) {
 const TORSO = [[110, 9], [70, 13], [20, 14], [-40, 14], [-96, 14], [-126, 10], [-141, -6], [-147, -32], [-143, -62], [-128, -88], [-102, -106], [-66, -113], [-30, -107], [4, -99], [34, -96], [58, -98], [80, -94], [100, -82], [114, -60], [120, -34], [118, -10]];
 // the thigh, a big round shape over the back of the torso
 const HAUNCH = [[-42, 12], [-80, 15], [-118, 12], [-138, 0], [-147, -26], [-144, -56], [-130, -82], [-106, -98], [-78, -97], [-58, -82], [-46, -58], [-40, -32], [-37, -8]];
-// the fluffy ruff under his chin
+// his chest, under the head
 const CHEST = [[60, -86], [88, -95], [114, -89], [130, -71], [139, -46], [137, -20], [129, 0], [115, 12], [94, 15], [74, 11], [60, -4], [54, -30], [53, -60]];
 const NECK = ellipsePts(27, 36, 18, 0.08, 4);
+// the ruff: long fur falling from under his chin (its own little frame, top at y -28)
+const RUFF = [[-44, -14], [-30, -24], [0, -28], [30, -24], [46, -12], [44, 6], [30, 20], [10, 27], [-10, 26], [-30, 18], [-44, 4]];
 // a round, full-cheeked head
 const SKULL = [[0, -45], [17, -43], [31, -37], [41, -27], [47, -13], [51, 1], [55, 11], [58, 19], [53, 27], [43, 35], [28, 41], [13, 45], [0, 46.5], [-13, 45], [-28, 41], [-43, 35], [-53, 27], [-58, 19], [-55, 11], [-51, 1], [-47, -13], [-41, -27], [-31, -37], [-17, -43]];
 // his left ear (screen left); the other one is its mirror
@@ -599,8 +722,10 @@ const NECK_PIVOT = [78, -58];
 const SHOULDER_N = [94, -34];
 const SHOULDER_F = [74, -30];
 const PAW_N = [114, 13];
-const PAW_F = [92, 10];
+const PAW_F = [80, 12];
 const TAIL_ROOT = [-126, 6];
+// where the eyes sit in head units (for the eye-sized pieces)
+const EYE_W = 12.5, EYE_H = 10.4;
 
 // top of the back, per column, for the flow field
 function topLine(outline) {
@@ -612,24 +737,36 @@ function topLine(outline) {
   return (x) => top[clamp(Math.round(x) + 180, 0, 359)];
 }
 
-function paintTorso(g, dense, q) {
-  const backY = topLine(TORSO);
-  fur(g, {
+// fur over the hip turns round in a whorl, then runs down the back of the thigh
+const HIP = [-100, -50];
+const angMix = (a, wa, b, wb) => Math.atan2(Math.sin(a) * wa + Math.sin(b) * wb, Math.cos(a) * wa + Math.cos(b) * wb);
+function hipFlow(x, y, base) {
+  const hx = x - HIP[0], hy = y - HIP[1], hr = Math.hypot(hx, hy) || 1;
+  const wrap = Math.atan2(-hx / hr + (hy / hr) * 0.3, hy / hr + (hx / hr) * 0.3);
+  const w = smooth(64, 18, hr);
+  return angMix(wrap, w, base, 1 - w * 0.85);
+}
+
+const BACK_Y = topLine(TORSO);
+function torsoFlow(x, y) {
+  const by = BACK_Y(x), v = clamp((y - by) / Math.max(20, 12 - by));
+  let a = Math.PI - 0.22 - 1.0 * v;
+  a -= smooth(-96, -146, x) * (0.9 - 0.4 * v);
+  a += smooth(70, 116, x) * 0.9 * v;
+  return a;
+}
+
+function paintTorso(g, q) {
+  return furJobs(g, {
     box: [-160, -126, 132, 24], outline: TORSO, seed: 11, round: 44, q,
     bumps: [[56, -84, 20, 7], [6, -50, 44, 10], [88, -12, 15, 5], [-60, -96, 26, 5]],
     ao: (x, y) => (1 - 0.6 * smooth(-40, 14, y)) * (1 - 0.18 * smooth(60, 116, x) * smooth(-70, -10, y)),
-    flow: (x, y) => {
-      const by = backY(x), v = clamp((y - by) / Math.max(20, 12 - by));
-      let a = Math.PI - 0.22 - 1.0 * v;
-      a -= smooth(-96, -146, x) * (0.9 - 0.4 * v);
-      a += smooth(70, 116, x) * 0.9 * v;
-      return a;
-    },
-    len: [3, 6.5], density: dense ? 0.42 : 0.3, clump: 0.03,
-    fringe: (x, y) => (y > 2 ? 0 : 1), fringeLen: [0.9, 2.6], fringeN: 1.5,
+    flow: (x, y) => hipFlow(x, y, torsoFlow(x, y)),
+    len: [5, 9], density: 0.5, clump: 0.03,
+    fringe: (x, y) => (y > 2 ? 0 : 1), fringeLen: [0.9, 2.8], fringeN: 1.6, lean: 0.9,
     after: (g) => {
       // the crease in front of his thigh
-      for (let k = 0; k <= 8; k++) { const u = k / 8; stamp(g, lerp(-58, -34, u) + 4, lerp(-82, 6, u), 9, FUR_DARK, 0.16, 0.3); }
+      for (let k = 0; k <= 8; k++) { const u = k / 8; stamp(g, lerp(-58, -34, u) + 4, lerp(-82, 6, u), 9, FUR_DARK, 0.18, 0.3); }
       // a light, broken ink line along his back, like the rest of the room
       const top = closedSpline(TORSO, 3).filter(([x, y]) => x < 74 && x > -132 && y < -60).sort((p, q) => q[0] - p[0]);
       stroke(g, { pts: top.map(([x, y]) => [x, y + 1.2]), width: 2.2, dry: 0.86, tone: 0.42, bleed: 0.06, rgb: INKC, seed: 21, bristles: 5 });
@@ -637,160 +774,232 @@ function paintTorso(g, dense, q) {
   });
 }
 
-function paintHaunch(g, dense, q) {
-  fur(g, {
+function paintHaunch(g, q) {
+  return furJobs(g, {
     box: [-160, -112, -26, 26], outline: HAUNCH, seed: 12, round: 34, q,
     bumps: [[-100, -50, 30, 9], [-118, -78, 18, 4]],
     ao: (x, y) => (1 - 0.55 * smooth(-30, 14, y)) * (1 - 0.22 * smooth(-70, -42, x)),
-    rimAt: (x, y) => 0.1 + 0.9 * Math.max(smooth(-60, -82, x), smooth(-76, -94, y)),
-    flow: (x, y) => {
-      const v = clamp((y + 96) / 100);
-      let a = Math.PI - 0.35 - 0.9 * v;
-      a -= smooth(-110, -146, x) * 0.5;
-      a += smooth(-60, -40, x) * 0.4;
-      return a;
-    },
-    len: [3, 6.5], density: dense ? 0.42 : 0.3, clump: 0.03,
-    fringe: (x, y) => (y > 2 || (x > -68 && y > -86) ? 0 : 1), fringeLen: [0.9, 2.8], fringeN: 1.5,
+    // the window only catches the outside edge, where it's also his silhouette
+    rimAt: (x, y) => 0.08 + 0.92 * smooth(-124, -138, x) * smooth(-10, -40, y),
+    // the top and front melt into his body, so the thigh reads by its shape and its whorl
+    fade: (x, y) => (x > -134 && y < -14 ? 8 : x > -60 ? 5 : 0),
+    flow: (x, y) => hipFlow(x, y, Math.PI - 0.35 - 0.9 * clamp((y + 96) / 100)),
+    len: [5, 9], density: 0.5, clump: 0.03,
+    fringe: (x, y) => (y > 2 || x > -132 ? 0 : 1), fringeLen: [0.9, 2.8], fringeN: 1.6, lean: 0.9,
     after: (g) => {
-      stroke(g, { pts: [[-124, -92], [-140, -66], [-146, -36], [-140, -6]], width: 2.2, dry: 0.8, tone: 0.32, bleed: 0.06, rgb: INKC, seed: 23, bristles: 5 });
+      stroke(g, { pts: [[-128, -86], [-140, -66], [-146, -36], [-140, -6]], width: 2.2, dry: 0.8, tone: 0.32, bleed: 0.06, rgb: INKC, seed: 23, bristles: 5 });
     },
   });
 }
 
-function paintChest(g, dense, q) {
-  fur(g, {
-    box: [46, -104, 148, 24], outline: CHEST, seed: 13, round: 26, tone: 1.08, q,
+function paintChest(g, q) {
+  const jobs = furJobs(g, {
+    box: [46, -104, 148, 24], outline: CHEST, seed: 13, round: 26, tone: 1.06, q,
     bumps: [[108, -36, 24, 7]],
     ao: (x, y) => (1 - 0.45 * smooth(-14, 14, y)) * (0.86 + 0.14 * smooth(-80, -50, y)),
     flow: (x, y) => Math.PI / 2 + (x - 100) * 0.012 - smooth(-90, -60, y) * 0.5,
-    len: [4, 8.5], density: dense ? 0.5 : 0.36, clump: 0.04,
+    len: [5, 9.5], density: 0.55, clump: 0.04,
     lenAt: (x, y) => 0.8 + 0.5 * smooth(-60, 0, y),
     rimAt: (x) => 0.15 + 0.85 * smooth(86, 106, x),
     fringe: (x, y) => (x < 84 && y < 0 ? 0 : y > -30 ? 1.3 : 0.8), fringeLen: [1.8, 4.6], fringeN: 2,
   });
   // melt the back edge into his body
-  g.globalCompositeOperation = 'destination-out';
-  const gr = g.createLinearGradient(50, 0, 94, 0);
-  gr.addColorStop(0, 'rgba(0,0,0,1)');
-  gr.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = gr;
-  g.fillRect(46, -104, 48, 128);
-  g.globalCompositeOperation = 'source-over';
+  jobs.push(() => {
+    g.globalCompositeOperation = 'destination-out';
+    const gr = g.createLinearGradient(50, 0, 94, 0);
+    gr.addColorStop(0, 'rgba(0,0,0,1)');
+    gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr;
+    g.fillRect(46, -104, 48, 128);
+    g.globalCompositeOperation = 'source-over';
+  });
+  return jobs;
 }
 
 function paintNeck(g) {
   fur(g, {
-    box: [-34, -44, 34, 44], outline: NECK, seed: 14, round: 18, tone: 0.92,
+    box: [-34, -44, 34, 44], outline: NECK, seed: 14, round: 18, tone: 0.92, rimAt: () => 0.1,
     flow: (x, y) => Math.PI / 2 + 0.3 + x * 0.01,
-    len: [3, 6], density: 0.36, clump: 0.03,
+    len: [3, 6], density: 0.4, clump: 0.03,
     fringe: () => 1, fringeLen: [1.6, 4],
   });
 }
 
-function paintSkull(g, dense, q) {
+function paintRuff(g) {
+  const flow = (x, y) => Math.atan2(y + 40, x * 0.9);
   fur(g, {
+    box: [-56, -34, 58, 40], outline: RUFF, seed: 57, round: 14, tone: 1.02,
+    bumps: [[4, 4, 20, 4]],
+    ao: (x, y) => 0.92 + 0.08 * smooth(-10, 10, y),
+    // only a band of it shows: over the seam under his jaw, fading down into his chest
+    alphaAt: (x, y) => smooth(-30, -12, y) * smooth(24, 4, y),
+    keep: (x, y) => y > -14 && y < 18,
+    flow, len: [5, 10], density: 0.6, clump: 0.03, under: 0.6,
+    fringe: (x, y, nx, ny) => (ny > 0.1 && y < 14 ? 1 : 0), fringeLen: [3, 7], fringeN: 3, lean: 1.2,
+  });
+}
+
+function paintSkull(g, q) {
+  return furJobs(g, {
     box: [-66, -54, 66, 56], outline: SKULL, seed: 31, round: 32, q,
     bumps: [[-32, 18, 15, 4], [32, 18, 15, 4], [0, -20, 24, 5], [0, 14, 16, 3]],
-    ao: (x, y) => 1 - 0.12 * smooth(26, 48, y),
+    ao: (x, y) => 1 - 0.06 * smooth(26, 48, y),
+    // the lower cheeks and chin are a touch lighter, so his face doesn't end in a dark band
+    lum: (x, y) => 1 + 0.1 * smooth(14, 40, y) * (1 - 0.4 * smooth(30, 50, Math.abs(x))),
     flow: (x, y) => Math.atan2(y - 16, x) + (y < 0 ? 0.1 * Math.sign(x) : 0) + (Math.abs(x) > 34 && y > 0 ? 0.25 * Math.sign(x) : 0),
-    len: [2.6, 5.5], density: dense ? 0.55 : 0.4, clump: 0.025,
-    lenAt: (x, y) => (Math.abs(x) > 40 && y > 0 ? 1.4 : y > 30 ? 1.3 : 1),
-    fringe: (x, y) => (Math.abs(x) > 42 && y > 2 && y < 34 ? 1.8 : y > 32 ? 1.7 : 0.7), fringeLen: [1.2, 3.2], fringeN: 1.8,
+    len: [3, 6], density: 0.6, clump: 0.025,
+    // short and fine over the face, longer on the cheeks and under the chin
+    lenAt: (x, y) => (Math.abs(x) > 40 && y > 0 ? 1.4 : y > 30 ? 1.3 : 1) * (1 - 0.3 * smooth(34, 18, Math.abs(x)) * smooth(-30, -16, y) * smooth(34, 22, y)),
+    // plush jowls: longer tufts on the lower cheeks
+    fringe: (x, y) => (Math.abs(x) > 40 && y > 4 && y < 34 ? 1 + 1.3 * smooth(4, 16, y) * smooth(34, 22, y) : y > 32 ? 1.3 : 0.7),
+    fringeLen: [1.3, 3.2], fringeN: 2, lean: 1,
   });
 }
 
 function earShape(side) { return side < 0 ? EAR_L : mirror(EAR_L); }
 function earInner(side) { return side < 0 ? EAR_L_IN : mirror(EAR_L_IN); }
 
+// a soft mask of a path on a little grid, sampled by unit coordinates
+function maskOf(path, x0, y0, x1, y1, q, blur) {
+  const W = Math.ceil((x1 - x0) * q), H = Math.ceil((y1 - y0) * q);
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  g.setTransform(q, 0, 0, q, -x0 * q, -y0 * q);
+  g.fill(path);
+  const d = g.getImageData(0, 0, W, H).data, a = new Float32Array(W * H);
+  for (let i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] / 255;
+  if (blur) blurF(a, W, H, Math.max(1, Math.round(blur * q)), 2);
+  return (x, y) => a[clamp(Math.floor((y - y0) * q), 0, H - 1) * W + clamp(Math.floor((x - x0) * q), 0, W - 1)];
+}
+
 function paintEarFront(g, side) {
+  const inner = toPath(closedSpline(earInner(side), 0.5));
+  const cup = maskOf(inner, -26, -48, 26, 10, 3, 1.4);
+  const pink = mix(EAR_IN, [170, 150, 160], 0.2);
+  const R2 = rng(57 + side);
   fur(g, {
     box: [-26, -48, 26, 10], outline: earShape(side), seed: 51 + side, round: 7, tone: 0.95,
-    flow: (x) => -Math.PI / 2 - x * 0.025, len: [2, 4], density: 0.6, clump: 0.02,
+    // the inside is a cup: lit on the wall that faces the window, deep at the bottom
+    ovals: [[-side * 0.5, -13, 9, 17, -6]],
+    paint: (x, y, v, c) => {
+      const m = cup(x, y);
+      if (m <= 0.01) return;
+      const k = (0.42 + v * 0.95) * (1 - 0.45 * smooth(-8, 4, y));
+      mix3(c, pink, k, m);
+    },
+    keep: (x, y) => cup(x, y) < 0.2,
+    flow: (x) => -Math.PI / 2 - x * 0.025, len: [2, 4], density: 0.7, clump: 0.02, lightP: 0.4,
     fringe: (x, y) => (y < 2 ? 1 : 0), fringeLen: [1.2, 3.2],
     after: (g) => {
-      const inner = toPath(closedSpline(earInner(side), 0.5));
-      g.save();
-      g.clip(inner);
-      const gr = g.createLinearGradient(0, -34, 0, 4);
-      gr.addColorStop(0, rgba(mix(EAR_IN, [170, 150, 160], 0.3), 1));
-      gr.addColorStop(0.5, rgba(EAR_IN, 1));
-      gr.addColorStop(1, rgba(EAR_DEEP, 1));
-      g.fillStyle = gr;
-      g.fill(inner);
-      // the fold along the inside edge, and the deep bit at the bottom
-      for (let k = 0; k < 6; k++) stamp(g, -side * (9 - k * 1.2), -4 - k * 4.6, 5, EAR_DEEP, 0.2, 0.3);
-      stamp(g, side * 2, 0, 9, EAR_DEEP, 0.35, 0.3);
-      stamp(g, side * 3, -16, 5, [196, 170, 180], 0.22, 0.2);
-      g.restore();
       // the furnishings: pale tufts growing from inside
-      const R = rng(57 + side);
       g.lineCap = 'round';
       for (let i = 0; i < 46; i++) {
-        const u = R();
-        const x = lerp(-side * 9, side * 6, R()) * (1 - u * 0.5), y = 2 - u * 22;
-        const a = -Math.PI / 2 + side * (0.15 + R() * 0.5) * (R() < 0.3 ? -1 : 1);
-        const L = 4 + R() * 8;
-        g.strokeStyle = rgba([214, 214, 226], 0.25 + R() * 0.35);
-        g.lineWidth = 0.35 + R() * 0.3;
+        const u = R2();
+        const x = lerp(-side * 9, side * 6, R2()) * (1 - u * 0.5), y = 2 - u * 22;
+        const a = -Math.PI / 2 + side * (0.15 + R2() * 0.5) * (R2() < 0.3 ? -1 : 1);
+        const L = 4 + R2() * 8;
+        g.strokeStyle = rgba([214, 214, 226], 0.25 + R2() * 0.35);
+        g.lineWidth = 0.35 + R2() * 0.3;
         g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * L * 0.5 + side * 1.5, y + Math.sin(a) * L * 0.5, x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
       }
-      g.strokeStyle = rgba(FUR_DARK, 0.45); g.lineWidth = 0.7;
+      g.strokeStyle = rgba(FUR_DARK, 0.3); g.lineWidth = 0.6;
       g.stroke(inner);
+      earInk(g, side, 51);
     },
   });
 }
+// a dry-brush ink line up one side of the ear and down the other, like the room's outlines
+function earInk(g, side, seed) {
+  const pts = earShape(side).slice(1, -1).map(([x, y]) => [x * 0.97, y * 0.98 + 0.3]);
+  stroke(g, { pts, width: 1.3, dry: 0.55, tone: 0.55, bleed: 0.05, rgb: INKC, seed: seed + side, bristles: 5 });
+}
+const mix3 = (c, rgb, k, m) => { for (let i = 0; i < 3; i++) c[i] += (rgb[i] * k - c[i]) * m; };
 
 function paintEarBack(g, side) {
   fur(g, {
     box: [-26, -48, 26, 10], outline: earShape(side), seed: 61 + side, round: 9, tone: 0.82,
-    flow: (x) => -Math.PI / 2 + x * 0.02, len: [2, 4.5], density: 0.6, clump: 0.03,
+    flow: (x) => -Math.PI / 2 + x * 0.02, len: [2, 4.5], density: 0.7, clump: 0.03,
     fringe: (x, y) => (y < 2 ? 1 : 0), fringeLen: [1.2, 3.2],
+    after: (g) => earInk(g, side, 61),
+  });
+}
+// a copy of an ear with its base faded, for when it comes round in front of his head
+function fadedBase(sp) {
+  const c = document.createElement('canvas');
+  c.width = sp.c.width; c.height = sp.c.height;
+  const g = c.getContext('2d');
+  g.drawImage(sp.c, 0, 0);
+  const k = c.height / sp.h;
+  const gr = g.createLinearGradient(0, (10 - sp.y0) * k, 0, (-9 - sp.y0) * k);
+  gr.addColorStop(0, 'rgba(0,0,0,1)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.globalCompositeOperation = 'destination-out';
+  g.fillStyle = gr;
+  g.fillRect(0, 0, c.width, c.height);
+  return { c, x0: sp.x0, y0: sp.y0, w: sp.w, h: sp.h };
+}
+
+// the face is a few soft patches laid over the skull where they turn with him:
+// the muzzle round the nose, and a socket and brow round each eye
+const ell = (x, y, cx, cy, rx, ry) => { const dx = (x - cx) / rx, dy = (y - cy) / ry; return Math.sqrt(dx * dx + dy * dy); };
+const PADS = [[-8.2, 6.4], [8.2, 6.4]];
+function padAt(x, y) {
+  let m = 0;
+  for (const [px, py] of PADS) m = Math.max(m, 1 - ell(x, y, px, py, 11, 8.5) ** 2);
+  return clamp(m);
+}
+// whisker pads, the bridge of the nose, the lip line; origin at the nose
+function paintMuzzle(g) {
+  const R = rng(41);
+  fur(g, {
+    box: [-26, -32, 26, 26], seed: 41, q: 3.2, base: 0, tone: 1,
+    // the pads and the bridge only, so an open mouth isn't covered up
+    mask: (x, y) => Math.max(
+      smooth(1, 0.55, Math.min(ell(x, y, -8.2, 5.6, 13.5, 9.6), ell(x, y, 8.2, 5.6, 13.5, 9.6))),
+      smooth(1, 0.5, ell(x, y, 0, -9, 6.4, 18))),
+    ovals: [[-8.6, 6, 10.5, 8.5, 6.5], [8.6, 6, 10.5, 8.5, 6.5], [0, -8, 6, 14, 2.5], [0, 15, 9, 5, 1.2]],
+    grooves: [{ pts: [[0, 2.6], [0, 6.6]], w: 1.1, h: 1.4 }, { pts: [[-8.5, 8.6], [-4.4, 9.8], [0, 6.8], [4.4, 9.8], [8.5, 8.6]], w: 1.3, h: 1.6 }],
+    lum: (x, y) => 1 + 0.3 * padAt(x, y) + 0.06 * (1 - clamp(ell(x, y, 0, -8, 4, 14))),
+    flow: (x, y) => (y > -2 ? Math.atan2(y - 3, x) : -Math.PI / 2 + x * 0.05),
+    len: [1.4, 3], density: 0.75, clump: 0, under: 0.6, lightP: 0.45, hi: 0.32,
+    after: (g) => {
+      // where the whiskers grow from
+      g.fillStyle = rgba(FUR_DARK, 0.5);
+      for (const sx of [-1, 1]) for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
+        if (c === 3 && r === 0) continue;
+        g.beginPath();
+        g.arc(sx * (5.6 + c * 2.4 + R() * 0.5), 5.4 + r * 2.2 + c * 0.5, 0.5, 0, TAU);
+        g.fill();
+      }
+    },
   });
 }
 
-// whisker pads, the bridge of the nose and the lip line, around the nose
-function paintMuzzle(g) {
-  const R = rng(41);
-  for (let i = 0; i < 9; i++) stamp(g, 0.6, -26 + i * 3, 5 - i * 0.25, SHEEN, 0.035, 0.2);
-  stamp(g, -8, -4, 7, FUR_DARK, 0.12, 0.3);
-  for (const sx of [-1, 1]) {
-    stamp(g, sx * 7.4, 7.6, 10, [80, 86, 104], 0.68, 0.35);
-    stamp(g, sx * 6.4 + 1, 4.6, 6, [130, 138, 160], 0.36, 0.3);
-    stamp(g, sx * 9, 12, 6.5, FUR_DARK, 0.22, 0.3);
-  }
-  stamp(g, 0, 15.5, 10, FUR_DARK, 0.3, 0.25);
-  g.lineCap = 'round';
-  for (let i = 0; i < 180; i++) {
-    const sx = i % 2 ? 1 : -1;
-    const a = R() * TAU, r = Math.sqrt(R()) * 9;
-    const x = sx * 7.2 + Math.cos(a) * r, y = 7.2 + Math.sin(a) * r * 0.8;
-    const fa = Math.atan2(y - 3, x) + (R() - 0.5) * 0.4, L = 1.6 + R() * 2.4;
-    g.strokeStyle = R() < 0.55 ? rgba([118, 126, 146], 0.18 + R() * 0.2) : rgba(FUR_DARK, 0.25 + R() * 0.2);
-    g.lineWidth = 0.4 + R() * 0.3;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(fa) * L, y + Math.sin(fa) * L); g.stroke();
-  }
-  // where the whiskers grow from
-  g.fillStyle = rgba(FUR_DARK, 0.5);
-  for (const sx of [-1, 1]) for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
-    g.beginPath();
-    g.arc(sx * (6.4 + c * 2.5 + R() * 0.5), 5.8 + r * 2.2 + c * 0.5, 0.5, 0, TAU);
-    g.fill();
-  }
+// the chin, which drops when he opens his mouth
+function paintChin(g) {
+  fur(g, {
+    box: [-14, -6, 14, 14], seed: 43, q: 3.2, base: 0,
+    mask: (x, y) => smooth(1, 0.5, ell(x, y, 0, 3.6, 11, 8)),
+    ovals: [[0, 3.6, 9, 6.5, 2.2]],
+    lum: () => 1.12,
+    flow: (x) => Math.PI / 2 + x * 0.06,
+    len: [1.5, 3.2], density: 0.8, clump: 0, under: 0.5, lightP: 0.42,
+  });
 }
 
-function paintChin(g) {
-  const R = rng(43);
-  stamp(g, 0, 4, 9, [58, 63, 78], 0.4, 0.35);
-  stamp(g, 0, 2.5, 5, [84, 90, 108], 0.2, 0.3);
-  g.lineCap = 'round';
-  for (let i = 0; i < 60; i++) {
-    const x = (R() - 0.5) * 16, y = R() * 9;
-    const a = Math.PI / 2 + x * 0.06 + (R() - 0.5) * 0.3, L = 1.5 + R() * 2.5;
-    g.strokeStyle = R() < 0.5 ? rgba([110, 118, 138], 0.2) : rgba(FUR_DARK, 0.3);
-    g.lineWidth = 0.4 + R() * 0.3;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
-  }
+// round each eye: a soft hollow for the eye, the brow ridge catching the light above it
+function paintSocket(g, side) {
+  fur(g, {
+    box: [-24, -27, 24, 15], seed: 47 + side, q: 3, base: 0,
+    mask: (x, y) => smooth(1, 0.6, ell(x, y, 0, -5, 21, 18)),
+    ovals: [[0, 0.6, 15, 11, -4.5], [side * 2.5, -14, 14, 6, 3.6]],
+    lum: (x, y) => 1 + 0.1 * smooth(-6, -14, y),
+    // up and out over the brow, out and down under the eye
+    flow: (x, y) => (y < -6 ? -Math.PI / 2 + side * 0.5 + x * 0.015 : side > 0 ? 0.45 + y * 0.01 : Math.PI - 0.45 - y * 0.01),
+    len: [1.4, 3.2], density: 0.7, clump: 0, under: 0.5,
+    keep: (x, y) => ell(x, y, 0, 0, EYE_W + 1.5, EYE_H * 0.9 + 1.5) > 1,
+  });
 }
 
 // green, a darker ring, a lighter ring round the pupil, and light pooling low
@@ -808,10 +1017,10 @@ function paintIris(g) {
   g.beginPath(); g.arc(0, 0, 10, 0, TAU); g.clip();
   stamp(g, 0.5, 5.5, 6.5, [224, 232, 150], 0.4, 0.3);
   g.lineCap = 'round';
-  for (let i = 0; i < 90; i++) {
+  for (let i = 0; i < 130; i++) {
     const a = R() * TAU, r0 = 2.4 + R() * 2, r1 = 6.5 + R() * 3.2;
-    g.strokeStyle = R() < 0.5 ? rgba([226, 232, 160], 0.14 + R() * 0.12) : rgba([30, 60, 34], 0.14 + R() * 0.14);
-    g.lineWidth = 0.3 + R() * 0.35;
+    g.strokeStyle = R() < 0.5 ? rgba([226, 232, 160], 0.14 + R() * 0.14) : rgba([30, 60, 34], 0.14 + R() * 0.16);
+    g.lineWidth = 0.25 + R() * 0.35;
     const a1 = a + (R() - 0.5) * 0.2;
     g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a1) * r1, Math.sin(a1) * r1); g.stroke();
   }
@@ -821,10 +1030,34 @@ function paintIris(g) {
   g.beginPath(); g.arc(0, 0, 9.4, 0, TAU); g.stroke();
 }
 
+// the nose leather: light on top where the window catches it, darker underneath
+function paintNose(g) {
+  const p = new Path2D();
+  p.moveTo(-4.8, -2.6);
+  p.quadraticCurveTo(0, -4.4, 4.8, -2.6);
+  p.quadraticCurveTo(5.4, -1.6, 4.2, 0.2);
+  p.quadraticCurveTo(2, 2.6, 0.7, 3.4);
+  p.quadraticCurveTo(0, 3.8, -0.7, 3.4);
+  p.quadraticCurveTo(-2, 2.6, -4.2, 0.2);
+  p.quadraticCurveTo(-5.4, -1.6, -4.8, -2.6);
+  const gr = g.createLinearGradient(0, -4, 0, 4);
+  gr.addColorStop(0, 'rgb(112,110,126)');
+  gr.addColorStop(0.55, 'rgb(80,78,92)');
+  gr.addColorStop(1, 'rgb(50,48,60)');
+  g.fillStyle = gr;
+  g.fill(p);
+  g.fillStyle = 'rgba(26,24,32,.85)';
+  for (const sx of [-1, 1]) { g.beginPath(); g.ellipse(sx * 2.3, 0.4, 1.1, 0.7, sx * 0.5, 0, TAU); g.fill(); }
+  g.fillStyle = 'rgba(214,214,228,.55)';
+  g.beginPath(); g.ellipse(-1.2, -2.4, 1.6, 0.6, -0.1, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(22,20,28,.7)'; g.lineWidth = 0.5;
+  g.stroke(p);
+}
+
 function paintLeg(g) {
   fur(g, {
     box: [-12, -16, 64, 16], outline: LEG, seed: 71, round: 9, light: FRONT, tone: 0.95,
-    flow: (x, y) => 0.12 * Math.sign(y), len: [2.5, 5], density: 0.6, clump: 0.03,
+    flow: (x, y) => 0.12 * Math.sign(y), len: [2.5, 5], density: 0.7, clump: 0.03,
     fringe: (x) => (x > 2 ? 1 : 0), fringeLen: [1.4, 3.4],
   });
   // fade the root so it melts into the chest
@@ -840,7 +1073,7 @@ function paintLeg(g) {
 function paintPaw(g, beans) {
   fur(g, {
     box: [-18, -16, 23, 16], outline: PAW, seed: beans ? 73 : 72, round: 8, light: FRONT, tone: beans ? 0.85 : 1.05,
-    flow: (x, y) => 0.25 * Math.sign(y) * smooth(4, 16, x), len: [2, 4], density: 0.7, clump: 0.02,
+    flow: (x, y) => 0.25 * Math.sign(y) * smooth(4, 16, x), len: [2, 4], density: 0.8, clump: 0.02,
     fringe: () => 1, fringeLen: [1, 2.6],
     after: (g) => {
       g.lineCap = 'round';
@@ -868,15 +1101,15 @@ function paintPaw(g, beans) {
 
 function paintTuck(g, far) {
   fur(g, {
-    box: [-22, -20, 24, 7], outline: PAW_TUCK, seed: far ? 75 : 74, round: 8, tone: far ? 0.72 : 1.05,
+    box: [-22, -20, 24, 7], outline: PAW_TUCK, seed: far ? 75 : 74, round: 8, tone: far ? 0.8 : 1.05,
     ao: (x, y) => 1 - 0.4 * smooth(-4, 3, y),
-    flow: (x, y) => 0.15 + smooth(4, 16, x) * 1.2, len: [2, 4], density: 0.7, clump: 0.02,
+    flow: (x, y) => 0.15 + smooth(4, 16, x) * 1.2, len: [2, 4], density: 0.8, clump: 0.02,
     fringe: (x, y) => (y < 0 ? 1 : 0.4), fringeLen: [1, 2.6],
     after: (g) => {
       g.lineCap = 'round';
-      g.strokeStyle = rgba(FUR_DARK, far ? 0.6 : 0.85); g.lineWidth = 0.9;
+      g.strokeStyle = rgba(FUR_DARK, far ? 0.7 : 0.85); g.lineWidth = 0.9;
       for (const x of [7, 11, 14.6]) { g.beginPath(); g.moveTo(x - 1, -9.5 + (x - 7) * 0.4); g.quadraticCurveTo(x + 0.4, -4, x - 0.2, 1.5); g.stroke(); }
-      if (!far) { g.strokeStyle = rgba(SHEEN, 0.3); g.lineWidth = 1; g.beginPath(); g.moveTo(-10, -11); g.quadraticCurveTo(2, -14.5, 13, -10); g.stroke(); }
+      g.strokeStyle = rgba(SHEEN, far ? 0.18 : 0.3); g.lineWidth = 1; g.beginPath(); g.moveTo(-10, -11); g.quadraticCurveTo(2, -14.5, 13, -10); g.stroke();
     },
   });
 }
@@ -890,51 +1123,62 @@ function paintTail(g) {
     const x = (i / 12) * (TAIL_LEN + 4), r = lerp(12.5, 8.6, i / 12) * (i === 12 ? 0.75 : 1);
     top.push([x, -r]); bot.unshift([x, r]);
   }
-  fur(g, {
+  return furJobs(g, {
     box: [-8, -18, TAIL_LEN + 22, 18], outline: [[-6, 0], ...top, [TAIL_LEN + 14, 0], ...bot], seed: 81, round: 11,
     light: norm3(0.05, -0.78, 0.62), rim: 0.8,
     ao: (x) => 1 - 0.25 * smooth(20, -6, x),
-    flow: (x, y) => y * 0.025, len: [3, 6.5], density: 0.5, clump: 0.04,
+    flow: (x, y) => y * 0.025, len: [3.4, 7], density: 0.6, clump: 0.04,
     lenAt: (x) => 1 + smooth(TAIL_LEN - 30, TAIL_LEN + 10, x) * 0.6,
-    fringe: (x) => (x < 4 ? 0 : x > TAIL_LEN - 6 ? 2 : 1), fringeLen: [1.4, 3.6], fringeN: 1.6,
+    fringe: (x) => (x < 4 ? 0 : x > TAIL_LEN - 6 ? 2 : 1), fringeLen: [1.4, 3.6], fringeN: 1.8,
   });
 }
 
-// his sprites, painted once per layout (u = css px per cat unit), as a list
-// of small jobs so the first paint can be spread over a few idle moments
-function catSteps(u, dpr, dense, out) {
-  const hu = u * HS;
-  const q = dense ? 1.6 : 1.25;
-  return [
-    () => { out.torso = makeSprite(-160, -126, 132, 24, u, dpr, (g) => paintTorso(g, dense, q)); },
-    () => { out.haunch = makeSprite(-160, -112, -26, 26, u, dpr, (g) => paintHaunch(g, dense, q)); },
-    () => { out.chest = makeSprite(46, -104, 148, 24, u, dpr, (g) => paintChest(g, dense, q)); },
-    () => { out.skull = makeSprite(-66, -54, 66, 56, hu, dpr, (g) => paintSkull(g, dense, q)); },
-    () => {
-      out.neck = makeSprite(-34, -44, 34, 44, u, dpr, paintNeck);
-      out.muzzle = makeSprite(-22, -30, 22, 24, hu, dpr, paintMuzzle);
-      out.chin = makeSprite(-14, -6, 14, 14, hu, dpr, paintChin);
-      out.iris = makeSprite(-11, -11, 11, 11, hu * 1.2, dpr, paintIris);
-    },
-    () => {
-      out.earFL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1));
-      out.earFR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1));
-      out.earBL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1));
-      out.earBR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1));
-    },
-    () => {
-      out.leg = makeSprite(-12, -16, 64, 16, u, dpr, paintLeg);
-      out.pawT = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, false));
-      out.pawB = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, true));
-      out.tuckN = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, false));
-      out.tuckF = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, true));
-    },
-    () => { out.tail = makeSprite(-8, -18, TAIL_LEN + 22, 18, u, dpr, paintTail); },
-  ];
+// his sprites, painted once per layout (u = css px per cat unit), a job at a
+// time so the painting can be spread over a few idle moments
+function* catGen(u, dpr, out) {
+  const hu = u * HS, q = 1.6;
+  function* big(key, box, uu, paint) {
+    let jobs = null;
+    out[key] = makeSprite(box[0], box[1], box[2], box[3], uu, dpr, (g) => { jobs = paint(g); });
+    for (const j of jobs) { j(); yield; }
+  }
+  yield* big('torso', [-160, -126, 132, 24], u, (g) => paintTorso(g, 1.3));
+  yield* big('haunch', [-160, -112, -26, 26], u, (g) => paintHaunch(g, 1.3));
+  yield* big('chest', [46, -104, 148, 24], u, (g) => paintChest(g, q));
+  yield* big('skull', [-66, -54, 66, 56], hu, (g) => paintSkull(g, q));
+  out.neck = makeSprite(-34, -44, 34, 44, u, dpr, paintNeck);
+  yield;
+  out.ruff = makeSprite(-56, -34, 58, 40, u, dpr, paintRuff);
+  yield;
+  out.muzzle = makeSprite(-26, -32, 26, 26, hu, dpr, paintMuzzle);
+  yield;
+  out.chin = makeSprite(-14, -6, 14, 14, hu, dpr, paintChin);
+  out.nose = makeSprite(-6.5, -5.5, 6.5, 5, hu * 2, dpr, paintNose);
+  out.iris = makeSprite(-11, -11, 11, 11, hu * 1.4, dpr, paintIris);
+  yield;
+  out.sockL = makeSprite(-24, -27, 24, 15, hu, dpr, (g) => paintSocket(g, -1));
+  out.sockR = makeSprite(-24, -27, 24, 15, hu, dpr, (g) => paintSocket(g, 1));
+  yield;
+  out.earFL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1));
+  out.earFR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1));
+  out.earFLf = fadedBase(out.earFL);
+  out.earFRf = fadedBase(out.earFR);
+  yield;
+  out.earBL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1));
+  out.earBR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1));
+  yield;
+  out.leg = makeSprite(-12, -16, 64, 16, u, dpr, paintLeg);
+  out.pawT = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, false));
+  out.pawB = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, true));
+  yield;
+  out.tuckN = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, false));
+  out.tuckF = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, true));
+  yield;
+  yield* big('tail', [-8, -18, TAIL_LEN + 22, 18], u, paintTail);
 }
-function catSprites(u, dpr, dense) {
+function catSprites(u, dpr) {
   const out = {};
-  for (const f of catSteps(u, dpr, dense, out)) f();
+  for (const x of catGen(u, dpr, out)) void x;
   return out;
 }
 
@@ -945,7 +1189,7 @@ function restPose(o = {}) {
     hx: 0, hy: 0, yaw: 0.22, pitch: 0.05, roll: 0,
     earFL: 0, earFR: 0, earSL: 0, earSR: 0, earTL: 0, earTR: 0,
     lidU: 0.04, lidL: 0.04, happy: 0, brow: 0, pupil: 0.3, gx: 0, gy: 0,
-    jaw: 0, tongue: 0, lick: 0, fangs: 0, grin: 0, noseTw: 0, whisk: 0, chew: 0,
+    jaw: 0, tongue: 0, lick: 0, fangs: 0, grin: 0, noseTw: 0, whisk: 0, chew: 0, wrinkle: 0,
     nUp: 0, nX: PAW_N[0], nY: PAW_N[1], nBeans: 0, nRot: 0,
     fUp: 0, fX: PAW_F[0], fY: PAW_F[1], fBeans: 0, fRot: 0,
     tPh: 0, tAmp: 0.12, tCurl: 0.5, tLift: 0, tFlick: 0,
@@ -1042,88 +1286,121 @@ function drawLeg(g, SP, ax, ay, px, py, up, beans, rot) {
 // the near ear or the far one; returns false if we see its back
 const EM = new Float64Array(6);
 function earMatrix(side, P) {
-  faceProj(side * 1.0, 0.7, FACE_R, P.yaw, P.pitch);
+  // the ears ride high on the skull, so they only follow half the nod
+  faceProj(side * 1.0, 0.7, FACE_R, P.yaw, P.pitch * 0.5);
   const fl = side < 0 ? P.earFL : P.earFR, sw = side < 0 ? P.earSL : P.earSR, tw = side < 0 ? P.earTL : P.earTR;
   const ang = Math.atan2(FP.ny - 0.7, FP.nx) + side * (fl * 1.05 + sw * 0.22) + tw;
   const ul = 0.9 - fl * 0.28;
   const ux = Math.cos(ang) * ul, uy = Math.sin(ang) * ul;
   const facing = Math.cos(P.yaw * 0.9 + side * (0.35 + sw * 1.5 + fl * 0.5)) * Math.cos(P.pitch * 0.6);
-  const wl = (0.35 + 0.65 * Math.abs(facing)) / ul;
+  const wl = Math.max(0.5, 0.35 + 0.65 * Math.abs(facing)) / ul;
   EM[0] = -uy * wl; EM[1] = ux * wl; EM[2] = -ux; EM[3] = -uy;
   EM[4] = FP.x + P.yaw * 2.5; EM[5] = FP.y + P.pitch * 2;
   return facing > 0;
 }
 
-function drawEye(g, SP, P, side) {
-  const ew = 11, eh = 8.9;
-  const xi = -side * ew, xo = side * ew, yi = 1.8, yo = -1.6;
-  const up = clamp(1 - P.lidU), lo = clamp(1 - P.lidL);
-  const br = P.brow;
-  // the socket and the brow above it
-  dab(g, 0, 0.6, ew * 1.32, FUR_DARK, 0.28, 0.3);
-  dab(g, side * 1.5, -eh * 1.5, ew * 1.05, SHEEN, 0.07, 0.2);
-  g.lineCap = 'round';
-  g.strokeStyle = '#0c0d11';
-  if (up < 0.07) {
-    // closed: a happy little arch, or a sleepy curve
-    const cy = lerp(eh * 0.5, -eh * 0.7, P.happy);
-    g.lineWidth = 1.9;
-    g.beginPath(); g.moveTo(xi, yi + 0.5); g.quadraticCurveTo(0, cy + 0.5, xo, yo + 0.5); g.stroke();
-    g.lineWidth = 1; g.beginPath(); g.moveTo(xi, yi + 0.5); g.lineTo(xi - side * 2.2, yi + 2.4); g.stroke();
-    return;
-  }
-  // a happy eye: the lower lid pushes up into a soft crescent
-  const hp = P.happy;
-  const c1x = xi * 0.45, c1y = yi - eh * 1.32 * up * (1 - 0.5 * Math.max(0, br));
-  const c2x = xo * 0.5, c2y = yo - eh * 1.38 * up * (1 - 0.4 * Math.max(0, -br));
-  const c3x = xo * 0.5, c3y = Math.max(c2y + 2, yo + eh * (1.08 * lo - 1.55 * hp));
-  const c4x = xi * 0.4, c4y = Math.max(c1y + 2, yi + eh * (0.98 * lo - 1.45 * hp));
-  g.save();
+// a point along a cubic, for the wet line under the eye
+const BZ = { x: 0, y: 0 };
+function bez(t, ax, ay, bx, by, cx, cy, dx, dy) {
+  const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+  BZ.x = a * ax + b * bx + c * cx + d * dx; BZ.y = a * ay + b * by + c * cy + d * dy;
+  return BZ;
+}
+function eyeShape(g, xi, yi, xo, yo, c1x, c1y, c2x, c2y, c3x, c3y, c4x, c4y) {
   g.beginPath();
   g.moveTo(xi, yi);
   g.bezierCurveTo(c1x, c1y, c2x, c2y, xo, yo);
   g.bezierCurveTo(c3x, c3y, c4x, c4y, xi, yi);
   g.closePath();
+}
+
+function drawEye(g, SP, P, side) {
+  const ew = EYE_W, eh = EYE_H;
+  const xi = -side * ew, xo = side * ew, yi = 2, yo = -1.8;
+  const up = clamp(1 - P.lidU), lo = clamp(1 - P.lidL);
+  const br = P.brow;
+  g.lineCap = 'round';
+  g.strokeStyle = '#0c0d11';
+  if (up < 0.07) {
+    // closed: a happy little arch, or a sleepy curve
+    const cy = lerp(eh * 0.5, -eh * 0.7, P.happy);
+    g.lineWidth = 2.1;
+    g.beginPath(); g.moveTo(xi, yi + 0.5); g.quadraticCurveTo(0, cy + 0.5, xo, yo + 0.5); g.stroke();
+    g.lineWidth = 1.1; g.beginPath(); g.moveTo(xi, yi + 0.5); g.lineTo(xi - side * 2.4, yi + 2.6); g.stroke();
+    return;
+  }
+  // a happy eye: the lower lid pushes up into a soft crescent
+  const hp = P.happy;
+  const c1x = xi * 0.4, c1y = yi - eh * 1.56 * up * (1 - 0.5 * Math.max(0, br));
+  const c2x = xo * 0.45, c2y = yo - eh * 1.36 * up * (1 - 0.4 * Math.max(0, -br));
+  const c3x = xo * 0.5, c3y = Math.max(c2y + 2, yo + eh * (1.08 * lo - 1.55 * hp));
+  const c4x = xi * 0.4, c4y = Math.max(c1y + 2, yi + eh * (0.98 * lo - 1.45 * hp));
+  // the dark rim round it
+  g.save();
+  g.scale(1.14, 1.2);
+  eyeShape(g, xi, yi, xo, yo, c1x, c1y, c2x, c2y, c3x, c3y, c4x, c4y);
+  g.fillStyle = 'rgba(12,12,16,.75)';
+  g.fill();
+  g.restore();
+  g.save();
+  eyeShape(g, xi, yi, xo, yo, c1x, c1y, c2x, c2y, c3x, c3y, c4x, c4y);
   g.clip();
   g.fillStyle = '#16221a';
   g.fillRect(-ew - 2, -eh * 2, ew * 2 + 4, eh * 4);
   const ix = P.gx * ew * 0.32, iy = P.gy * eh * 0.3 + 0.4, ri = eh * 1.04, sc = ri / 10;
   g.drawImage(SP.iris.c, ix - 11 * sc, iy - 11 * sc, 22 * sc, 22 * sc);
+  // the pupil: a slit when he's calm, wide and round when something moves
   const pw = ri * (0.12 + 0.72 * P.pupil);
   g.fillStyle = '#060709';
   g.beginPath(); g.ellipse(ix, iy, pw, ri * 0.93, 0, 0, TAU); g.fill();
-  // the upper lid casts a little shadow
-  dab(g, 0, yo - eh * 1.1 * up + eh * 0.15, ew * 1.3, FUR_DARK, 0.6, 0.4);
+  g.fillStyle = 'rgba(70,96,120,.35)';
+  g.beginPath(); g.ellipse(ix + pw * 0.3, iy + 3.2, pw * 0.5, 4.2, 0, 0, TAU); g.fill();
+  // the upper lid's shadow
+  g.strokeStyle = 'rgba(8,16,10,.26)';
+  g.lineWidth = 2;
+  for (let k = 1; k <= 3; k++) {
+    g.beginPath(); g.moveTo(xi, yi + k * 1.1); g.bezierCurveTo(c1x, c1y + k * 1.6, c2x, c2y + k * 1.6, xo, yo + k * 1.1); g.stroke();
+  }
   g.fillStyle = 'rgba(255,255,255,.92)';
-  g.beginPath(); g.ellipse(ix + 2.8, iy - 3.3, 2, 1.55, -0.5, 0, TAU); g.fill();
+  g.beginPath(); g.ellipse(ix + 3, iy - 3.6, 2.2, 1.7, -0.5, 0, TAU); g.fill();
   g.fillStyle = 'rgba(255,255,255,.45)';
-  g.beginPath(); g.arc(ix - 2.8, iy + 3.6, 0.85, 0, TAU); g.fill();
+  g.beginPath(); g.arc(ix - 3, iy + 3.9, 0.95, 0, TAU); g.fill();
   g.restore();
-  g.lineWidth = 1.8;
+  g.strokeStyle = '#0c0d11';
+  g.lineWidth = 1.9;
   g.beginPath(); g.moveTo(xi, yi); g.bezierCurveTo(c1x, c1y, c2x, c2y, xo, yo); g.stroke();
-  g.lineWidth = 0.9;
+  g.lineWidth = 0.95;
   g.beginPath(); g.moveTo(xo, yo); g.bezierCurveTo(c3x, c3y, c4x, c4y, xi, yi); g.stroke();
-  g.lineWidth = 1.2;
-  g.beginPath(); g.moveTo(xi, yi); g.lineTo(xi - side * 2.4, yi + 2.3); g.stroke();
+  g.lineWidth = 1.25;
+  g.beginPath(); g.moveTo(xi, yi); g.lineTo(xi - side * 2.6, yi + 2.5); g.stroke();
+  // the wet of the lower lid catching the light
+  g.strokeStyle = 'rgba(150,160,180,.35)';
+  g.lineWidth = 0.7;
+  g.beginPath();
+  for (let i = 0; i <= 6; i++) {
+    const p = bez(0.2 + i * 0.1, xo, yo, c3x, c3y, c4x, c4y, xi, yi);
+    i ? g.lineTo(p.x, p.y + 1.1) : g.moveTo(p.x, p.y + 1.1);
+  }
+  g.stroke();
 }
 
 function browWhiskers(g, side, k) {
   g.strokeStyle = WHISKER;
   g.lineWidth = 0.5;
   for (let j = 0; j < 3; j++) {
-    const x = side * (1 + j * 3), y = -14.5 - j * 0.8;
+    const x = side * (1 + j * 3), y = -15.5 - j * 0.8;
     const L = (12 + j * 2) * k;
     g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + side * L * 0.35, y - L * 0.7, x + side * L * 0.8, y - L * 0.95); g.stroke();
   }
 }
 
-// nose, lips, an open mouth when he needs one
+// nose, lips, an open mouth when he needs one (origin at the nose)
 function drawMouth(g, SP, P) {
   const J = P.jaw;
   // the jaw and chin drop when he opens up
-  blit(g, SP.chin, P.chew * 1.2, 14 + J * 14.5);
+  blit(g, SP.chin, P.chew * 1.2, 15 + J * 25);
+  const mw = 5.5 + J * 9, top = 9.2, bot = 9.6 + J * 26;
   if (J > 0.02) {
-    const mw = 5.5 + J * 4.2, top = 8.6, bot = 9 + J * 16;
     g.fillStyle = MOUTH_S;
     g.beginPath();
     g.moveTo(-mw, top);
@@ -1131,63 +1408,73 @@ function drawMouth(g, SP, P) {
     g.quadraticCurveTo(mw * 0.95, bot - 1, 0, bot);
     g.quadraticCurveTo(-mw * 0.95, bot - 1, -mw, top);
     g.fill();
+    // the dark of his throat
+    if (J > 0.3) {
+      g.fillStyle = 'rgba(28,8,14,.75)';
+      g.beginPath(); g.ellipse(0, top + (bot - top) * 0.42, mw * 0.5, (bot - top) * 0.3, 0, 0, TAU); g.fill();
+    }
     g.fillStyle = TONGUE_S;
-    g.beginPath(); g.ellipse(0, bot - 1.8 - J * 1.5, mw * 0.62, 1.4 + J * 2.6, 0, Math.PI, 0); g.fill();
-    g.beginPath(); g.ellipse(0, bot - 1.8 - J * 1.5, mw * 0.62, 1.2, 0, 0, Math.PI); g.fill();
+    g.beginPath(); g.ellipse(0, bot - 1.8 - J * 2, mw * 0.62, 1.4 + J * 3.4, 0, Math.PI, 0); g.fill();
+    g.beginPath(); g.ellipse(0, bot - 1.8 - J * 2, mw * 0.62, 1.2, 0, 0, Math.PI); g.fill();
     if (P.fangs > 0.05) {
       g.globalAlpha = clamp(P.fangs);
       g.fillStyle = 'rgb(250,248,240)';
-      for (let sx = -1; sx <= 1; sx += 2) {
-        g.beginPath(); g.moveTo(sx * (mw - 2.6), top + 0.2); g.lineTo(sx * (mw - 1.2), top + 0.2); g.lineTo(sx * (mw - 1.8), top + 2.6 * P.fangs + 0.6); g.fill();
-        g.beginPath(); g.moveTo(sx * (mw - 2.4), bot - 0.6); g.lineTo(sx * (mw - 1.3), bot - 0.6); g.lineTo(sx * (mw - 1.8), bot - 2.2 * P.fangs); g.fill();
-      }
+      for (let sx = -1; sx <= 1; sx += 2) { g.beginPath(); g.moveTo(sx * (mw - 2.8), bot - 0.6); g.lineTo(sx * (mw - 1.2), bot - 0.6); g.lineTo(sx * (mw - 1.9), bot - 3.4 * P.fangs); g.fill(); }
       g.globalAlpha = 1;
     }
     g.strokeStyle = 'rgba(12,10,12,.9)'; g.lineWidth = 0.9;
     g.beginPath(); g.moveTo(-mw, top); g.quadraticCurveTo(0, top - 1.2, mw, top); g.stroke();
   }
   blit(g, SP.muzzle);
+  // the top fangs hang down past the lip
+  if (J > 0.02 && P.fangs > 0.05) {
+    g.globalAlpha = clamp(P.fangs);
+    g.fillStyle = 'rgb(250,248,240)';
+    for (let sx = -1; sx <= 1; sx += 2) { g.beginPath(); g.moveTo(sx * (mw - 3.2), top + 0.4); g.lineTo(sx * (mw - 1), top + 0.4); g.lineTo(sx * (mw - 2), top + 4.8 * P.fangs + 0.8); g.closePath(); g.fill(); }
+    g.globalAlpha = 1;
+  }
   // tongue out: a blep, or licking his lips
   if (P.tongue > 0.02 && J < 0.25) {
     const t = P.tongue, lk = P.lick;
     g.fillStyle = TONGUE_S;
     g.beginPath();
-    g.ellipse(lk * 3.4, 9.2 + t * 2.2 - lk * 3, 2.5 + t * 0.6, 1.3 + t * 1.7, lk * 0.7, 0, TAU);
+    g.ellipse(lk * 3.4, 10.2 + t * 2.2 - lk * 3, 2.5 + t * 0.6, 1.3 + t * 1.7, lk * 0.7, 0, TAU);
     g.fill();
     g.strokeStyle = 'rgba(150,70,84,.6)'; g.lineWidth = 0.5;
-    g.beginPath(); g.moveTo(lk * 3.4, 8.4 - lk * 3); g.lineTo(lk * 3.4, 9.6 + t * 2.6 - lk * 3); g.stroke();
+    g.beginPath(); g.moveTo(lk * 3.4, 9.4 - lk * 3); g.lineTo(lk * 3.4, 10.6 + t * 2.6 - lk * 3); g.stroke();
+  }
+  // a wrinkled nose when the avocado is around
+  const wr = P.wrinkle;
+  if (wr > 0.05) {
+    g.strokeStyle = rgba(FUR_DARK, 0.75 * wr);
+    g.lineWidth = 0.85;
+    for (let i = 0; i < 3; i++) {
+      const y = -10.5 - i * 2.3;
+      g.beginPath(); g.moveTo(-3.4 + i * 0.4, y + 0.9); g.quadraticCurveTo(0, y - 0.9, 3.4 - i * 0.4, y + 0.9); g.stroke();
+    }
   }
   // the nose
   g.save();
-  g.translate(0, P.noseTw * 1.1);
-  g.scale(1.5 + P.noseTw * 0.06, 1.5 - P.noseTw * 0.06);
-  g.fillStyle = NOSE_S;
-  g.beginPath();
-  g.moveTo(-4.7, -2.4); g.quadraticCurveTo(0, -3.9, 4.7, -2.4);
-  g.quadraticCurveTo(4.3, 0.3, 0.9, 2.9); g.quadraticCurveTo(0, 3.5, -0.9, 2.9);
-  g.quadraticCurveTo(-4.3, 0.3, -4.7, -2.4);
-  g.fill();
-  g.fillStyle = 'rgba(196,198,214,.55)';
-  g.beginPath(); g.ellipse(1.4, -1.6, 1.7, 0.75, -0.15, 0, TAU); g.fill();
-  g.strokeStyle = 'rgba(14,12,16,.7)'; g.lineWidth = 0.6;
-  g.beginPath(); g.moveTo(-2.9, 0.1); g.quadraticCurveTo(-1.6, 0.9, -1.1, 0.2); g.moveTo(2.9, 0.1); g.quadraticCurveTo(1.6, 0.9, 1.1, 0.2); g.stroke();
+  g.translate(0, P.noseTw * 1.1 - 1.3 - wr * 0.6);
+  g.scale(1.75 + P.noseTw * 0.08, 1.75 - P.noseTw * 0.1 + wr * 0.08);
+  blit(g, SP.nose);
   g.restore();
   // lips: the little line down from the nose and its two curls
-  const cy = 7.8 - P.grin * 1.4;
+  const cy = 8.8 - P.grin * 1.4;
   g.strokeStyle = 'rgba(10,10,13,.92)'; g.lineWidth = 1.05; g.lineCap = 'round';
   g.beginPath();
-  g.moveTo(0, 3.2 + P.noseTw); g.lineTo(0, 6.4);
+  g.moveTo(0, 5 + P.noseTw); g.lineTo(0, 7.4);
   if (J <= 0.02) {
-    g.moveTo(0, 6.4); g.quadraticCurveTo(-2.5, 9.6 + P.grin * 0.6, -6.4, cy);
-    g.moveTo(0, 6.4); g.quadraticCurveTo(2.5, 9.6 + P.grin * 0.6, 6.4, cy);
+    g.moveTo(0, 7.4); g.quadraticCurveTo(-2.5, 10.6 + P.grin * 0.6, -6.6, cy);
+    g.moveTo(0, 7.4); g.quadraticCurveTo(2.5, 10.6 + P.grin * 0.6, 6.6, cy - wr * 1.2);
   }
   g.stroke();
   // a little light catching the lower lip, so the mouth reads on such dark fur
   if (J <= 0.02) {
     g.strokeStyle = 'rgba(150,158,180,.28)'; g.lineWidth = 0.8;
     g.beginPath();
-    g.moveTo(-5.6, cy + 1.6); g.quadraticCurveTo(-2.4, 10.8 + P.grin * 0.6, 0, 8);
-    g.quadraticCurveTo(2.4, 10.8 + P.grin * 0.6, 5.6, cy + 1.6);
+    g.moveTo(-5.8, cy + 1.6); g.quadraticCurveTo(-2.4, 11.8 + P.grin * 0.6, 0, 9);
+    g.quadraticCurveTo(2.4, 11.8 + P.grin * 0.6, 5.8, cy + 1.6);
     g.stroke();
   }
 }
@@ -1213,34 +1500,54 @@ function whiskers(g, P, side, M) {
 }
 
 const MM = new Float64Array(6);
+// where the ruff hangs from: just under his chin, in cat units
+const RUFF_AT = { x: 0, y: 0 };
 function drawHead(g, SP, P) {
   headMatrix(P);
   g.save();
   g.transform(HM[0], HM[1], HM[2], HM[3], HM[4], HM[5]);
-  // ears sit behind the skull
+  // his face turns only so far; past that the whole head just shifts a little
+  const yaw0 = P.yaw, yw = clamp(yaw0, -0.8, 0.8), shift = (yaw0 - yw) * 9;
+  P.yaw = yw;
+  g.translate(shift, 0);
+  const ox = yw * 2.5, oy = P.pitch * 2;
+  // ears sit behind the skull, unless one has come round in front of it
+  let ahead = 0;
   for (let side = -1; side <= 1; side += 2) {
     const front = earMatrix(side, P);
+    if (front && FP.y > -22) { ahead = side; continue; }
     g.save();
     g.transform(EM[0], EM[1], EM[2], EM[3], EM[4], EM[5]);
     blit(g, front ? (side < 0 ? SP.earFL : SP.earFR) : (side < 0 ? SP.earBL : SP.earBR));
     g.restore();
   }
-  blit(g, SP.skull, P.yaw * 2.5, P.pitch * 2);
+  blit(g, SP.skull, ox, oy);
+  if (ahead) {
+    earMatrix(ahead, P);
+    g.save();
+    g.transform(EM[0], EM[1], EM[2], EM[3], EM[4], EM[5]);
+    blit(g, ahead < 0 ? SP.earFLf : SP.earFRf);
+    g.restore();
+  }
   // the muzzle frame, used for whisker roots too
   faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
-  MM[0] = FP.ex; MM[1] = FP.ey; MM[2] = FP.sx; MM[3] = FP.sy; MM[4] = FP.x + P.yaw * 2.5; MM[5] = FP.y + P.pitch * 2;
+  MM[0] = FP.ex; MM[1] = FP.ey; MM[2] = FP.sx; MM[3] = FP.sy; MM[4] = FP.x + ox; MM[5] = FP.y + oy;
   const far = P.yaw >= 0 ? 1 : -1;
   whiskers(g, P, far, MM);
-  // eyes, far one first
-  for (let i = 0; i < 2; i++) {
-    const side = i ? -far : far;
-    faceProj(side * EYE_LON, EYE_LAT, FACE_R, P.yaw, P.pitch);
-    if (FP.z < 0.08) continue;
-    g.save();
-    g.transform(FP.ex, FP.ey, FP.sx, FP.sy, FP.x + P.yaw * 2.5, FP.y + P.pitch * 2);
-    drawEye(g, SP, P, side);
-    browWhiskers(g, side, clamp(FP.z * 1.4));
-    g.restore();
+  // the hollows round his eyes and the brows over them, then the eyes, far one first
+  for (let pass = 0; pass < 2; pass++) {
+    for (let i = 0; i < 2; i++) {
+      const side = i ? -far : far;
+      faceProj(side * EYE_LON, EYE_LAT, FACE_R, P.yaw, P.pitch);
+      if (FP.z < 0.08) continue;
+      // never squeezed into a slit: the far eye keeps a bit of width
+      const k = Math.max(1, 0.45 / (Math.abs(FP.ex) || 1));
+      g.save();
+      g.transform(FP.ex * k, FP.ey * k, FP.sx, FP.sy, FP.x + ox, FP.y + oy);
+      if (pass === 0) blit(g, side < 0 ? SP.sockL : SP.sockR);
+      else { drawEye(g, SP, P, side); browWhiskers(g, side, clamp(FP.z * 1.4)); }
+      g.restore();
+    }
   }
   g.save();
   g.transform(MM[0], MM[1], MM[2], MM[3], MM[4], MM[5]);
@@ -1248,6 +1555,24 @@ function drawHead(g, SP, P) {
   g.restore();
   whiskers(g, P, -far, MM);
   g.restore();
+  // just under the chin, for the ruff
+  const ry = 36 + P.jaw * 18;
+  headToCat(MM[4] + MM[2] * ry + shift, MM[5] + MM[3] * ry);
+  RUFF_AT.x = PT.x; RUFF_AT.y = PT.y;
+  P.yaw = yaw0;
+}
+
+// the long fur under his chin, over the line where his head meets his chest
+function drawRuff(g, SP, P) {
+  const a = 1 - smooth(14, 40, P.hy);
+  if (a <= 0.02) return;
+  g.save();
+  g.globalAlpha = a;
+  g.translate(RUFF_AT.x, RUFF_AT.y);
+  g.rotate(P.roll * 0.6);
+  blit(g, SP.ruff);
+  g.restore();
+  g.globalAlpha = 1;
 }
 
 // the whole cat, back to front; hk.under runs just after the platform's lip
@@ -1281,7 +1606,6 @@ function drawCat(g, SP, P, hk) {
   if (hk && hk.under) hk.under();
   g.save();
   g.translate(P.bx, P.by - P.lift);
-  if (P.fUp <= 0.15) blit(g, SP.tuckF, PAW_F[0], PAW_F[1]);
   // the neck fills in when his head goes down for something
   const hm = headMatrix(P);
   const nx0 = NECK_PIVOT[0] - 6, ny0 = NECK_PIVOT[1] + 6;
@@ -1297,10 +1621,13 @@ function drawCat(g, SP, P, hk) {
   g.translate(0, br * 1.1);
   blit(g, SP.chest);
   g.restore();
+  // both front paws peek out from under him
+  if (P.fUp <= 0.15) blit(g, SP.tuckF, PAW_F[0], PAW_F[1]);
   g.restore();
   if (hk && hk.front) hk.front();
   if (P.nUp <= 0.15) blit(g, SP.tuckN, PAW_N[0] + P.bx, PAW_N[1] + P.by - P.lift);
   drawHead(g, SP, P);
+  drawRuff(g, SP, P);
   if (P.nUp > 0.15) nearLeg(g, SP, P);
 }
 function nearLeg(g, SP, P) {
@@ -1818,9 +2145,9 @@ function paintPom(g) {
 }
 
 // how long each thing he does lasts, and what can interrupt what
-const PRI = { sleep: 0, groom: 1, yawn: 1, window: 1, tilt: 1, wake: 1, love: 1, pat: 2, boop: 2, eat: 3, bat: 3, pounce: 3, warn: 4, swat: 5, push: 5, bury: 5, sit: 5 };
-const DUR = { sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, pat: 900, boop: 1500, eat: 4400, bat: 380, pounce: 2000, warn: 720, swat: 600, push: 2900, bury: 2700, sit: 3800 };
-const DUR_RM = { pat: 800, boop: 1200, eat: 2600, bat: 600, pounce: 1400, warn: 900, swat: 1100, push: 1800, bury: 1700, sit: 2400, tilt: 900, wake: 400 };
+const PRI = { sleep: 0, groom: 1, yawn: 1, window: 1, tilt: 1, wake: 1, love: 1, glare: 1, pat: 2, boop: 2, eat: 3, bat: 3, pounce: 3, warn: 4, swat: 5, buck: 5, push: 5, bury: 5, sit: 5 };
+const DUR = { sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, glare: 1900, pat: 900, boop: 1500, eat: 4600, bat: 380, pounce: 2000, warn: 720, swat: 600, buck: 1300, push: 3500, bury: 2900, sit: 3800 };
+const DUR_RM = { pat: 800, boop: 1200, eat: 2600, bat: 600, pounce: 1400, warn: 900, swat: 1100, buck: 900, push: 2000, bury: 1700, sit: 2400, tilt: 900, wake: 400 };
 const BULLY = ['swat', 'push', 'bury', 'sit'];
 
 export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = false, sound = {}, name = '' } = {}) {
@@ -1851,6 +2178,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   const play = (n, ...a) => { try { sound && typeof sound[n] === 'function' && sound[n](...a); } catch { /* no sound is fine */ } };
   const RM = !!reduceMotion;
   const now0 = () => performance.now();
+  const idle = window.requestIdleCallback ? (f, o) => window.requestIdleCallback(f, o) : (f) => setTimeout(f, 30);
+  // painting comes in slices: one after another while he's on screen (or
+  // about to be), in idle moments otherwise
+  const slice = (f) => (active ? setTimeout(f, 0) : idle(f, { timeout: 1200 }));
+  const budget = (dl) => (active ? 14 : dl && dl.timeRemaining ? clamp(dl.timeRemaining(), 6, 30) : 10);
 
   let L = null, SP = null, CS = null, spKey = '', csKey = '', W = 0, H = 0, dpr = 0;
   let active = true, destroyed = false, ready = false, raf = 0, last = 0, lastDraw = 0;
@@ -1864,7 +2196,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     x: 0, y: 0, vx: 0, vy: 0, ang: 0, w: 0, sq: 0, sqv: 0, sqA: -Math.PI / 2,
     alpha: 1, scale: 1, grab: null, place: null, fade: null, sleeping: true, restT: 0, grounded: false,
     face: 'smug', faceUntil: 0, worriedAt: -1e9, touchedCat: false, lastMove: -1e9, fast: false,
-    carry: null, under: false, mash: 0, sink: 0, ghost: 0,
+    carry: null, under: false, mash: 0, sink: 0, mound: 0, ghost: 0, ghostTop: false,
   };
   // his pose: P is what's drawn, T is where it's heading this frame
   const P = restPose(), T = restPose(), REST = restPose();
@@ -1882,15 +2214,16 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     happy: 0, petZone: 'back', petUntil: 0, stim: 0, stimMax: 4.4, grumpyUntil: 0,
     disgust: 0, blepAt: 0, blepUntil: 0, alert: 0, meowAt: -1e9, mrrpAt: -1e9, lastSwat: -1e9,
     lastUser: 0, idleAt: 0, zAt: 0, avoSeenAt: 0, toyT: -1e9, toyStill: 0, batAt: -1e9, pounceAt: -1e9, agit: 0, swishUntil: 0,
+    boopSayT: -1e9, faceUntil: 0, batN: 0,
   };
-  const LK = { mode: 0, x: 0, y: 0, pupil: 0.3 };
+  const LK = { mode: 0, x: 0, y: 0, pupil: 0.3, flat: false };
   const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0 };
   const treat = { on: false, state: '', t0: 0, x: 0, y: 0, x0: 0, y0: 0, a: 0 };
   const win = { kind: '', t0: 0, x: 0, y: 0, px: 0, py: 0, fx: 0, fy: 0, flip: 1, dur: 0, perched: false };
   const fx = { purrs: [], words: [], seals: [], rings: [], strokes: [], zs: [], scratches: [] };
   const pointer = { x: 0, y: 0, t: -1e9 };
-  const pet = { dist: 0, lastX: null, dir: 0, flips: 0, t: 0, spawnT: 0, sayT: -1e9, zone: '' };
-  let tapCat = null, jarT = -1e9;
+  const pet = { dist: 0, lastX: null, dir: 0, flips: 0, t: 0, spawnT: 0, sayT: -1e9, sayZone: '', zone: '' };
+  let tapCat = null, jarT = -1e9, treatQ = 0;
   let count = 0, lastMilestone = 0, lastPurr = -1e9, pets = 0, treats = 0, petIdx = 0;
 
   // layout
@@ -1970,10 +2303,17 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function buildSprites() {
     const { s } = L;
     const key = `${s.toFixed(4)}|${dpr}`;
-    if (key !== csKey || !CS) { CS = catSprites(s, dpr, !mobile); csKey = key; }
+    if (!CS) { CS = catSprites(s, dpr); csKey = key; }
+    else if (key !== csKey) rebuildCat(key);
+    else rebuild = null;
     if (key === spKey && SP) return false;
     spKey = key;
-    SP = {
+    SP = propSprites(s, dpr);
+    return true;
+  }
+  // the room's props: the top platform, the avocado, the jar, a treat, the pompom, the seal
+  function propSprites(s, dpr) {
+    const SP = {
       plat: makeSprite(-108, -36, 108, 64, s, dpr, (g) => paintDisc(g, hit, 98, 25, 22, 110)),
       avo: makeSprite(-36, -60, 36, 32, s, dpr, paintAvocado),
       jar: makeSprite(-32, -60, 32, 8, s, dpr, paintJar),
@@ -2008,7 +2348,29 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     c.width = c.height = Math.ceil(sz * 1.2);
     sealStamp(c.getContext('2d'), c.width / 2, c.height / 2, sz / 0.62, '禁', { seed: 9, alpha: 0.94 });
     SP.seal = { c, size: c.width / dpr };
-    return true;
+    return SP;
+  }
+
+  // after a resize he's repainted a part at a time, a little after the last
+  // change; the old sprites stretch to fit until then
+  let rebuild = null, rebuildT = 0, settleT = 0;
+  function rebuildCat(key) {
+    if (rebuild && rebuild.key === key) return;
+    rebuild = { key, s: L.s, d: dpr, it: null, out: {} };
+    clearTimeout(rebuildT);
+    timers.delete(rebuildT);
+    rebuildT = later(() => { const job = rebuild; slice((dl) => rebuildStep(job, dl)); }, 150);
+  }
+  function rebuildStep(job, dl) {
+    if (destroyed || !job || job !== rebuild) return;
+    if (!job.it) job.it = catGen(job.s, job.d, job.out);
+    const t1 = now0(), b = budget(dl);
+    let done = false;
+    do done = job.it.next().done; while (!done && now0() - t1 < b);
+    if (!done) { slice((d) => rebuildStep(job, d)); return; }
+    rebuild = null;
+    CS = job.out; csKey = job.key;
+    if (ready && L) { draw(now0()); kick(); }
   }
 
   function paintBg() {
@@ -2030,14 +2392,31 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!w || !h) return;
     if (!force && w === W && h === H && d === dpr) return;
     const old = L;
+    // while it's being resized, the old room just stretches with its canvas
+    // (css does that for free) and gets painted properly once things settle
+    const settling = !!old && !force;
     W = w; H = h; dpr = d;
-    for (const c of [bgC, fgC]) {
+    for (const c of settling ? [fgC] : [bgC, fgC]) {
       c.width = Math.round(w * d);
       c.height = Math.round(h * d);
     }
     L = computeLayout(w, h);
-    buildSprites();
-    paintBg();
+    if (settling) {
+      clearTimeout(settleT);
+      timers.delete(settleT);
+      settleT = later(() => {
+        if (!L) return;
+        buildSprites();
+        slice(() => {
+          if (destroyed || !L) return;
+          bgC.width = Math.round(W * dpr); bgC.height = Math.round(H * dpr);
+          paintBg(); draw(now0()); kick();
+        });
+      }, 160);
+    } else {
+      buildSprites();
+      paintBg();
+    }
     grabEl.style.width = grabEl.style.height = `${Math.round(78 * L.s)}px`;
     grabEl.style.marginLeft = grabEl.style.marginTop = `${-Math.round(39 * L.s)}px`;
     toyEl.style.width = toyEl.style.height = `${Math.round(52 * L.s)}px`;
@@ -2122,7 +2501,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       contact(0, 1, rad - cy2, 0.4, 0.4);
       for (const c of L.cols) {
         // pushed off the edge, it drops past the sill in front, not onto it
-        if (c.sill && now < A.ghost) continue;
+        // (or off the front of the cushion it was pushed from)
+        if ((c.sill || (A.ghostTop && c === L.cols[0])) && now < A.ghost) continue;
         const qx0 = A.x + ox, qy0 = A.y + oy;
         const dx = c.bx - c.ax, dy = c.by - c.ay, ll = dx * dx + dy * dy;
         const k = ll ? clamp(((qx0 - c.ax) * dx + (qy0 - c.ay) * dy) / ll) : 0;
@@ -2298,7 +2678,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   // if a carry gets cut short (resize, a new action), put the avocado somewhere sensible
   function finishCarry() {
     if (!A.carry && !A.under) return;
-    A.carry = null; A.under = false; A.mash = 0; A.sink = 0;
+    A.carry = null; A.under = false; A.mash = 0; A.sink = 0; A.mound = 0;
     if (L) restOnFloorAt(L.home.x);
   }
 
@@ -2328,7 +2708,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const hx = hp.x - P.yaw * 2.5, hy = hp.y - P.pitch * 2;
     if ((hx / 60) ** 2 + ((hy - 2) / 50) ** 2 < 1 || (hy < -20 && hy > -80 && Math.abs(hx) < 54)) {
       faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
-      if (Math.hypot(hx - FP.x, hy - FP.y) < 9) return 'nose';
+      if (Math.hypot(hx - FP.x, hy - FP.y + 1.3) < 11) return 'nose';
       if (hy < -15) return 'head';
       if (hy > 13 || Math.abs(hx - FP.x) > 30) return 'chin';
       return 'face';
@@ -2422,8 +2802,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
 
   // treats
+  // on the cushion in front of him, where you can see it
+  const TREAT_AT = [54, 15];
   function placeTreat() {
-    treat.x = L.catX + 72 * L.s; treat.y = L.topY + 12 * L.s; treat.a = -0.3;
+    treat.x = L.catX + TREAT_AT[0] * L.s; treat.y = L.topY + TREAT_AT[1] * L.s; treat.a = -0.3;
   }
   function tossTreat() {
     if (!L) return;
@@ -2431,7 +2813,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     noteUser(now);
     jarT = now;
     play('rattle', { gain: 0.2 });
-    if (treat.on) return;
+    // one at a time: a couple more wait their turn, the rest is just a rattle
+    if (treat.on || (C.act && C.act.kind === 'eat')) { treatQ = Math.min(2, treatQ + 1); kick(); return; }
+    launchTreat(now);
+  }
+  function launchTreat(now) {
+    jarT = now;
     treat.on = true; treat.state = RM ? 'rest' : 'fly'; treat.t0 = now;
     treat.x0 = L.jar.x; treat.y0 = L.jar.y - 58 * L.s;
     if (RM) placeTreat(); else { treat.x = treat.x0; treat.y = treat.y0; }
@@ -2452,7 +2839,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     C.petUntil = Math.max(C.petUntil, now + ms);
     if (fromButton) C.stim += zone === 'head' ? 0.9 : zone === 'chin' ? 0.5 : 0.7;
     if (fresh) { pets++; renderTally(); }
-    if (fromButton || (fresh && now - pet.sayT > 5000)) { pet.sayT = now; say(`cat.say.${zone}`); }
+    // a new spot is always worth saying; the same one again only now and then
+    if (fromButton || (fresh && (zone !== pet.sayZone || now - pet.sayT > 5000))) { pet.sayT = now; pet.sayZone = zone; say(`cat.say.${zone}`); }
     if (now - lastPurr > 1700) {
       lastPurr = now;
       play('purr', { gain: zone === 'chin' ? 0.34 : 0.24, seconds: 1.9 });
@@ -2477,7 +2865,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     headMatrix(P); faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
     const n = headToCat(FP.x + P.yaw * 2.5, FP.y + P.pitch * 2);
     fx.rings.push({ x: L.catX + n.x * L.s, y: L.topY + n.y * L.s, t0: now });
-    if (fromButton) say('cat.say.boop');
+    if (fromButton || now - C.boopSayT > 4000) { C.boopSayT = now; say('cat.say.boop'); }
   }
   function meow(now) {
     if (now - C.meowAt < 450) return;
@@ -2498,6 +2886,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (a && a.kind === 'sleep') {
       C.act = null;
       if (!RM) start('wake');
+      if (a.asleep) say('cat.say.wake');
     } else if (a && PRI[a.kind] === 1 && a.kind !== 'wake' && a.kind !== 'tilt') endAct(a, now);
   }
 
@@ -2580,7 +2969,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const a = { kind, t0: now, dur: (RM && DUR_RM[kind]) || DUR[kind], hit: false, init: false, pawOver: false };
     if (data) Object.assign(a, data);
     C.act = a;
-    if (kind === 'swat') C.swat = a;
+    if (kind === 'swat' || kind === 'buck') C.swat = a;
     if (kind === 'warn' || kind === 'swat' || kind === 'push' || kind === 'bury' || kind === 'sit') C.petUntil = 0;
     kick();
     return a;
@@ -2588,6 +2977,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function endAct(a, now) {
     if (C.act === a) C.act = null;
     if (C.swat === a) C.swat = null;
+    // let him finish one thing before he thinks of the next
+    if (PRI[a.kind] > 1) C.idleAt = Math.max(C.idleAt, now + 4000);
     // cut short with the avocado still in his paws: let it go somewhere sensible
     if (!a.hit && (a.kind === 'push' || a.kind === 'bury' || a.kind === 'sit') && A.carry) {
       a.hit = true;
@@ -2595,6 +2986,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       seal(A.x, A.y - 12 * L.s, now);
     }
     if (a.kind === 'pounce') pom.pinned = null;
+    if (a.kind === 'eat') {
+      // keep looking at you for a moment after a treat
+      if (a.hit) C.faceUntil = now + 600;
+      if (treatQ > 0 && !treat.on) { treatQ--; later(() => { if (L && !treat.on) launchTreat(now0()); }, 360); }
+    }
   }
   // x, y in cat units; legs are drawn in his own shifted frame
   function paw(w, x, y, up, beans = 0, rot = 0, fast = 0) {
@@ -2634,11 +3030,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         if (!a.hit || a.kind === 'swat') { LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; LK.pupil = 0.7; } else LK.mode = 2;
         break;
       case 'sit': if (e < (RM ? 500 : 1000)) { LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; } else LK.mode = 2; break;
-      case 'push': case 'boop': case 'love': case 'tilt': case 'wake': LK.mode = 2; break;
+      case 'push': if (e < 450 && !a.hit) { LK.mode = 1; LK.x = A.x; LK.y = A.y - 20 * s; LK.pupil = 0.5; } else LK.mode = 2; break;
+      case 'buck': case 'glare': LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; LK.pupil = a.kind === 'buck' ? 0.8 : 0.35; LK.flat = true; break;
+      case 'boop': case 'love': case 'tilt': case 'wake': case 'yawn': LK.mode = 2; break;
       case 'warn': LK.mode = 1; LK.x = a.lx ?? pointer.x; LK.y = a.ly ?? pointer.y; LK.pupil = 0.8; break;
       case 'bat': case 'pounce': LK.mode = 1; LK.x = pom.x; LK.y = pom.y; LK.pupil = 1; break;
       case 'window': if (win.kind) { LK.mode = 1; LK.x = win.x; LK.y = win.y; LK.pupil = 1; } break;
-      case 'eat': if (treat.on && treat.state === 'fly') { LK.mode = 1; LK.x = treat.x; LK.y = treat.y; } LK.pupil = 0.7; break;
+      case 'eat':
+        if (treat.on) { LK.mode = 1; LK.x = treat.x; LK.y = treat.y; }
+        // done eating: a happy look straight at you
+        else if (e > (RM ? 1700 : 2900)) LK.mode = 2;
+        LK.pupil = 0.7;
+        break;
       default: break;
     }
   }
@@ -2648,7 +3051,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const k = clamp(e / a.dur);
     switch (a.kind) {
       case 'swat': {
-        if (!a.hit) { a.tx = cx(A.x); a.ty = cy(A.y - 14 * s); }
+        if (!a.hit) { a.tx = cx(A.x); a.ty = cy(A.y - 14 * s); if (a.ty < -40) a.tx = Math.max(a.tx, 166); }
         strike(k, a.tx, a.ty, [46, -40], 1);
         T.earFL = T.earFR = 0.55; T.brow = 0.7; T.lidU = 0.3; T.happy = 0; T.whisk = -0.5;
         T.bx = 4 * hump(k);
@@ -2657,32 +3060,89 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         break;
       }
       case 'push': {
-        // stare right at you, paw on the avocado, and over the edge it goes
-        if (!a.init) { a.init = true; A.carry = 'push'; A.place = null; a.x0 = A.x; a.edge = L.catX + 104 * s; A.vx = A.vy = A.w = 0; }
-        const t1 = RM ? 300 : 520, t2 = RM ? 1200 : 2100, t3 = t2 + (RM ? 200 : 450);
-        let prog = 0;
-        if (e >= t2) prog = 1;
-        else if (e > t1) { const u = (e - t1) / (t2 - t1); prog = RM ? 0 : clamp(u + 0.05 * Math.sin(u * TAU * 3)); }
+        // it gets nudged across the cushion toward the front edge, one slow
+        // shove at a time, his eyes on you the whole time; it teeters there,
+        // one last tap, and over it goes
+        if (!a.init) { a.init = true; A.carry = 'push'; A.place = null; A.vx = A.vy = A.w = 0; a.x0 = cx(A.x); a.y0 = cy(A.y); a.ang0 = A.ang; a.n = -1; }
+        const sx0 = 46, sy0 = -19, dx = -9, dy = 5;
+        const tIn = RM ? 200 : 520, nud = RM ? 330 : 470, tE = tIn + nud * 3, tT = tE + (RM ? 300 : 620), tGo = tT + (RM ? 120 : 200);
+        let px = PAW_N[0], py = PAW_N[1], beans = 0, up = 1;
         if (!a.hit) {
-          A.x = lerp(a.x0, a.edge, easeInOut(prog));
-          A.y = L.topY - avoBottom();
-          A.ang = prog * 0.5;
-          if (prog >= 1) {
-            a.hit = true; A.carry = null;
-            seal(A.x, A.y - 12 * s, now);
-            setFace('squeeze', 900);
-            if (RM) fadeAvo(() => restOnFloorAt(Math.max(L.home.x, L.catX + 230 * s)), 220, 420);
-            else { wake(); A.vx = 150 * s; A.vy = -40 * s; A.w = 4; A.fast = false; A.ghost = now + 700; }
-            a.hx = cx(A.x) - 10; a.hy = cy(A.y) - 40;
+          const ky = easeInOut(clamp(e / tIn));
+          let axc = lerp(a.x0, sx0, ky), ayc = lerp(a.y0, sy0, ky), ang = a.ang0 * (1 - ky);
+          if (e < tIn) {
+            const u = easeOut(e / tIn);
+            px = lerp(PAW_N[0], axc + 38, u); py = lerp(PAW_N[1], ayc - 12, u) - 10 * hump(u);
+          } else if (e < tE) {
+            // in against its side, shove, and back off a little
+            const i = Math.floor((e - tIn) / nud), u = (e - tIn - i * nud) / nud;
+            const pk = RM ? (u > 0.5 ? 1 : 0) : smooth(0.25, 0.75, u);
+            axc = sx0 + dx * (i + pk); ayc = sy0 + dy * (i + pk);
+            if (u < 0.25) { const v = easeOut(u / 0.25); px = lerp(axc + 38, axc + 30, v); py = lerp(ayc - 12, ayc - 4, v); }
+            else if (u < 0.75) { px = axc + 30; py = ayc - 4; }
+            else { const v = easeInOut((u - 0.75) / 0.25); px = lerp(axc + 30, axc + 38, v); py = lerp(ayc - 4, ayc - 12, v); }
+            if (!RM) ang = -0.08 * Math.sin(pk * Math.PI);
+            if (i === 2 && u > 0.75) beans = 1;
+            if (u > 0.3 && a.n !== i) { a.n = i; play('pluck', 7, { gain: 0.05 }); }
+          } else {
+            // right at the edge: it wobbles, he waits, beans up
+            axc = sx0 + dx * 3; ayc = sy0 + dy * 3;
+            const te = e - tE;
+            if (!a.teeter) { a.teeter = true; A.worriedAt = now; setFace('worried', 1800); }
+            ang = RM ? -0.1 : -0.15 * Math.sin(te / 65) * (0.65 + 0.35 * Math.sin(te / 210));
+            px = axc + 38; py = ayc - 22; beans = 1;
+            if (e >= tT) {
+              const v = clamp((e - tT) / (tGo - tT));
+              px = lerp(axc + 38, axc + 29, v); py = lerp(ayc - 22, ayc - 6, easeIn(v));
+              if (v >= 1) {
+                a.hit = true; A.carry = null; a.hx = px; a.hy = py; a.goneT = now;
+                A.x = L.catX + axc * s; A.y = L.topY + ayc * s; A.ang = ang;
+                seal(A.x, A.y - 12 * s, now);
+                setFace('squeeze', 900);
+                if (RM) fadeAvo(() => restOnFloorAt(Math.max(L.home.x, L.catX + 230 * s)), 220, 420);
+                // off the front of the cushion, not back onto it
+                else { wake(); A.vx = -70 * s; A.vy = 60 * s; A.w = -4; A.fast = false; A.ghost = now + 450; A.ghostTop = true; }
+              }
+            }
           }
+          if (!a.hit) { A.x = L.catX + axc * s; A.y = L.topY + ayc * s; A.ang = ang; }
         }
-        const qx = a.hit ? a.hx : cx(A.x) - 10, qy = a.hit ? a.hy : cy(A.y) - 40;
-        if (e < t1) { const u = easeOut(e / t1); paw('n', lerp(PAW_N[0], qx, u), lerp(PAW_N[1], qy, u) - 26 * hump(u), 1, 0, 0.5, 30); }
-        else if (e < t3) paw('n', qx, qy, 1, 0, 0.5, 30);
-        else { const u = easeInOut((e - t3) / (a.dur - t3)); paw('n', lerp(qx, PAW_N[0], u), lerp(qy, PAW_N[1], u), 1 - u, 0, 0.5, 30); }
-        T.lidU = 0.48; T.lidL = 0.12; T.brow = 0.25; T.happy = 0; T.whisk = -0.1; T.grin = 0; T.tongue = 0;
+        if (a.hit) {
+          const v = easeInOut(clamp((now - a.goneT) / 450));
+          px = lerp(a.hx, PAW_N[0], v); py = lerp(a.hy, PAW_N[1], v); up = 1 - v;
+          T.grin = 0.35;
+        }
+        paw('n', px, py, up, beans, 0.2, 30);
+        T.lidU = 0.5; T.lidL = 0.15; T.brow = 0.25; T.happy = 0; T.whisk = -0.1; T.tongue = 0;
         T.earSL = T.earSR = 0.1; T.earFL = T.earFR = 0;
         a.pawOver = true;
+        break;
+      }
+      case 'buck': {
+        // off my back: a bounce of the hips, a lash of the tail, a glare over his shoulder
+        if (!a.init) { a.init = true; a.side = A.x < L.catX + 40 * s ? -1 : 1; A.vx = A.vy = A.w = 0; A.sleeping = true; }
+        const tK = RM ? 200 : 300;
+        T.earFL = T.earFR = 0.95; T.brow = 1; T.lidU = 0.35; T.happy = 0; T.whisk = -0.8; T.grin = -0.6; T.wrinkle = 0.5;
+        T.tAmp = 1; T.tLift = 0.5 * hump(k * 1.4);
+        rate.yaw = rate.pitch = 14;
+        if (!RM) {
+          if (e < 220) { T.rumpY = 5 * easeOut(e / 220); T.lift = -2; }
+          else if (e < 520) { const v = hump((e - 220) / 300); T.rumpY = 5 - 19 * v; T.rumpA = -0.1 * v; T.lift = 8 * v; T.by = -3 * v; }
+          T.tFlick = Math.sin(e / 45) * 0.7 * (1 - k);
+          rate.rumpY = rate.rumpA = rate.lift = rate.by = 30;
+        }
+        if (!a.hit && e >= tK) {
+          a.hit = true;
+          seal(A.x, A.y - 12 * s, now);
+          A.place = null; A.touchedCat = false;
+          if (RM) { fadeAvo(() => restOnFloorAt(a.side < 0 ? 60 * s : Math.max(L.home.x, L.catX + 230 * s)), 260, 420); setFace('dizzy', 1600); }
+          else {
+            wake();
+            A.vx = a.side * (300 + Math.random() * 160) * s; A.vy = -(760 + Math.random() * 200) * s;
+            A.w = a.side * (10 + Math.random() * 6); A.sqv -= 8; A.sqA = -Math.PI / 2; A.fast = true;
+            setFace('squeeze', 900);
+          }
+        }
         break;
       }
       case 'bury': {
@@ -2706,12 +3166,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           if (e < tE + 500) T.lidU = Math.max(T.lidU, hump((e - tE) / 500));
           T.happy = 0.5;
         }
-        if (!a.hit) A.sink = RM ? 0 : smooth(tS + (tE - tS) * 0.5, tE, e);
+        if (!a.hit) { A.sink = RM ? 0 : 0.3 * smooth(tS, tE, e); A.mound = RM ? smooth(tS, tE, e) : smooth(tS + 120, tE, e); }
         if (!a.hit && e >= tE) {
           a.hit = true;
-          seal(A.x, A.y - 2 * s, now);
-          A.carry = null; A.sink = 0; A.alpha = 0;
-          fadeAvo(() => restOnFloorAt(L.home.x), 1, RM ? 400 : 800);
+          seal(A.x, A.y - 12 * s, now);
+          A.carry = null;
+          // the mound stays a moment, then it all fades and the avocado turns up on the floor
+          fadeAvo(() => { A.sink = 0; A.mound = 0; restOnFloorAt(L.home.x); }, RM ? 300 : 600, RM ? 400 : 700);
         }
         a.pawOver = true;
         break;
@@ -2755,7 +3216,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         if (!a.init) {
           a.init = true;
           let tx = 178, ty = -72;
-          if (now - pointer.t < 1500) { tx = Math.max(140, cx(pointer.x)); ty = clamp(cy(pointer.y), -170, -30); }
+          if (now - pointer.t < 1500) { tx = Math.max(150, cx(pointer.x)); ty = clamp(cy(pointer.y), -60, 0); }
           // aimed at your hand, but it always stops short
           const dx = tx - SHOULDER_N[0], dy = ty - SHOULDER_N[1], d = Math.hypot(dx, dy) || 1, r = clamp(d - 16, 40, 110);
           a.tx = SHOULDER_N[0] + (dx / d) * r; a.ty = SHOULDER_N[1] + (dy / d) * r;
@@ -2763,7 +3224,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           C.grumpyUntil = now + 3400; C.stim = C.stimMax * 0.25; C.petUntil = 0;
           say('cat.say.over');
         }
-        strike(k, a.tx, a.ty, [40, -46], 1);
+        // wound up low and out to the side, well clear of his own face
+        strike(k, a.tx, a.ty, [52, -14], 1);
         T.earSL = T.earSR = 0.95; T.earFL = T.earFR = 0.45; T.brow = 1; T.lidU = 0.25; T.happy = 0; T.whisk = -0.9; T.grin = -0.4;
         rate.lidU = rate.happy = rate.earSL = rate.earSR = 30;
         T.tAmp = 0.6;
@@ -2793,9 +3255,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         break;
       }
       case 'eat': {
-        const tL = RM ? 1 : 500, tS = RM ? 400 : 1200, tB = RM ? 600 : 1350, tC = RM ? 1700 : 2900, tK = RM ? 2100 : 3400;
-        if (e < tB) { T.pitch = 0.62; T.hx = -26; T.hy = 58; T.yaw = 0.1; T.gx = 0; T.gy = 0.7; }
-        else if (e < tC) { T.pitch = 0.28; T.hx = -10; T.hy = 24; T.yaw = 0.16; T.gx = 0; T.gy = 0.2; }
+        const tL = RM ? 1 : 500, tS = RM ? 400 : 1300, tB = RM ? 600 : 1500, tC = RM ? 1700 : 3000, tK = RM ? 2100 : 3500;
+        // sniff from just above it, then down for the bite, then up to chew
+        if (e < tS) { T.pitch = 0.5; T.hx = -34; T.hy = 34; T.yaw = -0.04; T.gx = -0.3; T.gy = 0.8; }
+        else if (e < tB) { T.pitch = 0.62; T.hx = -48; T.hy = 52; T.yaw = -0.04; T.gx = -0.2; T.gy = 0.6; }
+        else if (e < tC) { T.pitch = 0.22; T.hx = -8; T.hy = 18; T.yaw = 0.12; T.gx = 0; T.gy = 0.2; }
+        else { T.yaw = 0.1; T.pitch = 0.04; }
         rate.hx = rate.hy = rate.pitch = 5;
         if (e >= tL && e < tS) { T.noseTw = RM ? 0.5 : Math.sin(e / 34) * 0.9; T.whisk = 0.7; T.lidU = 0.25; }
         if (e >= tS && e < tB) T.jaw = 0.35;
@@ -2808,10 +3273,15 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           T.lidU = 0.55; T.happy = 0.3;
           rate.jaw = 30;
         }
-        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; }
+        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; T.lidU = 0.4; }
         if (e >= tK) {
           T.lidU = 1; T.happy = 1; T.grin = 0.5; T.tCurl = 1.2;
-          if (!a.m) { a.m = true; C.mrrpAt = now; play('mrrp', { gain: 0.12 }); }
+          if (!a.m) {
+            a.m = true; C.mrrpAt = now; play('mrrp', { gain: 0.12 });
+            // a heart and a purr or two over his head
+            headMatrix(P);
+            for (let i = 0; i < 3; i++) { const q = headToCat(-34 + i * 36, -46 - (i % 2) * 10); fx.purrs.push({ t0: now + i * 180, x: q.x, y: q.y, seed: i === 1 ? 0 : 1 + i * 3 }); }
+          }
         }
         break;
       }
@@ -2835,8 +3305,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         const tW = RM ? 300 : 850, tL = RM ? 400 : 1150, tH = RM ? 1000 : 1600;
         if (e < tW) {
           // the butt wiggle
-          if (!RM) { T.rumpY = -6 + Math.sin(e / 34) * 2.6; T.rumpA = Math.sin(e / 48) * 0.05; T.tFlick = Math.sin(e / 55) * 0.4; }
-          T.by = 3; T.hy += 6; rate.rumpY = rate.rumpA = 30;
+          // the crouch: head down, the butt wiggle getting bigger, the tip of the tail twitching
+          const w = smooth(0, tW, e);
+          if (!RM) { T.rumpY = -7 + Math.sin(e / 30) * (2.4 + 2 * w); T.rumpA = Math.sin(e / 44) * (0.04 + 0.04 * w); T.tFlick = Math.sin(e / 42) * 0.6; T.tAmp = 0.3; }
+          T.by = 3; T.lift = -3; T.hy += 6 + 5 * w; T.pitch += 0.15 * w; T.earFL = T.earFR = 0; rate.rumpY = rate.rumpA = 30;
           a.tx = cx(pom.x); a.ty = cy(pom.y);
         } else if (e < tH) {
           const v = RM ? 1 : easeOut((e - tW) / (tL - tW));
@@ -2877,7 +3349,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       }
       case 'yawn': {
         const J = e < 700 ? easeInOut(e / 700) : e < 1300 ? 1 : e < 1700 ? 1 - easeInOut((e - 1300) / 400) : 0;
-        T.jaw = J; T.fangs = J; T.lidU = lerp(T.lidU, 1, smooth(0, 0.4, J)); T.happy = 0; T.pitch = -0.3 * J;
+        T.jaw = J; T.fangs = J; T.lidU = lerp(T.lidU, 1, smooth(0, 0.4, J)); T.happy = 0.35 * J; T.pitch = -0.35 * J; T.yaw = 0.1;
         T.earFL = T.earFR = 0.45 * J; T.earSL = T.earSR = 0.2 * J; T.whisk = -0.4 * J; T.hy -= 3 * J;
         rate.jaw = 8;
         if (e > 1700) { T.tongue = 1; T.lick = hump((e - 1700) / 500); }
@@ -2903,7 +3375,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         T.lidU = 1; T.happy = 0; T.hy += 16; T.pitch = 0.4; T.roll = -0.08; T.yaw = 0.1; T.gx = 0; T.gy = 0;
         T.earSL = T.earSR = 0.22; T.tAmp = 0.02; T.tCurl = 0.95; T.whisk = -0.2; T.grin = 0.2;
         rate.hy = rate.pitch = 1.2;
-        if (now - C.zAt > 1800) {
+        if (!a.asleep && e > 2600) { a.asleep = true; say('cat.say.sleep'); }
+        if (a.asleep && now - C.zAt > 1800) {
           C.zAt = now;
           headMatrix(P);
           const z = headToCat(34, -52);
@@ -2983,7 +3456,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       if (onPlatform() && slow && (A.sleeping || A.grounded)) {
         if (!C.avoSeenAt) C.avoSeenAt = now;
         else if (now - C.avoSeenAt > (RM ? 200 : 420)) { C.avoSeenAt = 0; startBully(pickBully()); }
-      } else if (slow || A.touchedCat) startBully('swat');
+      } else if (slow || A.touchedCat) startBully(A.y < L.topY - 60 * s && A.x < L.catX + 60 * s ? 'buck' : 'swat');
     } else if (!inZone()) C.avoSeenAt = 0;
     if (!inZone()) A.touchedCat = false;
     if (A.carry || A.under) hot = true;
@@ -2997,8 +3470,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       const tx = cx(pom.x), ty = cy(pom.y);
       const d = Math.hypot(tx - SHOULDER_N[0], ty - SHOULDER_N[1]);
       const free = !C.act || PRI[C.act.kind] < 3;
-      if (free && d < 128 && tx > 70 && ty < 24 && now - C.batAt > 650) { C.batAt = now; start('bat'); }
-      else if (free && pom.held && d < 200 && tx > 80 && now - C.toyStill > (RM ? 400 : 850) && now - C.pounceAt > 2600) { C.pounceAt = now; start('pounce'); }
+      // a couple of quick bats, and if you keep holding it there he goes for the full pounce
+      const pounce = free && pom.held && d < 200 && tx > 80 && now - C.pounceAt > 2600 && (now - C.toyStill > (RM ? 400 : 850) || C.batN >= 2);
+      if (pounce && now - C.batAt > 450) { C.pounceAt = now; C.batN = 0; start('pounce'); }
+      else if (free && d < 128 && tx > 70 && ty < 24 && now - C.batAt > 650) { C.batAt = now; C.batN++; start('bat'); }
     }
 
     // the treat, flying up to him
@@ -3006,7 +3481,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       hot = true;
       if (treat.state === 'fly') {
         const e = (now - treat.t0) / 700;
-        const x1 = L.catX + 72 * s, y1 = L.topY + 12 * s;
+        const x1 = L.catX + TREAT_AT[0] * s, y1 = L.topY + TREAT_AT[1] * s;
         if (e >= 1) { treat.state = 'rest'; placeTreat(); play('pluck', 7, { gain: 0.06 }); }
         else {
           treat.x = lerp(treat.x0, x1, e);
@@ -3035,10 +3510,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       if (now - C.lastUser > 42000) start('sleep');
       else {
         const r = Math.random();
-        if (r < 0.26) start('groom');
-        else if (r < 0.4) start('yawn');
-        else if (r < 0.7) { if (spawnWindow(now)) start('window', { dur: 1e9 }); }
-        else if (r < 0.85) start('love');
+        if (r < 0.22) start('groom');
+        else if (r < 0.34) start('yawn');
+        else if (r < 0.6) { if (spawnWindow(now)) start('window', { dur: 1e9 }); }
+        else if (r < 0.72) start('love');
+        else if (r < 0.8) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 });
+        else if (r < 0.9 && A.alpha > 0.5 && A.sleeping) start('glare');
         else C.swishUntil = now + 2600;
       }
       C.idleAt = now + 6500 + Math.random() * 6500;
@@ -3072,7 +3549,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     Object.assign(rate, RATE);
     const a = C.act, e = a ? now - a.t0 : 0;
     // where to look
-    LK.mode = 0; LK.pupil = 0.28;
+    LK.mode = 0; LK.pupil = 0.28; LK.flat = false;
     const toyHot = pom.held || pom.pinned || pom.speed > 160 * s;
     if (toyHot) { LK.mode = 1; LK.x = pom.x; LK.y = pom.y; LK.pupil = 0.95; }
     else if (treat.on && treat.state === 'fly') { LK.mode = 1; LK.x = treat.x; LK.y = treat.y; LK.pupil = 0.75; }
@@ -3085,6 +3562,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       else if (mode === 1) LK.mode = 2;
       else { LK.mode = 1; LK.x = A.x; LK.y = A.y; }
     }
+    if (now < C.faceUntil) LK.mode = 2;
     if (a) actLook(a, e, now);
     headMatrix(P);
     const hx = L.catX + HM[4] * s, hy = L.topY + HM[5] * s;
@@ -3092,7 +3570,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     else if (LK.mode === 1) {
       const yawD = Math.atan2(LK.x - hx, 240 * s), pitchD = Math.atan2(LK.y - hy, 260 * s);
       T.yaw = clamp(0.1 + yawD * 0.85, -0.85, 0.95);
-      T.pitch = clamp(pitchD * 0.75, -0.48, 0.6);
+      // a glare keeps his chin up, so you still see the look on his face
+      T.pitch = clamp(pitchD * 0.75, -0.48, LK.flat ? 0.3 : 0.6);
       T.gx = clamp((0.1 + yawD - P.yaw) * 1.7, -1, 1);
       T.gy = clamp((pitchD - P.pitch) * 1.7, -1, 1);
     }
@@ -3131,13 +3610,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
     // that avocado is far too close
     const near = A.alpha > 0.5 && !A.under && !A.sink && Math.hypot(A.x - hx, A.y - hy) < 200 * s;
-    const dT = near || (a && a.kind === 'bury') ? 1 : 0;
+    const dT = near || (a && a.kind === 'bury') ? 1 : a && a.kind === 'glare' ? 0.75 : 0;
     C.disgust = RM ? dT : C.disgust + (dT - C.disgust) * (1 - Math.exp(-dt * (dT ? 5 : 2)));
     const dg = C.disgust;
     if (dg > 0.01) {
       T.hx -= 6 * dg; T.pitch -= 0.06 * dg; T.lidU = lerp(T.lidU, 0.48, dg); T.lidL = lerp(T.lidL, 0.45, dg); T.brow = lerp(T.brow, 0.9, dg);
       T.earSL += 0.45 * dg; T.earSR += 0.45 * dg; T.earFL += 0.15 * dg; T.earFR += 0.15 * dg;
-      T.whisk = lerp(T.whisk, -0.7, dg); T.grin = lerp(T.grin, -0.9, dg); T.happy *= 1 - dg;
+      T.whisk = lerp(T.whisk, -0.7, dg); T.grin = lerp(T.grin, -0.9, dg); T.happy *= 1 - dg; T.wrinkle = dg;
       if (!RM && dg > 0.6 && now > C.blepAt) { C.blepUntil = now + 750; C.blepAt = now + 2600 + Math.random() * 2400; }
       if (now < C.blepUntil) T.tongue = 1;
     }
@@ -3159,6 +3638,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (rk < 1) { T.jaw = Math.max(T.jaw, 0.26 * hump(rk)); rate.jaw = 25; }
     // blinks: quick ones, and slow ones (a cat's "I love you")
     if (!RM) {
+      const intent = a && PRI[a.kind] >= 3 && a.kind !== 'eat';
+      if (intent) { C.blink = null; C.blinkAt = Math.max(C.blinkAt, now + 600); }
       if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: Math.random() < 0.4 };
       if (C.blink) {
         const d = C.blink.slow ? [300, 420, 380] : [80, 50, 110];
@@ -3315,7 +3796,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     g.save();
     g.translate(treat.x, treat.y);
     g.rotate(treat.a);
-    blit2(g, SP.treat, 0, 0, L.s * 1.2);
+    blit2(g, SP.treat, 0, 0, L.s * 1.45);
     g.restore();
   }
   function drawToy(g) {
@@ -3519,6 +4000,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     blit(g, SP.avo);
     drawAvoFace(g, now);
     g.restore();
+    if (A.mound > 0.01) drawMound(g);
     // the sweat drop and the little "!"
     const wk = now - A.worriedAt;
     if (wk < 1700 && A.alpha > 0.5 && !A.under) {
@@ -3557,6 +4039,25 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         g.restore();
       }
     }
+  }
+
+  // fluff raked up from the cushion, piling over it from the bottom
+  function drawMound(g) {
+    const { s } = L, top = 26 - A.mound * 86;
+    g.save();
+    g.translate(A.x, A.y);
+    g.scale(s, s);
+    for (let i = 0; i < 20; i++) {
+      const y = 26 - (i / 19) * 86;
+      if (y < top) break;
+      const w = lerp(38, 22, (26 - y) / 86), lit = y < top + 14;
+      for (let j = -2; j <= 2; j++) {
+        const x = j * w * 0.36 + Math.sin(i * 2.1 + j * 1.7) * 3;
+        dab(g, x, y + 2, 10 + Math.abs(Math.sin(i * 1.3 + j)) * 5, CREAM_D, 0.5 * A.alpha, 0.5);
+        dab(g, x, y, 9 + Math.abs(Math.cos(i * 0.9 + j)) * 4, lit ? CREAM : CREAM_S, 0.95 * A.alpha, 0.6);
+      }
+    }
+    g.restore();
   }
 
   function drawAvoFace(g, now) {
@@ -3618,15 +4119,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
 
   // loop control
   function frame(now) {
-    raf = 0;
-    if (!active || destroyed || document.hidden || !ready) return;
+    if (!active || destroyed || document.hidden || !ready) { raf = 0; return; }
+    // -1 while the frame runs, so a start() from in here can't open a second loop
+    raf = -1;
     const dt = clamp((now - last) / 1000, 0.001, 0.05);
     last = now;
     const hot = update(dt, now);
-    const idle = !RM && !hot;
-    // idle life (breathing, blinking, the tail) is gentle: about 30 fps is plenty
-    if (!idle || now - lastDraw > 30) draw(now);
-    if (hot || !RM) raf = requestAnimationFrame(frame);
+    // idle life (breathing, blinking, the tail) is gentle: about 30 fps is plenty,
+    // and asleep he barely moves, so less than that
+    const napping = C.act && C.act.kind === 'sleep' && C.act.asleep;
+    const gap = napping ? 55 : !RM && !hot ? 30 : 0;
+    if (!gap || now - lastDraw > gap) draw(now);
+    raf = hot || !RM ? requestAnimationFrame(frame) : 0;
   }
   function kick() {
     if (raf || !active || destroyed || document.hidden || !ready) return;
@@ -3634,7 +4138,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     raf = requestAnimationFrame(frame);
   }
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else kick();
+    if (document.hidden) { if (raf > 0) cancelAnimationFrame(raf); raf = 0; } else kick();
   }, opt);
 
   // text
@@ -3713,7 +4217,6 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   C.twAt = t0 + 2500;
   C.lastUser = t0;
   C.idleAt = t0 + 6000;
-  const idle = window.requestIdleCallback || ((f) => setTimeout(f, 30));
   // his sprites a part at a time in idle moments, then the room: each is a fair
   // bit of brushwork, and splitting it up keeps a scroll from hitching while he wakes up
   const wakeUp = () => {
@@ -3727,14 +4230,20 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!w || !h) { idle(wakeUp, { timeout: 1200 }); return; }
     dpr = dprNow();
     const s = computeLayout(w, h).s, out = {};
-    const steps = catSteps(s, dpr, !mobile, out);
-    const run = () => {
+    const it = catGen(s, dpr, out);
+    const run = (dl) => {
       if (destroyed) return;
-      const t1 = now0();
-      do steps.shift()(); while (steps.length && now0() - t1 < 10);
-      if (steps.length) { idle(run, { timeout: 1200 }); return; }
+      const t1 = now0(), b = budget(dl);
+      let done = false;
+      do done = it.next().done; while (!done && now0() - t1 < b);
+      if (!done) { slice(run); return; }
       CS = out; csKey = `${s.toFixed(4)}|${dpr}`;
-      idle(wakeUp, { timeout: 1200 });
+      // the props in a slice of their own, then the room and off he goes
+      slice(() => {
+        if (destroyed) return;
+        SP = propSprites(s, dpr); spKey = csKey;
+        slice(wakeUp);
+      });
     };
     run();
   }, { timeout: 1200 });
