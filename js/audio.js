@@ -249,3 +249,80 @@ export function meow({ gain = 0.16 } = {}) {
   o.connect(f1).connect(g).connect(master);
   o.start(now); o.stop(now + 0.7);
 }
+
+/** A little chirrup, the trill a cat does to say hi. */
+export function mrrp({ gain = 0.14 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime, d = 0.34;
+  const o = ctx.createOscillator();
+  o.type = 'sawtooth';
+  o.frequency.setValueAtTime(430, now);
+  o.frequency.linearRampToValueAtTime(640, now + 0.12);
+  o.frequency.linearRampToValueAtTime(560, now + d);
+  // the rolled r is just a fast flutter on the volume
+  const am = ctx.createGain(); am.gain.value = 0.55;
+  const lfo = ctx.createOscillator(); lfo.frequency.value = 30;
+  const depth = ctx.createGain(); depth.gain.value = 0.45;
+  lfo.connect(depth).connect(am.gain);
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 2.5;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 2400;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(gain, now + 0.04);
+  g.gain.setValueAtTime(gain, now + d - 0.12);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + d);
+  o.connect(am).connect(bp).connect(lp).connect(g).connect(master);
+  o.start(now); o.stop(now + d + 0.02);
+  lfo.start(now); lfo.stop(now + d + 0.02);
+}
+
+/** Crunching a treat: a few bites, each a cluster of tiny cracks. */
+export function chew({ gain = 0.2, bites = 5 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  for (let k = 0; k < bites; k++) {
+    const t = now + k * 0.3 + Math.random() * 0.03;
+    for (let j = 0; j < 3; j++) {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(0.03 + Math.random() * 0.03, 4);
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400 + Math.random() * 2200; bp.Q.value = 1.6;
+      const g = ctx.createGain(); g.gain.value = gain * (1 - k * 0.12) * (0.5 + Math.random() * 0.5);
+      src.connect(bp).connect(g).connect(master);
+      src.start(t + j * 0.012);
+    }
+  }
+}
+
+/** Shaking the treat jar: two quick handfuls of rattles. */
+export function rattle({ gain = 0.18 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  for (let k = 0; k < 14; k++) {
+    const t = now + (k < 7 ? k * 0.022 : 0.2 + (k - 7) * 0.022) + Math.random() * 0.012;
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(0.012, 6);
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2600 + Math.random() * 3000; bp.Q.value = 5;
+    const g = ctx.createGain(); g.gain.value = gain * (0.5 + Math.random() * 0.5);
+    src.connect(bp).connect(g).connect(master);
+    src.start(t);
+  }
+}
+
+/** The ek-ek-ek chatter at a bird on the other side of the glass. */
+export function chatter({ gain = 0.12 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  for (let k = 0; k < 9; k++) {
+    const t = now + k * 0.085;
+    const o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(1500 + Math.random() * 200, t);
+    o.frequency.exponentialRampToValueAtTime(900, t + 0.04);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+    o.connect(g).connect(master);
+    o.start(t); o.stop(t + 0.06);
+  }
+}

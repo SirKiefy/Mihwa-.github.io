@@ -12,7 +12,7 @@ import { inkify } from './fx/inkify.js?v=774a543f68';
 import { extractPalette } from './fx/palette.js?v=774a543f68';
 import { mountLightbox } from './fx/lightbox.js?v=774a543f68';
 import { makeGrainDataURL } from './scene/inktex.js?v=774a543f68';
-import { setSound, pluck, phrase, shot, ping, glass, purr, meow } from './audio.js?v=774a543f68';
+import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter } from './audio.js?v=774a543f68';
 import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=774a543f68';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -526,7 +526,7 @@ async function boot() {
 
   // her baby, keeping the house avocado-free
   cat = await part('her baby', async () => (await import('./fx/cat.js?v=774a543f68')).createCat($('#cat'), {
-    t, reduceMotion, mobile, sound: { purr, meow, pluck }, name: HER.cat?.name || '',
+    t, reduceMotion, mobile, sound: { purr, meow, pluck, mrrp, chew, rattle, chatter }, name: HER.cat?.name || '',
   }));
   if (cat) onLang.push(() => cat.relabel());
 
