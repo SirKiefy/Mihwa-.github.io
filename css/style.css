@@ -107,7 +107,7 @@ body.scrolled .topbar::before { opacity: 1; }
 .rail { position: fixed; right: clamp(10px, 1.6vw, 26px); top: 50%; transform: translateY(-50%); z-index: 40; color: var(--ink-3); }
 .rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; }
 .rail a { display: flex; align-items: center; justify-content: flex-end; gap: 10px; height: 12px; text-decoration: none; }
-.rail-dot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid currentColor; transition: transform .5s var(--ease), background .4s; }
+.rail-dot { width: 7px; height: 7px; border-radius: 50%; border: 1px solid currentColor; box-shadow: 0 0 0 2px rgba(241,235,224,.78); transition: transform .5s var(--ease), background .4s; }   /* (a halo of the page's paper: unseen on it, it keeps the dot visible over the storm) */
 .rail-label { font-size: .78rem; letter-spacing: .1em; font-style: italic; opacity: 0; transform: translateX(6px); transition: opacity .35s, transform .35s var(--ease); white-space: nowrap; background: rgba(248,244,236,.8); padding: 0 6px; border-radius: 2px; }
 html[lang="ko"] .rail-label { font-family: var(--f-ko); font-style: normal; letter-spacing: 0; }
 .rail a:hover .rail-label, .rail a:focus-visible .rail-label, .rail a.is-active .rail-label { opacity: 1; transform: none; }

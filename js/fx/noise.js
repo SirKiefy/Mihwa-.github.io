@@ -1,6 +1,6 @@
 // A baked, tileable noise texture shared by every shader on the site.
 // R: fbm (period 4) · G: fbm (period 8) · B: fine (period 16) · A: broad (period 2)
-import { rng } from '../ink/brush.js?v=d9c6b47b0a';
+import { rng } from '../ink/brush.js?v=774a543f68';
 
 function tileFbm(size, period, octaves, seed) {
   const out = new Float32Array(size * size);

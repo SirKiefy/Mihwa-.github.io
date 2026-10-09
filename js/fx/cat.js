@@ -19,7 +19,7 @@
 //
 //  createCat(root, { t, reduceMotion, mobile, sound, name }) → { setActive, relabel, destroy }
 // ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=d9c6b47b0a';
+import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=774a543f68';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);

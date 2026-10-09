@@ -29,7 +29,7 @@
 //
 //  createStorm(canvas, { reduceMotion, mobile, card }) → { setActive, destroy, renderAt } | null
 // ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=d9c6b47b0a';
+import { noiseData } from './noise.js?v=774a543f68';
 
 // the swell, and the big rock at the cliff foot: shared by the shader and the JS that times the still frame
 const WK = 6;         // swells per unit of depth
@@ -100,7 +100,8 @@ vec3 sky(vec2 p, float brk) {
   // Each lobe is pale where it swells up and shaded where it tucks under the next.
   float bump = nz(wq * vec2(2.6, 3.2) + 0.4).g;
   float d = 0.3 * smoothstep(topLine + 0.02, topLine + 0.1, wq.y), inC = 0.0, rowY = topLine;
-  for (int k = 0; k < 6; k++) {
+  // (higher than 0.15 above the top row no lobe reaches: open sky, and the rows are not looked at)
+  if (wq.y > topLine - 0.16) for (int k = 0; k < 6; k++) {
     float fk = float(k);
     float r = 0.06 + 0.032 * fk;
     float sp = r * 1.3;
@@ -137,6 +138,7 @@ vec3 sky(vec2 p, float brk) {
     }
     rowY += r * 0.85;
   }
+  rowY = topLine + 0.714;                                         // (below the six rows)
   d *= inC;
   // the body of the cloud below the billows: one heavy, wet wash
   float b1 = nz(wq * vec2(0.5, 0.7) + 0.17).r;
@@ -164,18 +166,21 @@ vec3 sky(vec2 p, float brk) {
   d *= 1.0 - 0.82 * brk;
   vec2 src = vec2(uBreak.x + 0.1 * uBreak.y, uHz - 0.19 * uV);
   vec2 hq = (p - src) / vec2(uBreak.y * 0.9, 0.065 * uV);
-  float hn = nz(p / uV * vec2(1.1, 2.0) + vec2(uT * 0.002, 0.4)).g;
-  float hn2 = nz(p / uV * vec2(3.5, 5.0) + vec2(uT * 0.003, 0.7)).r;
-  float hl = length(hq * vec2(1.0, 1.0 + 0.6 * smoothstep(0.0, 1.0, hq.y))) + (hn - 0.5) * 1.3 + (hn2 - 0.5) * 0.5
-           + 0.4 * smoothstep(0.0, 1.0, hq.x) * hn2;             // (closing unevenly on one side)
-  float hole = smoothstep(1.0, 0.3, hl);
-  d *= 1.0 - 0.3 * exp(-sq((hl - 1.05) / 0.35));            // the cloud edges round it catch the light
-  d = mix(d, 0.1, hole * 0.75);
-  d += 0.1 * smoothstep(0.55, 0.7, hn2) * hole;
+  float hole = 0.0;
+  if (dot(hq, hq) < 9.0) {                                   // (further off, nothing of it shows)
+    float hn = nz(p / uV * vec2(1.1, 2.0) + vec2(uT * 0.002, 0.4)).g;
+    float hn2 = nz(p / uV * vec2(3.5, 5.0) + vec2(uT * 0.003, 0.7)).r;
+    float hl = length(hq * vec2(1.0, 1.0 + 0.6 * smoothstep(0.0, 1.0, hq.y))) + (hn - 0.5) * 1.3 + (hn2 - 0.5) * 0.5
+             + 0.4 * smoothstep(0.0, 1.0, hq.x) * hn2;           // (closing unevenly on one side)
+    hole = smoothstep(1.0, 0.3, hl);
+    d *= 1.0 - 0.3 * exp(-sq((hl - 1.05) / 0.35));          // the cloud edges round it catch the light
+    d = mix(d, 0.1, hole * 0.75);
+    d += 0.1 * smoothstep(0.55, 0.7, hn2) * hole;
+  }
   float below = p.y - src.y;
   float ang = (p.x - src.x) / (max(below, 0.0) + 0.04 * uV);
-  float shaft = smoothstep(0.42, 0.72, nz(vec2(ang * 2.2 + uT * 0.002, 0.21)).r);
   float fan = exp(-ang * ang / 0.3) * smoothstep(0.0, 0.05 * uV, below) * smoothstep(-0.005, 0.04, hgt);
+  float shaft = fan > 0.002 ? smoothstep(0.42, 0.72, nz(vec2(ang * 2.2 + uT * 0.002, 0.21)).r) : 0.0;
   d *= 1.0 - 0.42 * shaft * fan;
   // and a light inside the clouds now and then: a breath of warmth through the wash
   vec2 fd = (p - uFlash.xy) / uFlash.z;
@@ -228,56 +233,96 @@ vec3 sea(vec2 p) {
   float near = smoothstep((uFoot - uHz) / uV - 0.2, (uFoot - uHz) / uV, s);
   float dxp = uPx / uV;                                            // per buffer pixel
   float dzp = 0.1 / ((s + 0.01) * (s + 0.01)) * dxp;
-  // each swell is painted as a row of short strokes, every one its own length and weight, set a little
-  // higher or lower than its neighbours and bowed like the back of a wave, tapering away at its ends;
-  // about half of them are not painted at all, and the water between is left as wash
-  float idc = floor(ph + 0.4);                                     // the nearest crest
-  float sx = xw * 2.0 + p.x / uV * 2.4 + hash(vec2(idc, 0.3)) * 3.0;   // along the crest, in strokes
-  float si = floor(sx), tap = sin(3.14159 * fract(sx));
-  float hs = hash(vec2(si, idc)), hs2 = hash(vec2(si + 7.0, idc)), hs3 = fract(hs * 9.37);
-  ph += (hs - 0.5) * 0.2 - 0.06 * tap * tap;
-  float f = fract(ph);
-  float onS = step(0.35, hs2) * smoothstep(0.0, 0.35, tap);
-  // pressed hard under the crest, dragged dry behind
-  float dry = nzd(vec2(xw * 0.3 + p.x / uV * 1.2, z * 26.0 + idc * 0.3), max((0.3 * z + 1.2) * dxp, 26.0 * dzp)).b;
-  float face = smoothstep(0.7, 0.92, f) * (1.0 - smoothstep(1.0 - max(aa, 0.012) * 1.5, 1.0, f));
-  d += face * (0.1 + 0.08 * hs3) * onS * det * (0.55 + 0.45 * smoothstep(0.3, 0.6, dry));
-  // the crest left as paper, swelling and thinning along the stroke; foam trailing on the back
-  float g = f < 0.6 ? f : f - 1.0;                               // signed distance to the crest
-  float cw = (0.04 + 0.1 * near) * (0.5 + 0.7 * hs3) * (0.4 + 0.6 * sqrt(tap));
-  float crest = (1.0 - smoothstep(cw * 0.35, cw + aa * 1.6, g)) * smoothstep(-aa * 1.6 - 0.004, 0.0, g)
-              * min(1.0, (cw + 0.002) / (aa * 1.2 + 0.002));
-  float trail = smoothstep(0.58, 0.72, nz(vec2(xw * 1.1 + p.x / uV * 0.8, z * 10.0)).b) * (1.0 - smoothstep(0.03, 0.4, f));
-  d *= 1.0 - (crest * 0.95 + trail * 0.45) * onS * det;
+  if (det > 0.0) {                                                 // (none of this on the far water)
+    // each swell is painted as a row of strokes, every one its own length and weight, set a little
+    // higher or lower than its neighbours and bowed like the back of a wave, tapering away at its ends:
+    // most of them short, a few running long over two cells, and about half not painted at all, the
+    // water between left as wash
+    float idc = floor(ph + 0.4);                                     // the nearest crest
+    float sx = xw * 2.0 + p.x / uV * 2.4 + hash(vec2(idc, 0.3)) * 3.0;   // along the crest, in cells
+    float s2 = floor(sx * 0.5);
+    float longK = step(hash(vec2(s2 + 3.0, idc)), 0.25);
+    float si = mix(floor(sx), s2 * 2.0, longK);
+    float hs = hash(vec2(si, idc)), hs2 = hash(vec2(si + 7.0, idc)), hs3 = fract(hs * 9.37), hs4 = fract(hs2 * 7.13);
+    float len = mix(0.3 + 0.7 * hs4 * hs4, 0.65 + 0.35 * hs4, longK);          // in cells
+    float u = ((sx - si) / (1.0 + longK) - (1.0 - len) * fract(hs2 * 5.71)) / len;   // along the stroke, 0..1
+    float tap = sin(3.14159 * sat(u));
+    float inS = smoothstep(0.0, 0.35, tap);                          // within the stroke, fading at its ends
+    float off = (hs - 0.5) * 0.2 - 0.06 * tap * tap;                 // the stroke's own height, and its bow
+    float f = fract(ph + off);
+    float onS = step(0.35, hs2) * inS;
+    // (the lookups below only count near the crest and on the back: looked up only there)
+    float g = f < 0.6 ? f : f - 1.0;                               // signed distance to the crest
+    // the back of the swell: a darker wash behind the crest, graded softly up into the next trough,
+    // dragged dry here and there. Half of it is painted under every swell, stroke or no stroke; that
+    // half follows the stroke only while within it and the swell itself between strokes, so it runs
+    // on from one cell to the next without a jump
+    float dry = g > -(aa * 1.6 + 0.01) ? nzd(vec2(xw * 0.3 + p.x / uV * 1.2, z * 26.0 + idc * 0.3), max((0.3 * z + 1.2) * dxp, 26.0 * dzp)).b : 0.5;
+    float fw = fract(ph + off * inS);
+    float back = smoothstep(0.03, 0.22, f) * (1.0 - smoothstep(0.25, 0.6, f));
+    float backW = smoothstep(0.03, 0.22, fw) * (1.0 - smoothstep(0.25, 0.6, fw));
+    // (the stroke's half swells and tapers along it like the brush itself, so it never reads as a block)
+    d += (0.5 * backW + 0.5 * back * step(0.35, hs2) * tap) * (0.07 + 0.06 * hs3 * tap) * det * (0.6 + 0.4 * smoothstep(0.3, 0.6, dry));
+    if (onS > 0.0) {                                               // (an unpainted stroke: wash only)
+      // the crest left as paper, swelling and thinning along the stroke, and breaking up where the
+      // brush ran dry; foam trailing on the back
+      float cw = (0.04 + 0.1 * near) * (0.5 + 0.7 * hs3) * (0.4 + 0.6 * sqrt(tap));
+      float crest = (1.0 - smoothstep(cw * 0.35, cw + aa * 1.6, g)) * smoothstep(-aa * 1.6 - 0.004, 0.0, g)
+                  * min(1.0, (cw + 0.002) / (aa * 1.2 + 0.002));
+      if (crest > 0.0) {
+        float dryc = nzd(vec2(xw * 0.12 + p.x / uV * 0.35, idc * 0.37 + 0.5), 0.35 * dxp).g;
+        crest *= (0.3 + 0.7 * smoothstep(0.3, 0.55, dryc)) * (0.75 + 0.25 * smoothstep(0.3, 0.6, dry));
+      }
+      float trail = f < 0.4 ? smoothstep(0.58, 0.72, nz(vec2(xw * 1.1 + p.x / uV * 0.8, z * 10.0)).b) * (1.0 - smoothstep(0.03, 0.4, f)) : 0.0;
+      d *= 1.0 - (crest * 0.95 + trail * 0.45) * onS * det;
+    }
+  }
   // whitecaps: short white dashes scattered over the water, riding in with the swell
-  {
+  if (s > 0.05 && s < 0.36) {
     vec2 cc = vec2(xw * 24.0, (z + uT * WSPD / WK) * 29.0);
     vec2 ci = floor(cc), cf = fract(cc) - 0.5;
     float hc = hash(ci + 0.71);
-    float lenK = 0.16 + 0.24 * hash(ci + 3.3);
-    float ax = (cf.x + (hash(ci + 1.9) - 0.5) * 0.4) / lenK;
-    float lens = sat(1.0 - ax * ax);
-    // a little arched stroke, thickest in the middle and tapering to points; never thinner than
-    // a pixel, only fainter, so far-off ones do not break into stair-steps
-    float cy = cf.y - (hash(ci + 5.7) - 0.5) * 0.4 + 0.06 * ax * ax;
-    float cellPx = uV * (s + 0.01) * (s + 0.01) / (0.1 * 29.0) / uPx;   // the cell's height in buffer pixels
-    float th = 0.11 * lens * lens;
-    float tq = max(th, 0.7 / cellPx);
-    float dash = (1.0 - smoothstep(tq * 0.4, tq + 0.6 / cellPx, abs(cy))) * (th / tq);
-    float under = smoothstep(0.0, 0.5, lens) * exp(-sq((cy - 0.16) / 0.07));
-    float on = step(0.78, hc) * smoothstep(0.35, 0.65, nz(vec2(xw * 0.3, z * 0.8) + 0.4).g) * smoothstep(0.05, 0.12, s) * (1.0 - smoothstep(0.24, 0.36, s));
-    d += under * on * 0.1;
-    d *= 1.0 - dash * on * 0.8;
+    if (hc >= 0.78) {                                              // (most cells are empty)
+      float lenK = 0.1 + 0.3 * sq(hash(ci + 3.3));
+      float ax = (cf.x + (hash(ci + 1.9) - 0.5) * 0.4) / lenK;
+      float lens = sat(1.0 - ax * ax);
+      // a little arched stroke, thickest in the middle and tapering to points; never thinner than
+      // a pixel, only fainter, so far-off ones do not break into stair-steps
+      float cy = cf.y - (hash(ci + 5.7) - 0.5) * 0.4 + 0.06 * ax * ax;
+      float cellPx = uV * (s + 0.01) * (s + 0.01) / (0.1 * 29.0) / uPx;   // the cell's height in buffer pixels
+      float th = (0.07 + 0.08 * hash(ci + 6.1)) * lens * lens;
+      float tq = max(th, 0.7 / cellPx);
+      float dash = (1.0 - smoothstep(tq * 0.4, tq + 0.6 / cellPx, abs(cy))) * (th / tq);
+      float on = smoothstep(0.35, 0.65, nz(vec2(xw * 0.3, z * 0.8) + 0.4).g) * smoothstep(0.05, 0.12, s) * (1.0 - smoothstep(0.24, 0.36, s));
+      d *= 1.0 - dash * on * 0.8;
+    }
   }
-  // far out the swells are only short dashes of white and grey, in a few sparse patches
+  // far out the swells are only short dashes of white and grey, in a few sparse patches: one stroke
+  // to a cell, 7–24 px long and two or three tall, most cells left empty
   float farK = (1.0 - smoothstep(0.03, 0.13, s)) * smoothstep(0.0, 0.006, s);
-  float fl = nzl(vec2(p.x / uV * 6.0 + 0.3, s * 40.0)).g;
-  float flk = smoothstep(0.45, 0.65, n.g);
-  d += farK * (smoothstep(0.5, 0.68, fl) * flk * 0.7 - 0.25) * 0.12;
-  d *= 1.0 - farK * 0.3 * smoothstep(0.62, 0.8, fl) * flk * smoothstep(0.012, 0.03, s);
+  if (farK > 0.0) {
+    float row = floor(p.y / 5.0);
+    vec2 fc = vec2(p.x / 24.0 + 0.5 * mod(row, 2.0) + 0.3, p.y / 5.0);
+    vec2 fi = floor(fc), ff = fract(fc) - 0.5;
+    float hf = hash(fi + 0.37);
+    float on = step(0.7, hf) * smoothstep(0.45, 0.65, n.g);
+    d -= farK * 0.03;
+    if (on > 0.0) {
+      float lenK = 0.3 + 0.7 * fract(hf * 7.31);
+      float ax = (ff.x + (fract(hf * 13.7) - 0.5) * 0.3) / (0.5 * lenK);
+      float lens = sat(1.0 - ax * ax);
+      float cyp = (ff.y + (fract(hf * 5.3) - 0.5) * 0.3) * 5.0;     // px from the stroke's centre line
+      float th = (1.0 + 0.6 * fract(hf * 3.17)) * lens;              // half its height, in px
+      float tq = max(th, 0.7 * uPx);
+      float dash = (1.0 - smoothstep(tq * 0.5, tq + 0.7 * uPx, abs(cyp))) * (th / tq) * on;
+      float white = step(0.88, hf);
+      d += farK * dash * (1.0 - white) * 0.084;
+      d *= 1.0 - farK * 0.3 * dash * white * smoothstep(0.012, 0.03, s);
+    }
+  }
   // the light of the break on the water
   float refl = exp(-sq((p.x - uBreak.x) / (uBreak.y * 0.55))) * exp(-s / 0.07);
-  refl *= 0.6 + 0.6 * smoothstep(0.4, 0.7, nzl(vec2(p.x / uV * 1.5, s * 40.0)).b);
+  if (refl > 0.002) refl *= 0.6 + 0.6 * smoothstep(0.4, 0.7, nzl(vec2(p.x / uV * 1.5, s * 40.0)).b);
   d *= 1.0 - 0.55 * refl;
   vec3 col = inkTone(d, TEAL);
   return mix(col, mix(PAPER, WARM, 0.22), sat(refl) * 0.35 * smoothstep(0.0, 0.015, s));
@@ -300,10 +345,11 @@ float ridge(float x, float faceX, float topH, float seed) {
 // silhouette .. 1 for the near cliff with all its texture strokes
 vec3 headland(vec3 col, vec2 p, float faceX, float topH, float baseS, float pale, float seed, float detail) {
   float xr = (p.x - faceX) / uV;
-  if (xr > 0.3) return col;
+  if (xr > mix(0.3, 0.2, detail)) return col;      // (the nearer one's mist spill is the shorter)
   float y = (p.y - uHz) / uV;
-  if (y > baseS + 0.2) return col;
-  // (below the foot only its mist is wanted, and the ridge is not needed for that)
+  // (below the foot only a far one's mist is wanted, and the ridge is not needed for that; the near
+  // one's mist lies halfway up, so nothing of it reaches below its foot)
+  if (y > baseS + (detail > 0.99 ? 0.02 : 0.2)) return col;
   float topY = y > baseS ? baseS - 0.01 : ridge(p.x, faceX, topH, seed);
   if (y < topY - 0.2) return col;
   float span = baseS - topY;
@@ -340,33 +386,47 @@ vec3 headland(vec3 col, vec2 p, float faceX, float topH, float baseS, float pale
     lines = max(lines, exp(-abs(dx) / 0.0028) * run * brk);
     shade += smoothstep(-0.002, 0.004, dx) * exp(-max(dx, 0.0) / 0.035) * run;
   }
-  // the face is a few broad planes, some left nearly as paper and some wet and dark, with a ledge or
-  // two stepping across it; and over them, texture strokes: long, nearly vertical cuts (부벽준),
-  // hard-edged, dry-broken, starting and stopping, gathered by the creases and the face
-  vec2 rp = vec2(p.x * 0.985 + p.y * 0.17, p.y * 0.985 - p.x * 0.17) / uV;
-  float cut = nz(rp * vec2(6.0, 0.7) + seed).b;
-  float cut2 = nz(rp * vec2(13.0, 1.3) + seed * 1.7).g;
-  vec4 pn = nz(rp * vec2(1.2, 1.4) + seed * 0.3);
-  float planeN = pn.r;
   float faceK = exp(-df / 0.028);
   float near = sat(shade + faceK);
   float dd = detail * detail;                 // the far ones are flat washes: their texture fades fastest
-  float d = 0.5 + (0.26 * sat(shade) + 0.22 * faceK) * (0.3 + 0.7 * dd) + (planeN - 0.5) * 0.14 * detail;
+  float d = 0.5 + (0.26 * sat(shade) + 0.22 * faceK) * (0.3 + 0.7 * dd);
   d += (1.0 - detail) * (0.14 - 0.3 * v);   // a flat wash, darkest along the ridge, paling downwards
-  d -= dd * 0.3 * smoothstep(0.5, 0.6, planeN) * (1.0 - near);           // lit planes, left pale
-  d += dd * (0.14 * smoothstep(0.42, 0.32, planeN) + 0.3 * smoothstep(0.6, 0.85, v));   // wet dark towards the foot
-  float lg = v * 2.4 + (pn.g - 0.5) * 0.3 + hash(vec2(seed, 2.2));
-  d += dd * (0.3 * exp(-fract(lg) / 0.035) - 0.06 * smoothstep(0.8, 1.0, fract(lg))) * step(1.0, lg) * (1.0 - smoothstep(0.8, 0.95, v));   // the ledges
-  float stroke = smoothstep(0.5, 0.56, cut) * smoothstep(0.35, 0.6, cut2) * smoothstep(0.35, 0.55, pn.g);
-  d += dd * (0.3 * stroke * (0.4 + 0.6 * near) + 0.12 * smoothstep(0.6, 0.72, cut2) * near);
   d += 0.38 * lines * dd;
-  // grass and scrub along the top
-  vec4 dn = nz(p / uV * 6.0 + seed);
-  d += 0.24 * detail * exp(-dt / 0.022) * (0.6 + 0.4 * cut2);
+  float brush = 1.0;                         // the brush down the face: unbroken on a far wash
+  if (detail > 0.01) {
+    // the face is a few broad planes, some left nearly as paper and some wet and dark, with a ledge or
+    // two stepping across it; and over them, texture strokes: long, nearly vertical cuts (부벽준),
+    // hard-edged, dry-broken, starting and stopping, gathered by the creases and the face
+    vec2 rp = vec2(p.x * 0.985 + p.y * 0.17, p.y * 0.985 - p.x * 0.17) / uV;
+    float cut = nz(rp * vec2(6.0, 0.7) + seed).b;
+    float cut2 = nz(rp * vec2(13.0, 1.3) + seed * 1.7).g;
+    vec4 pn = nz(rp * vec2(1.2, 1.4) + seed * 0.3);
+    float planeN = pn.r;
+    d += (planeN - 0.5) * 0.14 * detail;
+    d -= dd * 0.3 * smoothstep(0.5, 0.6, planeN) * (1.0 - near);           // lit planes, left pale
+    d += dd * (0.14 * smoothstep(0.42, 0.32, planeN) + 0.3 * smoothstep(0.6, 0.85, v));   // wet dark towards the foot
+    // the ledges: a pale lip, and the shadow under it. Each ledge wanders across the face on a line of
+    // its own (the wander in x alone, so the step up the face is always the same few pixels tall),
+    // and the step from lip to shadow is spread over a few buffer pixels, so it does not break into
+    // stairs once the buffer is scaled up
+    float lg0 = v * 2.4 + hash(vec2(seed, 2.2));
+    float li = floor(lg0 + 0.5);                               // the nearest ledge
+    float lg = lg0 + (nzl(vec2(p.x / uV * 0.35 + seed, li * 0.37 + 0.2)).g - 0.5) * 0.24;
+    float lf = fract(lg), ls = lf < 0.5 ? lf : lf - 1.0;      // signed distance to the ledge, in ledges
+    float lpx = 2.4 * uPx / (span * uV) * 3.5;                 // three and a half buffer pixels, in ledges
+    float ledge = mix(-0.06 * smoothstep(-0.2, 0.0, ls), 0.3 * exp(-max(ls - 0.5 * lpx, 0.0) / 0.035), smoothstep(-lpx, lpx, ls));
+    // (none above the first ledge's lip, which begins at lg 0.8: the gate cuts where nothing is drawn)
+    d += dd * ledge * step(0.5, lg) * (1.0 - smoothstep(0.8, 0.95, v));
+    float stroke = smoothstep(0.5, 0.56, cut) * smoothstep(0.35, 0.6, cut2) * smoothstep(0.35, 0.55, pn.g);
+    d += dd * (0.3 * stroke * (0.4 + 0.6 * near) + 0.12 * smoothstep(0.6, 0.72, cut2) * near);
+    // grass and scrub along the top
+    vec4 dn = nz(p / uV * 6.0 + seed);
+    d += 0.24 * detail * exp(-dt / 0.022) * (0.6 + 0.4 * cut2);
+    brush = mix(1.0, 0.25 + 0.75 * smoothstep(0.35, 0.6, dn.g), detail);
+    d += smoothstep(0.6, 0.72, dn.b) * exp(-dt / 0.026) * detail * 0.45;   // moss dots
+  }
   d += 0.36 * exp(-dt / 0.005) * (0.7 + 0.3 * tn2);               // the brush along the top
-  d += 0.22 * exp(-df / 0.004) * (0.4 + 0.6 * detail) * mix(1.0, 0.25 + 0.75 * smoothstep(0.35, 0.6, dn.g), detail);   // and down the face, dropping out here and there (비백)
-  float dots = smoothstep(0.6, 0.72, dn.b) * exp(-dt / 0.026) * detail;
-  d += dots * 0.45;
+  d += 0.22 * exp(-df / 0.004) * (0.4 + 0.6 * detail) * brush;    // and down the face, dropping out here and there (비백)
   vec3 c = mix(inkTone(d * pale, SLATE), PAPER, mist * 0.9);
   return mix(col, c, m);
 }
@@ -578,48 +638,67 @@ vec3 spray(vec3 col, vec2 p) {
     float lob2 = nz(vec2(th * 1.2 + wave * 0.71, R.w)).g;
     float reach = (0.5 + 0.85 * power) * shoot * (0.45 + 0.7 * lob + 0.25 * lob2) * pow(max(cos(th * 1.15), 0.0), 0.8) + 1e-3;
     float rr = r / reach;
-    // the mass: dense at the heart, breaking into clumps and holes as it falls back
+    // a veil of fine spray, lifting and drifting off
+    vec2 vq = (q - vec2(0.25 + life * 0.9, -0.45 - 0.55 * shoot)) / vec2(0.7 + 0.8 * life, 0.5 + 0.35 * life);
+    float vd = dot(vq, vq);
+    if (rr > 1.7 && vd > 5.3) continue;                     // (past the last drops and the veil: nothing)
+    float vn = vd < 5.3 ? nz(p / rS * vec2(2.0, 2.6) + vec2(-life * 0.12, wave * 0.13)).g : 0.0;
+    float veil = exp(-vd) * smoothstep(0.35, 0.7, vn) * smoothstep(0.05, 0.3, life);
+    float fade = (1.0 - smoothstep(0.6, 1.0, life)) * power;
+    // the mass: paper at its heart under a thin, uneven grey wash, its edge frayed and torn, and
+    // opening into clumps and holes as it falls back
     float pn = nz(p / rS * vec2(4.2, 3.4) + vec2(wave * 0.37 - life * 0.12, R.w + life * 0.2)).b;
     float pn2 = nz(p / rS * vec2(10.0, 8.0) + vec2(R.w, wave * 0.19)).r;
     float pn3 = nz(p / rS * vec2(18.0, 14.0) + vec2(wave * 0.11, R.w * 0.7 - life * 0.3)).g;
-    float dens = (1.0 - rr) * 1.5 + (pn - 0.5) * 0.9 + (pn2 - 0.5) * 0.55 + (pn3 - 0.5) * 0.35;
+    // (the fine fraying: only at the rim and along the fingers)
+    float pn4 = rr > 0.4 && rr < 1.6 ? nz(p / rS * vec2(38.0, 30.0) + vec2(wave * 0.29, R.w * 0.4)).a : 0.5;
+    float dens = (1.0 - rr) * 1.5 + (pn - 0.5) * 0.9 + (pn2 - 0.5) * 0.55 + (pn3 - 0.5) * 0.35
+               + (pn4 - 0.5) * 0.3 * smoothstep(0.4, 0.9, rr);
     float thr = 0.15 + 1.0 * smoothstep(0.15, 1.0, life);
-    float mass = smoothstep(thr, thr + 0.3, dens);
+    float mass = smoothstep(thr, thr + 0.22, dens);
     float rim = smoothstep(thr - 0.15, thr + 0.05, dens) * (1.0 - smoothstep(thr + 0.05, thr + 0.3, dens));
-    // fingers flung out past the rim
+    float wash = 0.7 + 0.3 * smoothstep(0.3, 0.75, pn2 * 0.6 + pn * 0.4);
+    // fingers flung out past the rim: broad and frayed, bent on by the wind, breaking where the brush
+    // ran dry
     float dth = 0.08;
-    float j = floor(th / dth);
+    float thb = th - 0.16 * (0.3 + life) * max(rr - 0.7, 0.0);
+    float j = floor(thb / dth);
     float hj = hash(vec2(j, wave + R.w)), hj2 = hash(vec2(j + 9.1, wave + R.w));
     float c = (j + 0.5 + (hj2 - 0.5) * 0.4) * dth;
     float tip = 1.0 + 0.25 * hj;
-    float aw = dth * (0.1 + 0.16 * hj2) * (1.0 - smoothstep(0.85, tip, rr));
-    float finger = 0.7 * smoothstep(aw, aw * 0.35, abs(th - c)) * step(0.45, hj) * smoothstep(0.8, 0.92, rr)
-                 * (1.0 - smoothstep(tip - 0.1, tip, rr)) * (1.0 - smoothstep(0.35, 0.8, life));
-    // drops off the tips, and a ring of finer spatter beyond them
-    vec2 dq = (p - o) / 6.0 - vec2(life * life * hh * 0.2 / 6.0, 0.0);
-    vec2 di = floor(dq);
-    vec2 dp = di + 0.25 + 0.5 * vec2(hash(di + 1.3 + wave), hash(di + 2.9));
-    float dr = 0.22 + 0.2 * hash(di + 4.4);
-    float drop = step(0.93, hash(di + wave * 7.1 + R.w)) * smoothstep(dr, dr - 0.12, length(dq - dp))
-               * smoothstep(0.85, 1.0, rr) * (1.0 - smoothstep(1.25, 1.6, rr)) * step(q.y, 0.1);
-    vec2 sq2 = (p - o) / 4.5 - vec2(life * life * hh * 0.25 / 4.5, 0.0);
-    vec2 si2 = floor(sq2);
-    vec2 sp2 = si2 + 0.3 + 0.4 * vec2(hash(si2 + 0.7 + wave), hash(si2 + 1.9));
-    float spat = step(0.85, hash(si2 + wave * 3.3 + R.w)) * smoothstep(0.3, 0.16, length(sq2 - sp2))
-               * smoothstep(0.95, 1.1, rr) * (1.0 - smoothstep(1.3, 1.6, rr)) * step(q.y, 0.15) * (1.0 - smoothstep(0.4, 0.9, life));
-    // a veil of fine spray, lifting and drifting off
-    vec2 vq = (q - vec2(0.25 + life * 0.9, -0.45 - 0.55 * shoot)) / vec2(0.7 + 0.8 * life, 0.5 + 0.35 * life);
-    float vn = nz(p / rS * vec2(2.0, 2.6) + vec2(-life * 0.12, wave * 0.13)).g;
-    float veil = exp(-dot(vq, vq)) * smoothstep(0.35, 0.7, vn) * smoothstep(0.05, 0.3, life);
-    float fade = (1.0 - smoothstep(0.6, 1.0, life)) * power;
-    col *= 1.0 - 0.18 * rim * fade;
-    col = mix(col, PAPER, sat((mass * 0.82 + finger + drop * 0.85 + spat * 0.7) * fade + veil * 0.3 * fade));
+    float aw = dth * (0.4 + 0.3 * hj2) * (1.0 - 0.6 * smoothstep(0.85, tip, rr));
+    float fe = abs(thb - c) + (pn3 - 0.5) * aw * 1.2 + (pn4 - 0.5) * aw * 0.5;
+    float finger = 0.7 * smoothstep(aw, aw * 0.3, fe) * step(0.45, hj) * smoothstep(0.78, 0.9, rr)
+                 * (1.0 - smoothstep(tip - 0.1, tip, rr)) * (1.0 - smoothstep(0.35, 0.8, life))
+                 * smoothstep(0.3, 0.55, pn2) * (0.5 + 0.5 * smoothstep(0.35, 0.6, pn4));
+    // drops off the tips, drawn out along the wind, and a ring of finer spatter beyond them: on two
+    // lattices turned against each other, every drop its own size and place, so no grid shows
+    float drop = 0.0, spat = 0.0;
+    if (rr > 0.8 && rr < 1.65) {
+      float ca = 0.9394, sa = 0.3429;                       // cos and sin of 0.35
+      vec2 pd = p - o - vec2(life * life * hh * 0.2, 0.0);
+      vec2 dq = vec2(ca * pd.x - sa * pd.y, sa * pd.x + ca * pd.y);
+      vec2 di = floor(dq / 11.0);
+      vec2 dp = (di + 0.15 + 0.7 * vec2(hash(di + 1.3 + wave), hash(di + 2.9))) * 11.0;
+      float dr = 1.6 + 1.8 * hash(di + 4.4);
+      drop = step(0.9, hash(di + wave * 7.1 + R.w)) * smoothstep(dr + uPx, dr - 0.6 * uPx, length((dq - dp) * vec2(0.55, 1.0)))
+           * smoothstep(0.85, 1.0, rr) * (1.0 - smoothstep(1.25, 1.6, rr)) * step(q.y, 0.1);
+      vec2 pd2 = pd - vec2(life * life * hh * 0.05, 0.0);
+      vec2 sq2 = vec2(ca * pd2.x + sa * pd2.y, ca * pd2.y - sa * pd2.x);
+      vec2 si2 = floor(sq2 / 7.0);
+      vec2 sp2 = (si2 + 0.1 + 0.8 * vec2(hash(si2 + 0.7 + wave), hash(si2 + 1.9))) * 7.0;
+      float sr = 0.9 + 1.1 * hash(si2 + 5.3);
+      spat = step(0.87, hash(si2 + wave * 3.3 + R.w)) * smoothstep(sr + uPx, sr - 0.5 * uPx, length(sq2 - sp2))
+           * smoothstep(0.95, 1.1, rr) * (1.0 - smoothstep(1.3, 1.6, rr)) * step(q.y, 0.15) * (1.0 - smoothstep(0.4, 0.9, life));
+    }
+    col *= 1.0 - 0.15 * rim * fade;
+    col = mix(col, PAPER, sat((mass * wash * 0.9 + finger + drop * 0.85 + spat * 0.6) * fade + veil * 0.3 * fade));
   }
   return col;
 }
 
-// white water along the cliff foot: lace drifting on dark water, and the roller of each
-// swell breaking as it comes in
+// white water along the cliff foot: the roller of each swell breaking as it comes in, whitest about
+// the rocks, and the foam it leaves sliding up the shore in a few long soft lines, wash between them
 vec3 surf(vec3 col, vec2 p) {
   float y = (p.y - uFoot) / uV;
   if (y < -0.05) return col;
@@ -629,15 +708,24 @@ vec3 surf(vec3 col, vec2 p) {
   float surge = exp(-age / 2.0) * smoothstep(0.0, 0.4, age);
   float top = -0.004 - 0.01 * surge + (nz(vec2(p.x / uV * 2.6, 0.4)).r - 0.5) * 0.008;
   float zone = smoothstep(top - 0.004, top + 0.004, y);
-  float l1 = nz(vec2(p.x / uV * 1.4 - uT * 0.005, y * 6.0 - age * 0.02)).b;
+  if (zone <= 0.0) return col;
   float l2 = nz(vec2(p.x / uV * 3.2 + uT * 0.004, y * 13.0 + 0.3)).g;
-  // lace: the foam lies in threads and patches, the water dark between them
-  float thread = 1.0 - smoothstep(0.0, 0.05 + 0.03 * surge, abs(l1 * 0.7 + l2 * 0.3 - 0.5));
-  float blot = smoothstep(0.58, 0.68, l2 * 0.6 + l1 * 0.4 + surge * 0.12);
   // the roller: a white band along the front of the zone, thickest just after the swell breaks
-  float roll = exp(-sq((y - top - 0.004) / (0.004 + 0.006 * surge))) * (0.5 + 0.5 * smoothstep(0.3, 0.6, l2));
-  float lace = sat(max(max(thread * 0.85, blot), roll));
-  vec3 water = inkTone(0.5 + 0.12 * l2, TEAL);
+  float roll = exp(-sq((y - top - 0.004) / (0.004 + 0.006 * surge))) * (0.5 + 0.5 * smoothstep(0.3, 0.6, l2))
+             * (0.65 + 0.35 * smoothstep(0.35 * uSize.x, 0.0, abs(p.x - rockX(0.25))));
+  // the foam lines: following the shore and sliding up it with each swell (a line id that does not
+  // jump when the swell does), every one its own weight, broken along its length and fading up the shore
+  float ln = nz(vec2(p.x / uV * 0.9 - uT * 0.003, 0.55)).r;
+  float ly = (y - top) / 0.026 + (ln - 0.5) * 1.6 - fract(ph);
+  float li = floor(ly) - floor(ph);
+  float hl = hash(vec2(li, 0.7)), hl2 = hash(vec2(li + 4.0, 0.3));
+  float lw = 0.1 + 0.12 * hl;
+  vec4 lnz = nzd(vec2(p.x / uV * 1.5 + hl * 5.0, li * 0.37 + 0.2), 1.5 * uPx / uV);   // this line's own noise
+  float gate = smoothstep(0.35, 0.6, lnz.b);
+  float line = exp(-sq((fract(ly + (lnz.r - 0.5) * 0.7) - 0.5) / lw)) * gate * (0.6 + 0.4 * smoothstep(0.3, 0.6, l2))   // (wandering, so no two run parallel)
+             * (0.45 + 0.55 * hl2) * step(0.4, hl2) * (1.0 - smoothstep(0.015, 0.085, y - top));
+  float lace = sat(max(line, roll));
+  vec3 water = inkTone(0.48 + 0.1 * l2, TEAL);
   return mix(col, mix(water, PAPER, lace * 0.95), zone);
 }
 
@@ -1156,9 +1244,7 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
   canvas.addEventListener('webglcontextlost', onLost);
   canvas.addEventListener('webglcontextrestored', onRestored);
 
-  measure();
-  if (ready) onReady(); else awaitLink();
-
+  // (fail() retires the storm through api.destroy(), so the api exists before the link is waited for)
   const api = {
     /** run while the section is on screen, stop when it is not */
     setActive(on) {
@@ -1193,5 +1279,8 @@ export function createStorm(canvas, { reduceMotion = false, mobile = false, card
       gl.getExtension('WEBGL_lose_context')?.loseContext();
     },
   };
+
+  measure();
+  if (ready) onReady(); else awaitLink();
   return api;
 }
