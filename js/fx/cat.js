@@ -612,10 +612,10 @@ function topLine(outline) {
   return (x) => top[clamp(Math.round(x) + 180, 0, 359)];
 }
 
-function paintTorso(g, dense) {
+function paintTorso(g, dense, q) {
   const backY = topLine(TORSO);
   fur(g, {
-    box: [-160, -126, 132, 24], outline: TORSO, seed: 11, round: 44,
+    box: [-160, -126, 132, 24], outline: TORSO, seed: 11, round: 44, q,
     bumps: [[56, -84, 20, 7], [6, -50, 44, 10], [88, -12, 15, 5], [-60, -96, 26, 5]],
     ao: (x, y) => (1 - 0.6 * smooth(-40, 14, y)) * (1 - 0.18 * smooth(60, 116, x) * smooth(-70, -10, y)),
     flow: (x, y) => {
@@ -630,13 +630,16 @@ function paintTorso(g, dense) {
     after: (g) => {
       // the crease in front of his thigh
       for (let k = 0; k <= 8; k++) { const u = k / 8; stamp(g, lerp(-58, -34, u) + 4, lerp(-82, 6, u), 9, FUR_DARK, 0.16, 0.3); }
+      // a light, broken ink line along his back, like the rest of the room
+      const top = closedSpline(TORSO, 3).filter(([x, y]) => x < 74 && x > -132 && y < -60).sort((p, q) => q[0] - p[0]);
+      stroke(g, { pts: top.map(([x, y]) => [x, y + 1.2]), width: 2.2, dry: 0.86, tone: 0.42, bleed: 0.06, rgb: INKC, seed: 21, bristles: 5 });
     },
   });
 }
 
-function paintHaunch(g, dense) {
+function paintHaunch(g, dense, q) {
   fur(g, {
-    box: [-160, -112, -26, 26], outline: HAUNCH, seed: 12, round: 34,
+    box: [-160, -112, -26, 26], outline: HAUNCH, seed: 12, round: 34, q,
     bumps: [[-100, -50, 30, 9], [-118, -78, 18, 4]],
     ao: (x, y) => (1 - 0.55 * smooth(-30, 14, y)) * (1 - 0.22 * smooth(-70, -42, x)),
     rimAt: (x, y) => 0.1 + 0.9 * Math.max(smooth(-60, -82, x), smooth(-76, -94, y)),
@@ -655,9 +658,9 @@ function paintHaunch(g, dense) {
   });
 }
 
-function paintChest(g, dense) {
+function paintChest(g, dense, q) {
   fur(g, {
-    box: [46, -104, 148, 24], outline: CHEST, seed: 13, round: 26, tone: 1.08,
+    box: [46, -104, 148, 24], outline: CHEST, seed: 13, round: 26, tone: 1.08, q,
     bumps: [[108, -36, 24, 7]],
     ao: (x, y) => (1 - 0.45 * smooth(-14, 14, y)) * (0.86 + 0.14 * smooth(-80, -50, y)),
     flow: (x, y) => Math.PI / 2 + (x - 100) * 0.012 - smooth(-90, -60, y) * 0.5,
@@ -685,9 +688,9 @@ function paintNeck(g) {
   });
 }
 
-function paintSkull(g, dense) {
+function paintSkull(g, dense, q) {
   fur(g, {
-    box: [-66, -54, 66, 56], outline: SKULL, seed: 31, round: 32,
+    box: [-66, -54, 66, 56], outline: SKULL, seed: 31, round: 32, q,
     bumps: [[-32, 18, 15, 4], [32, 18, 15, 4], [0, -20, 24, 5], [0, 14, 16, 3]],
     ao: (x, y) => 1 - 0.12 * smooth(26, 48, y),
     flow: (x, y) => Math.atan2(y - 16, x) + (y < 0 ? 0.1 * Math.sign(x) : 0) + (Math.abs(x) > 34 && y > 0 ? 0.25 * Math.sign(x) : 0),
@@ -897,29 +900,42 @@ function paintTail(g) {
   });
 }
 
-// his sprites, painted once per layout (u = css px per cat unit)
-function catSprites(u, dpr, dense) {
+// his sprites, painted once per layout (u = css px per cat unit), as a list
+// of small jobs so the first paint can be spread over a few idle moments
+function catSteps(u, dpr, dense, out) {
   const hu = u * HS;
-  return {
-    torso: makeSprite(-160, -126, 132, 24, u, dpr, (g) => paintTorso(g, dense)),
-    haunch: makeSprite(-160, -112, -26, 26, u, dpr, (g) => paintHaunch(g, dense)),
-    chest: makeSprite(56, -98, 146, 22, u, dpr, (g) => paintChest(g, dense)),
-    neck: makeSprite(-34, -44, 34, 44, u, dpr, paintNeck),
-    skull: makeSprite(-66, -54, 66, 56, hu, dpr, (g) => paintSkull(g, dense)),
-    earFL: makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1)),
-    earFR: makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1)),
-    earBL: makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1)),
-    earBR: makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1)),
-    muzzle: makeSprite(-22, -30, 22, 24, hu, dpr, paintMuzzle),
-    chin: makeSprite(-14, -6, 14, 14, hu, dpr, paintChin),
-    iris: makeSprite(-11, -11, 11, 11, hu * 1.2, dpr, paintIris),
-    leg: makeSprite(-12, -16, 64, 16, u, dpr, paintLeg),
-    pawT: makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, false)),
-    pawB: makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, true)),
-    tuckN: makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, false)),
-    tuckF: makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, true)),
-    tail: makeSprite(-8, -18, TAIL_LEN + 22, 18, u, dpr, paintTail),
-  };
+  const q = dense ? 1.6 : 1.25;
+  return [
+    () => { out.torso = makeSprite(-160, -126, 132, 24, u, dpr, (g) => paintTorso(g, dense, q)); },
+    () => { out.haunch = makeSprite(-160, -112, -26, 26, u, dpr, (g) => paintHaunch(g, dense, q)); },
+    () => { out.chest = makeSprite(46, -104, 148, 24, u, dpr, (g) => paintChest(g, dense, q)); },
+    () => { out.skull = makeSprite(-66, -54, 66, 56, hu, dpr, (g) => paintSkull(g, dense, q)); },
+    () => {
+      out.neck = makeSprite(-34, -44, 34, 44, u, dpr, paintNeck);
+      out.muzzle = makeSprite(-22, -30, 22, 24, hu, dpr, paintMuzzle);
+      out.chin = makeSprite(-14, -6, 14, 14, hu, dpr, paintChin);
+      out.iris = makeSprite(-11, -11, 11, 11, hu * 1.2, dpr, paintIris);
+    },
+    () => {
+      out.earFL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1));
+      out.earFR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1));
+      out.earBL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1));
+      out.earBR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1));
+    },
+    () => {
+      out.leg = makeSprite(-12, -16, 64, 16, u, dpr, paintLeg);
+      out.pawT = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, false));
+      out.pawB = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, true));
+      out.tuckN = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, false));
+      out.tuckF = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, true));
+    },
+    () => { out.tail = makeSprite(-8, -18, TAIL_LEN + 22, 18, u, dpr, paintTail); },
+  ];
+}
+function catSprites(u, dpr, dense) {
+  const out = {};
+  for (const f of catSteps(u, dpr, dense, out)) f();
+  return out;
 }
 
 // a pose: every channel the rig understands, at rest
@@ -1803,7 +1819,7 @@ function paintPom(g) {
 
 // how long each thing he does lasts, and what can interrupt what
 const PRI = { sleep: 0, groom: 1, yawn: 1, window: 1, tilt: 1, wake: 1, love: 1, pat: 2, boop: 2, eat: 3, bat: 3, pounce: 3, warn: 4, swat: 5, push: 5, bury: 5, sit: 5 };
-const DUR = { sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, pat: 900, boop: 1500, eat: 4400, bat: 380, pounce: 2000, warn: 520, swat: 600, push: 2900, bury: 2700, sit: 3800 };
+const DUR = { sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, pat: 900, boop: 1500, eat: 4400, bat: 380, pounce: 2000, warn: 720, swat: 600, push: 2900, bury: 2700, sit: 3800 };
 const DUR_RM = { pat: 800, boop: 1200, eat: 2600, bat: 600, pounce: 1400, warn: 900, swat: 1100, push: 1800, bury: 1700, sit: 2400, tilt: 900, wake: 400 };
 const BULLY = ['swat', 'push', 'bury', 'sit'];
 
@@ -1836,7 +1852,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   const RM = !!reduceMotion;
   const now0 = () => performance.now();
 
-  let L = null, SP = null, CS = null, spKey = '', W = 0, H = 0, dpr = 0;
+  let L = null, SP = null, CS = null, spKey = '', csKey = '', W = 0, H = 0, dpr = 0;
   let active = true, destroyed = false, ready = false, raf = 0, last = 0, lastDraw = 0;
   const ac = new AbortController();
   const opt = { signal: ac.signal };
@@ -1954,6 +1970,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function buildSprites() {
     const { s } = L;
     const key = `${s.toFixed(4)}|${dpr}`;
+    if (key !== csKey || !CS) { CS = catSprites(s, dpr, !mobile); csKey = key; }
     if (key === spKey && SP) return false;
     spKey = key;
     SP = {
@@ -1963,7 +1980,6 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       treat: makeSprite(-9, -5, 7, 5, s, dpr, paintTreat),
       pom: makeSprite(-20, -20, 20, 22, s, dpr, paintPom),
     };
-    CS = catSprites(s, dpr, !mobile);
     // the front lip of the top platform, drawn over his belly so he sits in the plush
     SP.lip = makeSprite(-108, -36, 108, 64, s, dpr, (g) => {
       g.save();
@@ -3268,7 +3284,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     lastDraw = now;
   }
 
-  const HA = { x: NaN, y: NaN, on: null }, HT = { x: NaN, y: NaN, on: null };
+  const HA = { x: -1e9, y: -1e9, on: null }, HT = { x: -1e9, y: -1e9, on: null };
   function handle(el, h, x, y, on) {
     if (Math.abs(x - h.x) > 0.25 || Math.abs(y - h.y) > 0.25) { h.x = x; h.y = y; el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; }
     if (on !== h.on) { h.on = on; el.style.visibility = on ? 'visible' : 'hidden'; }
@@ -3698,17 +3714,29 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   C.lastUser = t0;
   C.idleAt = t0 + 6000;
   const idle = window.requestIdleCallback || ((f) => setTimeout(f, 30));
-  // two idle slices: first his sprites, then the room (each is a fair bit of
-  // brushwork, so splitting them keeps a scroll from hitching while he wakes up)
+  // his sprites a part at a time in idle moments, then the room: each is a fair
+  // bit of brushwork, and splitting it up keeps a scroll from hitching while he wakes up
+  const wakeUp = () => {
+    if (destroyed) return;
+    ready = true;
+    relayout(true);
+  };
   idle(() => {
     if (destroyed) return;
     const w = stage.clientWidth, h = stage.clientHeight;
-    if (w && h) { dpr = dprNow(); L = computeLayout(w, h); buildSprites(); L = null; }
-    idle(() => {
+    if (!w || !h) { idle(wakeUp, { timeout: 1200 }); return; }
+    dpr = dprNow();
+    const s = computeLayout(w, h).s, out = {};
+    const steps = catSteps(s, dpr, !mobile, out);
+    const run = () => {
       if (destroyed) return;
-      ready = true;
-      relayout(true);
-    }, { timeout: 1200 });
+      const t1 = now0();
+      do steps.shift()(); while (steps.length && now0() - t1 < 10);
+      if (steps.length) { idle(run, { timeout: 1200 }); return; }
+      CS = out; csKey = `${s.toFixed(4)}|${dpr}`;
+      idle(wakeUp, { timeout: 1200 });
+    };
+    run();
   }, { timeout: 1200 });
 
   return {
