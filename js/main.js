@@ -1,13 +1,13 @@
 // page setup: text, layout bits, then boot() loads the photos and the heavy scenes
-import { LANGS, STRINGS } from './i18n.js?v=15902125b0';
-import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=15902125b0';
-import { loadPhotos } from './fx/placeholder.js?v=15902125b0';
-import { inkify } from './fx/inkify.js?v=15902125b0';
-import { extractPalette } from './fx/palette.js?v=15902125b0';
-import { mountLightbox } from './fx/lightbox.js?v=15902125b0';
-import { makeGrainDataURL } from './scene/inktex.js?v=15902125b0';
-import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter } from './audio.js?v=15902125b0';
-import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=15902125b0';
+import { LANGS, STRINGS } from './i18n.js?v=9ff5ee8a7c';
+import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=9ff5ee8a7c';
+import { loadPhotos } from './fx/placeholder.js?v=9ff5ee8a7c';
+import { inkify } from './fx/inkify.js?v=9ff5ee8a7c';
+import { extractPalette } from './fx/palette.js?v=9ff5ee8a7c';
+import { mountLightbox } from './fx/lightbox.js?v=9ff5ee8a7c';
+import { makeGrainDataURL } from './scene/inktex.js?v=9ff5ee8a7c';
+import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter } from './audio.js?v=9ff5ee8a7c';
+import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=9ff5ee8a7c';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -104,13 +104,39 @@ $('#ig-avatar').href = IG_URL;
 $('#ig-handle').textContent = `@${HER.instagram}`;
 
 if (finePointer) {
-  const cursor = $('.cursor'), cDot = $('.cursor-dot'), cRing = $('.cursor-ring');
-  let mx = innerWidth / 2, my = innerHeight / 2, rx = mx, ry = my;
+  // the cursor is a plum blossom. it turns a bit as it moves and drops a few petals when you click
+  const cursor = $('.cursor'), bloom = $('.cursor-bloom'), bloomSvg = $('.cursor-svg');
+  let lx = 0, ly = 0, spin = 0, falling = 0;
   document.body.classList.add('has-cursor');
-  addEventListener('pointermove', (e) => { mx = e.clientX; my = e.clientY; cDot.style.transform = `translate3d(${mx}px, ${my}px, 0)`; }, { passive: true });
-  const loop = () => { rx += (mx - rx) * 0.2; ry += (my - ry) * 0.2; cRing.style.transform = `translate3d(${rx}px, ${ry}px, 0)`; requestAnimationFrame(loop); };
-  loop();
+  addEventListener('pointermove', (e) => {
+    const x = e.clientX, y = e.clientY;
+    if (!reduceMotion) { spin = (spin + Math.min(40, Math.hypot(x - lx, y - ly)) * 0.6) % 360; bloomSvg.style.rotate = `${spin.toFixed(1)}deg`; }
+    lx = x; ly = y;
+    bloom.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    cursor.classList.add('is-on');
+  }, { passive: true });
   document.addEventListener('pointerover', (e) => cursor.classList.toggle('is-hover', !!e.target.closest('a, button, input, .fan, .ig-tile, #screen-gl, #globe-gl')));
+  document.documentElement.addEventListener('pointerleave', () => cursor.classList.remove('is-on'));
+  const petal = (x, y) => {
+    const p = document.createElement('span');
+    p.className = 'cursor-petal';
+    cursor.append(p);
+    falling++;
+    const r = Math.random() * 360, dx = (Math.random() - 0.5) * 34, drift = (Math.random() - 0.5) * 40;
+    p.animate([
+      { transform: `translate(${x}px, ${y}px) rotate(${r}deg) scale(.5)`, opacity: 0.95 },
+      { transform: `translate(${x + dx}px, ${y - 6 - Math.random() * 8}px) rotate(${r + 90}deg) scale(1)`, opacity: 0.9, offset: 0.25 },
+      { transform: `translate(${x + dx + drift}px, ${y + 50 + Math.random() * 40}px) rotate(${r + 260 + Math.random() * 120}deg) scale(.85)`, opacity: 0 },
+    ], { duration: 1200 + Math.random() * 500, easing: 'cubic-bezier(.25,.6,.45,1)' }).onfinish = () => { p.remove(); falling--; };
+  };
+  addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    cursor.classList.add('is-down');
+    // none over the scope (the site cursor is hidden there) or with reduced motion
+    if (reduceMotion || falling > 12 || cursor.style.visibility === 'hidden') return;
+    for (let i = 0; i < 3; i++) petal(e.clientX, e.clientY);
+  }, { capture: true });
+  ['pointerup', 'pointercancel', 'blur'].forEach((ev) => addEventListener(ev, () => cursor.classList.remove('is-down'), { capture: true }));
 }
 
 // --- two homes: clocks, sun, weather ---
@@ -486,14 +512,14 @@ async function boot() {
   const part = async (name, make) => {
     try { return await make(); } catch (err) { console.warn(`${name} unavailable`, err); return null; }
   };
-  scope = await part('scope', async () => (await import('./fx/scope.js?v=15902125b0')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
-  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=15902125b0')).mountWanted($('#wanted'), {
+  scope = await part('scope', async () => (await import('./fx/scope.js?v=9ff5ee8a7c')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
+  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=9ff5ee8a7c')).mountWanted($('#wanted'), {
     photo: photos[HER.wantedPhoto ?? HER.heroPhoto] || heroPh, t, reduceMotion, sound,
   }));
   // no reasons in her.js yet = drop the section and its nav link
   const reasonText = (r) => (r && (r[lang] || r.en || r.fr || r.ko || '')).trim();
   if (REASONS.some((r) => reasonText(r))) {
-    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=15902125b0')).createBlossoms($('#love-branch'), {
+    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=9ff5ee8a7c')).createBlossoms($('#love-branch'), {
       reasons: () => REASONS.map(reasonText).filter(Boolean), t, reduceMotion, mobile, sound,
     }));
   } else {
@@ -502,26 +528,26 @@ async function boot() {
   }
   [scope, wanted, love].forEach((api) => api && onLang.push(() => api.relabel()));
 
-  cat = await part('her baby', async () => (await import('./fx/cat.js?v=15902125b0')).createCat($('#cat'), {
+  cat = await part('her baby', async () => (await import('./fx/cat.js?v=9ff5ee8a7c')).createCat($('#cat'), {
     t, reduceMotion, mobile, sound: { purr, meow, pluck, mrrp, chew, rattle, chatter }, name: HER.cat?.name || '',
   }));
   if (cat) onLang.push(() => cat.relabel());
 
   const stormCanvas = $('#letter .storm-canvas');
-  const storm = await part('storm', async () => (await import('./fx/storm.js?v=15902125b0')).createStorm(stormCanvas, { reduceMotion, mobile }));
+  const storm = await part('storm', async () => (await import('./fx/storm.js?v=9ff5ee8a7c')).createStorm(stormCanvas, { reduceMotion, mobile }));
   if (!storm) stormCanvas.classList.add('storm-fallback');
 
   layoutAll();
 
   // paper background + every ink mark on the page
   try {
-    const { createInkField } = await import('./fx/inkfield.js?v=15902125b0');
+    const { createInkField } = await import('./fx/inkfield.js?v=9ff5ee8a7c');
     field = createInkField($('#ink-field'), { reduceMotion });
   } catch (err) { console.warn('ink field unavailable', err); field = null; }
   if (!field) $('#ink-field').hidden = true;
 
   try {
-    const { createInkHero } = await import('./fx/fluid.js?v=15902125b0');
+    const { createInkHero } = await import('./fx/fluid.js?v=9ff5ee8a7c');
     hero = createInkHero($('#ink-gl'), { source: heroPh.inkCanvas, reduceMotion, mobile, color: 1 });
   } catch (err) { console.warn('ink hero unavailable', err); hero = null; }
   if (hero) {
@@ -548,7 +574,7 @@ async function boot() {
   }
 
   try {
-    const { createScreen } = await import('./fx/screen.js?v=15902125b0');
+    const { createScreen } = await import('./fx/screen.js?v=9ff5ee8a7c');
     screen = createScreen($('#screen-gl'), photos, { reduceMotion, onOpen: (i, e) => open(i, e, 'col') });
   } catch (err) { console.warn('folding screen unavailable', err); screen = null; }
   if (screen) {
@@ -572,7 +598,7 @@ async function boot() {
   }
 
   try {
-    const { createHomes } = await import('./fx/homes.js?v=15902125b0');
+    const { createHomes } = await import('./fx/homes.js?v=9ff5ee8a7c');
     homes = createHomes($('#globe-gl'), HOMES, { mobile, reduceMotion });
   } catch (err) { console.warn('globe unavailable', err); homes = null; }
   if (homes) {

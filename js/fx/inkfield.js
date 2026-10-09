@@ -1,6 +1,6 @@
 // paper and all the ink marks, one webgl layer behind the page. each mark is an
 // <i class="ink" data-ink="bloom|arc|line|range"> and paints in when it scrolls into view
-import { noiseData } from './noise.js?v=15902125b0';
+import { noiseData } from './noise.js?v=9ff5ee8a7c';
 
 const MAX = 16;
 const TYPES = { bloom: 0, arc: 1, line: 2, range: 3 };

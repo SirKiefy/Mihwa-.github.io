@@ -8,7 +8,7 @@
 //
 // createCat(root, { t, reduceMotion, mobile, sound, name }) gives back
 // { setActive, relabel, destroy }, or null if there's no 2D canvas.
-import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=15902125b0';
+import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=9ff5ee8a7c';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);

@@ -1,6 +1,6 @@
 // sharpshooter mini game. the valley is painted once onto a big offscreen sheet,
 // and the scope follows the pointer and shows it at 4-6x through a mil-dot reticle
-import { rng, noise1, smooth, stroke, dotGen, sealStamp, PROFILE } from '../ink/brush.js?v=15902125b0';
+import { rng, noise1, smooth, stroke, dotGen, sealStamp, PROFILE } from '../ink/brush.js?v=9ff5ee8a7c';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

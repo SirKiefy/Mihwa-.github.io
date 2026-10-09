@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Gowun+Batang:wght@400;700&family=Nanum+Brush+Script&family=Nanum+Pen+Script&family=Noto+Serif+KR:wght@600;900&family=Rye&family=Special+Elite&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=15902125b0">
+  <link rel="stylesheet" href="css/style.css?v=9ff5ee8a7c">
 </head>
 <body>
   <svg width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -508,9 +508,22 @@
     <button type="button" class="lb-btn lb-close" data-i18n-label="lb.close" aria-label="Close">×</button>
   </div>
 
-  <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"></span></div>
+  <!-- cursor: a little plum blossom -->
+  <div class="cursor" aria-hidden="true">
+    <span class="cursor-bloom">
+      <svg class="cursor-svg" viewBox="-13 -13 26 26" width="26" height="26" focusable="false">
+        <defs><path id="cb-petal" d="M0 -1.4C-4.4 -2.6 -6 -8.2 -3 -10.8C-1.6 -12 1.6 -12 3 -10.8C6 -8.2 4.4 -2.6 0 -1.4Z"/></defs>
+        <g class="cb-petals">
+          <use href="#cb-petal"/><use href="#cb-petal" transform="rotate(72)"/><use href="#cb-petal" transform="rotate(144)"/><use href="#cb-petal" transform="rotate(216)"/><use href="#cb-petal" transform="rotate(288)"/>
+        </g>
+        <path class="cb-stamens" d="M0 0L1.42 -4.37M0 0L3.72 -2.7M0 0L4.6 0M0 0L3.72 2.7M0 0L1.42 4.37M0 0L-1.42 4.37M0 0L-3.72 2.7M0 0L-4.6 0M0 0L-3.72 -2.7M0 0L-1.42 -4.37"/>
+        <g class="cb-pollen"><circle cx="1.42" cy="-4.37" r=".7"/><circle cx="3.72" cy="-2.7" r=".7"/><circle cx="4.6" cy="0" r=".7"/><circle cx="3.72" cy="2.7" r=".7"/><circle cx="1.42" cy="4.37" r=".7"/><circle cx="-1.42" cy="4.37" r=".7"/><circle cx="-3.72" cy="2.7" r=".7"/><circle cx="-4.6" cy="0" r=".7"/><circle cx="-3.72" cy="-2.7" r=".7"/><circle cx="-1.42" cy="-4.37" r=".7"/></g>
+        <circle class="cb-heart" r="2"/>
+      </svg>
+    </span>
+  </div>
   <p class="webgl-fallback" hidden data-i18n="fallback">Your browser could not start WebGL.</p>
 
-  <script type="module" src="js/main.js?v=15902125b0"></script>
+  <script type="module" src="js/main.js?v=9ff5ee8a7c"></script>
 </body>
 </html>
