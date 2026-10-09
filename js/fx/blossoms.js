@@ -19,7 +19,7 @@
 //
 //  createBlossoms(root, { reasons, t, reduceMotion, mobile, sound }) → { relabel, setActive, destroy }
 // ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, stamp, strokeGen, wash, samplePath, sealStamp, Painter, PROFILE, PLUM } from '../ink/brush.js?v=84ce73c042';
+import { rng, noise1, stamp, strokeGen, wash, samplePath, sealStamp, Painter, PROFILE, PLUM } from '../ink/brush.js?v=d9c6b47b0a';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);

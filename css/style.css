@@ -1083,24 +1083,40 @@ html[lang="ko"] .love .love-done { font-family: var(--f-ko); font-style: normal;
 .storm > .letter { z-index: 1; }
 
 /* no WebGL2: the same storm as a still wash (add .storm-fallback to the canvas):
-   grey cloud, a pale horizon with a faint warm glow in the break, the slate sea,
-   a dark headland on the left and the cliff edge, all fading into the paper */
+   grey cloud heaped in a few masses, a pale misty horizon with a faint warm glow
+   in the break, the slate sea, a tall dark headland rising on the left and a far
+   one fading behind it, and the mound of the grassy edge, all fading into the
+   paper. The stops below the horizon are measured from the bottom in --sv, a vh
+   that stops growing where the section's padding stops (so on a very tall
+   screen the horizon still falls below the card). */
 .storm > .storm-canvas.storm-fallback {
+  --sv: min(1vh, 10.2px);
   background:
-    radial-gradient(26% 7% at 80% calc(100% - 76vh), rgba(226, 178, 150, .4), transparent 70%),
-    radial-gradient(16% 26% at 4% calc(100% - 44vh), rgba(78, 84, 92, .42), transparent 72%),
+    radial-gradient(28% 8% at 78% calc(100% - 76 * var(--sv)), rgba(226, 178, 150, .4), transparent 70%),
+    radial-gradient(30% 12vh at 18% 30vh, rgba(92, 98, 108, .34), transparent 70%),
+    radial-gradient(26% 10vh at 60% 38vh, rgba(92, 98, 108, .3), transparent 70%),
+    radial-gradient(24% 9vh at 90% 24vh, rgba(92, 98, 108, .3), transparent 70%),
+    radial-gradient(14% calc(14 * var(--sv)) at 26% calc(100% - 77 * var(--sv)), rgba(124, 130, 138, .34), transparent 72%),
+    radial-gradient(18% calc(46 * var(--sv)) at 0% calc(100% - 56 * var(--sv)), rgba(78, 84, 92, .5), rgba(78, 84, 92, .25) 55%, transparent 72%),
+    radial-gradient(120% calc(16 * var(--sv)) at 60% calc(100% - 6 * var(--sv)), rgba(70, 72, 74, .55), rgba(120, 120, 118, .3) 55%, transparent 80%),
     linear-gradient(180deg,
       rgba(241, 235, 224, 0) 0,
       rgba(168, 170, 172, .42) 20vh,
       rgba(112, 118, 126, .56) 45vh,
-      rgba(96, 104, 114, .6) calc(100% - 88vh),
-      rgba(206, 202, 194, .6) calc(100% - 77vh),
-      rgba(86, 104, 108, .56) calc(100% - 74vh),
-      rgba(118, 134, 136, .5) calc(100% - 40vh),
-      rgba(178, 186, 182, .5) calc(100% - 24vh),
-      rgba(70, 72, 74, .55) calc(100% - 17vh),
-      rgba(120, 120, 118, .3) calc(100% - 9vh),
+      rgba(96, 104, 114, .6) calc(100% - 90 * var(--sv)),
+      rgba(206, 202, 194, .6) calc(100% - 79 * var(--sv)),
+      rgba(196, 198, 194, .55) calc(100% - 74 * var(--sv)),
+      rgba(104, 118, 122, .55) calc(100% - 66 * var(--sv)),
+      rgba(118, 134, 136, .5) calc(100% - 40 * var(--sv)),
+      rgba(178, 186, 182, .5) calc(100% - 24 * var(--sv)),
+      rgba(241, 235, 224, 0) calc(100% - 12 * var(--sv)),
       rgba(241, 235, 224, 0) 100%);
+}
+
+/* on paper the letter prints as a clean sheet, without the painting */
+@media print {
+  .storm > .storm-canvas { display: none; }
+  .letter-sec.storm { padding-top: 60px; padding-bottom: 60px; }
 }
 
 /* ═══════════ her baby, and the avocado ═══════════ */

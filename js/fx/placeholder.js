@@ -1,6 +1,6 @@
 // Placeholder frames, used until her real photos are added in her.js.
 // Each one is a soft, film-like portrait: a figure in warm light, bokeh, grain.
-import { rng } from '../ink/brush.js?v=84ce73c042';
+import { rng } from '../ink/brush.js?v=d9c6b47b0a';
 
 const TONES = [
   ['#2c1f1b', '#b9805f', '#f0b27a'], // amber

@@ -9,7 +9,7 @@
 //    range  – a misty mountain ridge, dark at the crest, dissolving downward
 //  All of it is drawn with smooth shader maths, so it stays crisp at any size.
 // ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=84ce73c042';
+import { noiseData } from './noise.js?v=d9c6b47b0a';
 
 const MAX = 16;
 const TYPES = { bloom: 0, arc: 1, line: 2, range: 3 };

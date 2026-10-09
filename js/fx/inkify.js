@@ -5,7 +5,7 @@
 //  laid in as three or four washes whose edges wander, granulate and pool
 //  darker at their rims; finally the ink bleeds a little into the hanji.
 // ─────────────────────────────────────────────────────────────────────────────
-import { noiseData } from './noise.js?v=84ce73c042';
+import { noiseData } from './noise.js?v=d9c6b47b0a';
 
 const PAPER = [241, 235, 224];
 const INK = [24, 19, 17];
