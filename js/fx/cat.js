@@ -1,25 +1,14 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Her baby. A slate-grey cat, almost black, with a plush coat that catches a
-//  softer grey sheen on his back and small green eyes, loafs on the top
-//  platform of his cream cat tree by the window, paws tucked, tail hanging
-//  over the edge. He breathes, blinks slowly, twitches an ear now and then,
-//  and follows the avocado with his eyes (otherwise your pointer).
+// Her baby: a slate-grey cat, nearly black, loafing on his cat tree by the
+// window, plus an avocado that really should know better.
 //
-//  The avocado, which she hates passionately, sits on the floor looking smug.
-//  Poke it, drag and fling it (gravity, bounces, spin, squish), or toss it up
-//  to him: anything that lands near his platform gets swatted off with a quick
-//  paw, and a cinnabar seal 禁 ("forbidden") is pressed where it was.
-//  Stroke him to make him purr; click him for a tiny 야옹.
+// The room is painted once into .cat-bg. Everything that moves is on .cat-fg.
+// He's a little rig of pre-painted parts (body, haunch, chest, neck, head,
+// ears, legs, paws, a fluffy tail) posed every frame, and his face is drawn
+// live on a sphere so his head can actually turn.
 //
-//  Two canvases: .cat-bg holds the room (wall, window, floor, the cat tree),
-//  painted once per layout; .cat-fg holds everything alive, redrawn while
-//  something moves. The cat is painted once into sprites (body, head, ears,
-//  muzzle) with the brush engine; eyes, tail, paws and the avocado's face are
-//  drawn live.
-//
-//  createCat(root, { t, reduceMotion, mobile, sound, name }) → { setActive, relabel, destroy }
-// ─────────────────────────────────────────────────────────────────────────────
-import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=e0590b5d34';
+// createCat(root, { t, reduceMotion, mobile, sound, name }) gives back
+// { setActive, relabel, destroy }, or null if there's no 2D canvas.
+import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=15902125b0';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -29,22 +18,22 @@ const easeOut = (k) => 1 - Math.pow(1 - clamp(k), 3);
 const easeIn = (k) => { k = clamp(k); return k * k * k; };
 const easeInOut = (k) => { k = clamp(k); return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; };
 const easeBack = (k) => { k = clamp(k) - 1; return 1 + 2.4 * k * k * k + 1.4 * k * k; };
+// up and back down again as k goes from 0 to 1
+const hump = (k) => Math.sin(Math.PI * clamp(k));
 const wrapA = (a) => Math.atan2(Math.sin(a), Math.cos(a));
-const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${clamp(a).toFixed(3)})`;
+const rgba = (c, a) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp(a).toFixed(3)})`;
 const mix = (c1, c2, k) => [0, 1, 2].map((i) => Math.round(c1[i] + (c2[i] - c1[i]) * k));
 const fmt = (s, o) => String(s).replace(/\{(\w+)\}/g, (m, k) => (k in o ? o[k] : m));
 const dprNow = () => Math.min(2, window.devicePixelRatio || 1);
 
-// ─────────────────────────── palette ───────────────────────────
-
+// colours
 const INKC = [24, 22, 22];
-const FUR_TOP = [100, 106, 121];
-const FUR_MID = [66, 70, 82];
-const FUR_LOW = [36, 38, 46];
-const FUR_DARK = [18, 19, 24];
-const FUR_SHEEN = [168, 176, 194];
-const EAR_IN = [140, 112, 120];
-const BEAN = [168, 128, 136];
+const FUR_DARK = [14, 15, 20];
+const SHEEN = [172, 185, 210];
+const EAR_IN = [138, 108, 118];
+const EAR_DEEP = [52, 38, 46];
+const BEAN = [160, 114, 130];
+const WHISKER = 'rgba(238,238,244,.72)';
 const WOOD = [204, 156, 102];
 const WOOD_L = [226, 186, 132];
 const WOOD_D = [152, 104, 60];
@@ -63,21 +52,76 @@ const SKY = [240, 243, 230];
 const AVO_SKIN = [40, 66, 32];
 const AVO_SKIN_L = [84, 118, 50];
 const SEAL_RGB = [184, 50, 42];
+const TREAT = [190, 128, 74];
 
-// ─────────────────────────── text (fallback: English) ───────────────────────────
+// soft round dabs for things drawn every frame; same look as brush.js stamp(),
+// but cached by the colour array itself so nothing gets built per call
+const SOFT = new Map();
+function soft(rgb, hard) {
+  let m = SOFT.get(rgb);
+  if (!m) { m = new Map(); SOFT.set(rgb, m); }
+  let c = m.get(hard);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  const [r, gg, b] = rgb;
+  gr.addColorStop(0, `rgba(${r},${gg},${b},1)`);
+  gr.addColorStop(hard, `rgba(${r},${gg},${b},0.85)`);
+  gr.addColorStop(0.75, `rgba(${r},${gg},${b},0.25)`);
+  gr.addColorStop(1, `rgba(${r},${gg},${b},0)`);
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 64, 64);
+  m.set(hard, c);
+  return c;
+}
+function dab(g, x, y, r, rgb, alpha, hard) {
+  if (alpha <= 0.002 || r <= 0.2) return;
+  g.globalAlpha = Math.min(1, alpha);
+  g.drawImage(soft(rgb, hard), x - r, y - r, r * 2, r * 2);
+  g.globalAlpha = 1;
+}
+const SHADOW = [60, 46, 34];
+const AVO_SHADOW = [60, 44, 30];
+const BLUSH = [232, 120, 110];
+const GLOW = [255, 250, 236];
+const MOUTH_S = 'rgb(70,26,36)';
+const TONGUE_S = 'rgb(214,124,136)';
+const NOSE_S = 'rgb(62,58,72)';
 
+// his coat, from deep shadow to where the window light catches it
+const COAT = [[0, [9, 10, 13]], [0.2, [19, 20, 26]], [0.4, [32, 35, 43]], [0.6, [50, 54, 66]], [0.8, [76, 82, 99]], [1, [114, 122, 144]]];
+function coat(v, out) {
+  v = clamp(v);
+  let i = 1;
+  while (i < COAT.length - 1 && COAT[i][0] < v) i++;
+  const [a, ca] = COAT[i - 1], [b, cb] = COAT[i];
+  const k = (v - a) / (b - a);
+  out[0] = ca[0] + (cb[0] - ca[0]) * k;
+  out[1] = ca[1] + (cb[1] - ca[1]) * k;
+  out[2] = ca[2] + (cb[2] - ca[2]) * k;
+  return out;
+}
+
+// text (English is the fallback if the page doesn't have a key)
 export const CAT_STRINGS = {
   en: {
-    'cat.label': 'Her baby, a slate-grey cat with green eyes, loafing on his cat tree by the window. On the floor sits an avocado, looking far too pleased with itself.',
-    'cat.label.named': '{name}, her baby: a slate-grey cat with green eyes, loafing on his cat tree by the window. On the floor sits an avocado, looking far too pleased with itself.',
+    'cat.label': 'Her baby, a slate-grey cat with green eyes, loafing on his cat tree by the window, a pompom dangling below him. On the floor: a jar of treats, and an avocado looking far too pleased with itself.',
+    'cat.label.named': '{name}, her baby: a slate-grey cat with green eyes, loafing on his cat tree by the window, a pompom dangling below him. On the floor: a jar of treats, and an avocado looking far too pleased with itself.',
     'cat.caption': 'Her baby keeps watch by the window, and this house is strictly avocado-free.',
     'cat.caption.named': '{name}, her baby, keeps watch by the window, and this house is strictly avocado-free.',
-    'cat.hint': 'Poke the avocado, fling it around, or toss it up to him: he knows what to do. Stroke his back to say thank you.',
-    'cat.hint.touch': 'Tap the avocado, fling it with your finger, or toss it up to him: he knows what to do. Stroke his back to say thank you.',
+    'cat.hint': 'Fling the avocado or toss it up to him: he knows what to do. Stroke his back, scratch his chin, boop his nose, dangle the pompom, or tap the jar for a treat.',
+    'cat.hint.touch': 'Fling the avocado with your finger or toss it up to him: he knows what to do. Stroke his back, scratch his chin, boop his nose, pull the pompom, or tap the jar for a treat.',
+    'cat.btns': 'Play with her baby',
+    'cat.btns.named': 'Play with {name}',
     'cat.btn.poke': 'Poke the avocado',
     'cat.btn.swat': 'Let him handle it',
     'cat.btn.pet': 'Pet her baby',
     'cat.btn.pet.named': 'Pet {name}',
+    'cat.btn.boop': 'Boop his nose',
+    'cat.btn.treat': 'Give a treat',
+    'cat.btn.toy': 'Dangle the pompom',
     'cat.count.0': 'Avocado bullied: not yet',
     'cat.count.1': 'Avocado bullied: {n} time',
     'cat.count.n': 'Avocado bullied: {n} times',
@@ -90,18 +134,38 @@ export const CAT_STRINGS = {
     'cat.m.40': 'It has not learned its lesson.',
     'cat.m.60': 'Somewhere, a bowl of guacamole is trembling.',
     'cat.m.100': 'One hundred. He accepts payment in treats.',
+    'cat.tally.pets': 'Pets: {n}',
+    'cat.tally.treats': 'Treats: {n}',
+    'cat.say.back': 'You stroke his back. He purrs, eyes half shut.',
+    'cat.say.chin': 'You scratch under his chin. He leans in and purrs louder.',
+    'cat.say.head': 'You pat his head. His ears go flat for a second.',
+    'cat.say.over': 'Too much petting! A gentle warning swat, no claws. Give him a moment.',
+    'cat.say.grumpy': 'He’s had enough petting for now.',
+    'cat.say.boop': 'Boop! A slow blink, a twitch of the nose, and a little mrrp.',
+    'cat.say.treat': 'A treat! He sniffs it, crunches it, and licks his lips.',
+    'cat.say.toy': 'The pompom wiggles. He wiggles back, then pounces.',
+    'cat.say.swat': 'He swats it right off the platform.',
+    'cat.say.push': 'He pushes it off the edge, slowly, staring right at you.',
+    'cat.say.bury': 'He scratches at the cushion to bury it, like something gross.',
+    'cat.say.sit': 'He just sits on it. Problem solved.',
+    'cat.say.wake': 'He wakes up and blinks at you.',
   },
   fr: {
-    'cat.label': 'Son bébé, un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre. Par terre trône un avocat, l’air bien trop content de lui.',
-    'cat.label.named': '{name}, son bébé : un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre. Par terre trône un avocat, l’air bien trop content de lui.',
+    'cat.label': 'Son bébé, un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
+    'cat.label.named': '{name}, son bébé : un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
     'cat.caption': 'Son bébé monte la garde près de la fenêtre, et ici, les avocats sont strictement interdits.',
     'cat.caption.named': '{name}, son bébé, monte la garde près de la fenêtre, et ici, les avocats sont strictement interdits.',
-    'cat.hint': 'Piquez l’avocat, lancez-le dans tous les sens ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos pour le remercier.',
-    'cat.hint.touch': 'Touchez l’avocat, lancez-le du doigt ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos pour le remercier.',
+    'cat.hint': 'Lancez l’avocat ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos, grattez-lui le menton, faites boop sur son nez, agitez le pompon ou tapotez le bocal pour une friandise.',
+    'cat.hint.touch': 'Lancez l’avocat du doigt ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos, grattez-lui le menton, faites boop sur son nez, tirez sur le pompon ou touchez le bocal pour une friandise.',
+    'cat.btns': 'Jouer avec son bébé',
+    'cat.btns.named': 'Jouer avec {name}',
     'cat.btn.poke': 'Piquer l’avocat',
     'cat.btn.swat': 'Le laisser faire',
     'cat.btn.pet': 'Caresser son bébé',
     'cat.btn.pet.named': 'Caresser {name}',
+    'cat.btn.boop': 'Boop sur le nez',
+    'cat.btn.treat': 'Donner une friandise',
+    'cat.btn.toy': 'Agiter le pompon',
     'cat.count.0': 'Avocat malmené : pas encore',
     'cat.count.1': 'Avocat malmené : {n} fois',
     'cat.count.n': 'Avocat malmené : {n} fois',
@@ -114,18 +178,38 @@ export const CAT_STRINGS = {
     'cat.m.40': 'Il n’a pas compris la leçon.',
     'cat.m.60': 'Quelque part, un bol de guacamole tremble.',
     'cat.m.100': 'Cent. Il accepte d’être payé en friandises.',
+    'cat.tally.pets': 'Caresses : {n}',
+    'cat.tally.treats': 'Friandises : {n}',
+    'cat.say.back': 'Vous lui caressez le dos. Il ronronne, les yeux mi-clos.',
+    'cat.say.chin': 'Vous lui grattez le menton. Il se penche vers vous et ronronne plus fort.',
+    'cat.say.head': 'Vous lui tapotez la tête. Ses oreilles s’aplatissent un instant.',
+    'cat.say.over': 'Trop de caresses ! Un petit coup de patte d’avertissement, sans les griffes. Laissez-le souffler un moment.',
+    'cat.say.grumpy': 'Il a eu assez de caresses pour l’instant.',
+    'cat.say.boop': 'Boop ! Un lent clignement d’yeux, le nez qui frémit, et un petit « mrrp ».',
+    'cat.say.treat': 'Une friandise ! Il la renifle, la croque et se lèche les babines.',
+    'cat.say.toy': 'Le pompon s’agite. Il se trémousse, puis il bondit.',
+    'cat.say.swat': 'D’un coup de patte, il l’envoie valser hors de la plateforme.',
+    'cat.say.push': 'Il le pousse lentement dans le vide, en vous regardant droit dans les yeux.',
+    'cat.say.bury': 'Il gratte le coussin pour l’enterrer, comme un truc dégoûtant.',
+    'cat.say.sit': 'Il s’assoit dessus, tout simplement. Problème réglé.',
+    'cat.say.wake': 'Il se réveille et cligne des yeux vers vous.',
   },
   ko: {
-    'cat.label': '미화네 아기: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있어요. 바닥에는 아보카도 하나가 괜히 잘난 척하며 앉아 있어요.',
-    'cat.label.named': '미화네 아기 {name}: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있어요. 바닥에는 아보카도 하나가 괜히 잘난 척하며 앉아 있어요.',
+    'cat.label': '미화네 아기: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
+    'cat.label.named': '미화네 아기 {name}: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
     'cat.caption': '창가를 지키는 미화네 아기. 이 집은 아보카도 출입 금지예요.',
     'cat.caption.named': '창가를 지키는 미화네 아기, {name}. 이 집은 아보카도 출입 금지예요.',
-    'cat.hint': '아보카도를 콕 찌르거나, 휙 던지거나, 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 고마우면 등을 쓰다듬어 주세요.',
-    'cat.hint.touch': '아보카도를 톡 건드리거나, 손가락으로 휙 던지거나, 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 고마우면 등을 쓰다듬어 주세요.',
+    'cat.hint': '아보카도를 휙 던지거나 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 등을 쓰다듬고, 턱을 긁어 주고, 코를 콕 눌러 보고, 폼폼을 흔들거나 간식 통을 눌러 간식을 줘 보세요.',
+    'cat.hint.touch': '아보카도를 손가락으로 휙 던지거나 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 등을 쓰다듬고, 턱을 긁어 주고, 코를 톡 건드려 보고, 폼폼을 당기거나 간식 통을 눌러 간식을 줘 보세요.',
+    'cat.btns': '아기랑 놀기',
+    'cat.btns.named': '{name}하고 놀기',
     'cat.btn.poke': '아보카도 콕 찌르기',
     'cat.btn.swat': '아기한테 맡기기',
     'cat.btn.pet': '아기 쓰다듬기',
     'cat.btn.pet.named': '{name} 쓰다듬기',
+    'cat.btn.boop': '코 톡 누르기',
+    'cat.btn.treat': '간식 주기',
+    'cat.btn.toy': '폼폼 흔들기',
     'cat.count.0': '아보카도 괴롭힌 횟수: 아직 없음',
     'cat.count.1': '아보카도 괴롭힌 횟수: {n}번',
     'cat.count.n': '아보카도 괴롭힌 횟수: {n}번',
@@ -138,15 +222,32 @@ export const CAT_STRINGS = {
     'cat.m.40': '아니요, 아직 정신 못 차렸네요.',
     'cat.m.60': '어딘가에서 과카몰리 한 그릇이 떨고 있어요.',
     'cat.m.100': '백 번! 수고비는 간식으로 받는대요.',
+    'cat.tally.pets': '쓰다듬기: {n}번',
+    'cat.tally.treats': '간식: {n}개',
+    'cat.say.back': '등을 쓰다듬어 주니 눈을 반쯤 감고 골골거려요.',
+    'cat.say.chin': '턱 밑을 긁어 주니 몸을 기대 오며 더 크게 골골거려요.',
+    'cat.say.head': '머리를 토닥이니 귀가 잠깐 납작해져요.',
+    'cat.say.over': '너무 많이 쓰다듬었어요! 발톱 없이 살짝 경고 냥펀치. 잠깐 쉬게 해 주세요.',
+    'cat.say.grumpy': '지금은 쓰다듬기 그만이래요.',
+    'cat.say.boop': '콕! 천천히 눈을 깜빡이고 코를 씰룩이더니 작게 “냥” 해요.',
+    'cat.say.treat': '간식이다! 킁킁 냄새를 맡고, 오독오독 씹고, 입맛을 다셔요.',
+    'cat.say.toy': '폼폼이 흔들리자 엉덩이를 씰룩씰룩하더니 덮쳐요.',
+    'cat.say.swat': '냥펀치 한 방에 아보카도가 날아가요.',
+    'cat.say.push': '이쪽을 빤히 쳐다보면서 아보카도를 천천히 밀어 떨어뜨려요.',
+    'cat.say.bury': '더러운 걸 묻듯이 쿠션을 박박 긁어요.',
+    'cat.say.sit': '그냥 깔고 앉아 버렸어요. 해결 완료.',
+    'cat.say.wake': '잠에서 깨어 이쪽을 보며 눈을 깜빡여요.',
   },
 };
 const MILESTONES = [1, 3, 5, 10, 15, 25, 40, 60, 100];
 
-// ─────────────────────────── markup ───────────────────────────
-
+// markup
 const ICON_AVO = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 2.2c2 0 2.9 1.9 3.3 3.9.4 1.8 2.6 3.2 2.6 6.3 0 3.3-2.6 5.4-5.9 5.4S4.1 15.7 4.1 12.4c0-3.1 2.2-4.5 2.6-6.3C7.1 4.1 8 2.2 10 2.2z"/><circle cx="10" cy="12.6" r="2.6"/></svg>';
 const ICON_PAW = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><ellipse cx="10" cy="13.4" rx="4.1" ry="3.3"/><circle cx="4.6" cy="8.6" r="1.7"/><circle cx="8" cy="5.4" r="1.8"/><circle cx="12" cy="5.4" r="1.8"/><circle cx="15.4" cy="8.6" r="1.7"/></svg>';
 const ICON_PET = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 16.4S3.2 12.3 3.2 7.6A3.4 3.4 0 0 1 10 6a3.4 3.4 0 0 1 6.8 1.6c0 4.7-6.8 8.8-6.8 8.8z"/></svg>';
+const ICON_BOOP = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M2.8 2.6l4.5 3.3c1.8-.6 3.6-.6 5.4 0l4.5-3.3-.2 7.1c.5 4.6-3 7.3-7 7.3s-7.5-2.7-7-7.3zM8.6 11.2h2.8L10 12.9z"/></svg>';
+const ICON_TREAT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2 10c2.3-3.6 6.2-4.9 9.8-3.6L16.4 3l-1 7 1 7-4.6-3.4C8.2 14.9 4.3 13.6 2 10z"/><circle cx="6.4" cy="9.2" r="1" fill="#f8f4ec"/></svg>';
+const ICON_TOY = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 1.2v7.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="13.4" r="4.4"/><path d="M5 11.2l-1.6-.9M15 11.2l1.6-.9M4.9 15.4l-1.5.8M15.1 15.4l1.5.8M10 18.6v1" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
 
 /** The inside of the fragment (the outer element is `<div class="cat" id="cat">`). */
 export const CAT_INNER = `
@@ -154,23 +255,29 @@ export const CAT_INNER = `
     <canvas class="cat-bg" aria-hidden="true"></canvas>
     <canvas class="cat-fg" aria-hidden="true"></canvas>
     <span class="cat-grab" aria-hidden="true"></span>
+    <span class="cat-grab cat-grab--toy" aria-hidden="true"></span>
   </div>
   <p class="cat-caption"><span class="cat-caption-main"></span> <span class="cat-caption-hint"></span></p>
   <div class="cat-bar">
     <p class="cat-count" aria-live="polite"><span class="cat-count-n"></span> <span class="cat-count-note"></span></p>
-    <div class="cat-btns">
+    <div class="cat-btns" role="group">
       <button type="button" class="cat-btn cat-btn--poke">${ICON_AVO}<span class="cat-btn-text" data-ck="cat.btn.poke"></span></button>
       <button type="button" class="cat-btn cat-btn--swat">${ICON_PAW}<span class="cat-btn-text" data-ck="cat.btn.swat"></span></button>
       <button type="button" class="cat-btn cat-btn--pet">${ICON_PET}<span class="cat-btn-text cat-btn-pet"></span></button>
+      <button type="button" class="cat-btn cat-btn--boop">${ICON_BOOP}<span class="cat-btn-text" data-ck="cat.btn.boop"></span></button>
+      <button type="button" class="cat-btn cat-btn--treat">${ICON_TREAT}<span class="cat-btn-text" data-ck="cat.btn.treat"></span></button>
+      <button type="button" class="cat-btn cat-btn--toy">${ICON_TOY}<span class="cat-btn-text" data-ck="cat.btn.toy"></span></button>
     </div>
+    <p class="cat-tally" hidden><span class="cat-tally-pets"></span> <span class="cat-tally-treats"></span></p>
   </div>
+  <p class="cat-say" role="status" aria-live="polite"></p>
 `;
 /** The complete fragment to put in the page. */
 export const CAT_HTML = `<div class="cat" id="cat">${CAT_INNER}</div>`;
 
-// ─────────────────────────── geometry helpers ───────────────────────────
+// geometry helpers
 
-/** closed Catmull–Rom through control points */
+// closed Catmull-Rom through the control points
 function closedSpline(ctrl, step = 1.5) {
   const n = ctrl.length, out = [];
   for (let i = 0; i < n; i++) {
@@ -189,19 +296,13 @@ const toPath = (pts, close = true) => {
   if (close) p.closePath();
   return p;
 };
-/** outward normals of a closed outline (checked against the path) */
-function normalsOf(pts, path, hit) {
-  const n = pts.length;
-  return pts.map((p, i) => {
-    const a = pts[(i - 1 + n) % n], b = pts[(i + 1) % n];
-    let nx = b[1] - a[1], ny = -(b[0] - a[0]);
-    const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-    if (hit.isPointInPath(path, p[0] + nx * 2, p[1] + ny * 2)) { nx = -nx; ny = -ny; }
-    return [nx, ny];
-  });
-}
+const mirror = (pts) => pts.map(([x, y]) => [-x, y]).reverse();
+const ellipsePts = (rx, ry, n = 16, wob = 0, seed = 1) => {
+  const R = rng(seed);
+  return Array.from({ length: n }, (_, i) => { const a = (i / n) * TAU, k = 1 + (R() - 0.5) * wob; return [Math.cos(a) * rx * k, Math.sin(a) * ry * k]; });
+};
 
-/** an offscreen canvas painted in its own units (u = css px per unit) */
+// an offscreen canvas painted in its own units (u = css px per unit)
 function makeSprite(x0, y0, x1, y1, u, dpr, paint) {
   const c = document.createElement('canvas');
   const k = u * dpr;
@@ -213,8 +314,10 @@ function makeSprite(x0, y0, x1, y1, u, dpr, paint) {
   return { c, x0, y0, w: x1 - x0, h: y1 - y0 };
 }
 const blit = (g, sp, x = 0, y = 0) => g.drawImage(sp.c, x + sp.x0, y + sp.y0, sp.w, sp.h);
+// draw a sprite painted in s-units at (x, y)
+const blit2 = (g, sp, x, y, s) => g.drawImage(sp.c, x + sp.x0 * s, y + sp.y0 * s, sp.w * s, sp.h * s);
 
-/** short hair marks inside a path */
+// short hair marks inside a path (used for the plush and the props)
 function hairs(g, path, hit, R, { box, n, flow, pick, len = [4, 9], width = [0.5, 1.25], bend = 0.35 }) {
   const [bx0, by0, bx1, by1] = box;
   for (let i = 0; i < n; i++) {
@@ -233,179 +336,981 @@ function hairs(g, path, hit, R, { box, n, flow, pick, len = [4, 9], width = [0.5
     g.stroke();
   }
 }
-/** fuzz poking out of a silhouette */
-function fuzzEdge(g, pts, nrm, R, { keep = () => true, len = [2.5, 6], lean = 0, cols, n = 2, width = [0.5, 1.1] }) {
-  g.lineCap = 'round';
-  for (let i = 0; i < pts.length; i++) {
-    const [x, y] = pts[i];
-    if (!keep(x, y)) continue;
-    const [nx, ny] = nrm[i];
-    for (let k = 0; k < n; k++) {
-      const a = Math.atan2(ny, nx) + (R() - 0.5) * 1.1 + lean;
-      const L = lerp(len[0], len[1], R());
-      const sx = x - nx * 1.6, sy = y - ny * 1.6;
-      const [c, al] = cols[Math.floor(R() * cols.length)];
-      g.strokeStyle = rgba(c, al * (0.6 + R() * 0.4));
-      g.lineWidth = lerp(width[0], width[1], R());
-      g.beginPath();
-      g.moveTo(sx, sy);
-      g.quadraticCurveTo(sx + Math.cos(a) * L * 0.5 + (R() - 0.5) * 1.2, sy + Math.sin(a) * L * 0.5 + (R() - 0.5) * 1.2, sx + Math.cos(a) * L, sy + Math.sin(a) * L);
-      g.stroke();
+
+// the fur painter
+//
+// For each part: rasterise the outline, take a distance field to get a soft
+// rounded height map (plus a few bumps where there's anatomy under the fur),
+// light it like the window is up and to the right, then lay strokes along the
+// fur's flow, coloured from that lighting so they keep the form. A fringe of
+// hairs round the edge does the silhouette, and catches the rim light on top.
+
+const norm3 = (x, y, z) => { const l = Math.hypot(x, y, z); return [x / l, y / l, z / l]; };
+const KEY = norm3(0.5, -0.74, 0.46);
+const FRONT = norm3(0.12, -0.42, 0.9);
+
+function chamfer(d, W, H) {
+  const B = 1.4142;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      let v = d[i];
+      if (v === 0) continue;
+      if (x > 0) v = Math.min(v, d[i - 1] + 1);
+      if (y > 0) {
+        v = Math.min(v, d[i - W] + 1);
+        if (x > 0) v = Math.min(v, d[i - W - 1] + B);
+        if (x < W - 1) v = Math.min(v, d[i - W + 1] + B);
+      }
+      d[i] = v;
+    }
+  }
+  for (let y = H - 1; y >= 0; y--) {
+    for (let x = W - 1; x >= 0; x--) {
+      const i = y * W + x;
+      let v = d[i];
+      if (v === 0) continue;
+      if (x < W - 1) v = Math.min(v, d[i + 1] + 1);
+      if (y < H - 1) {
+        v = Math.min(v, d[i + W] + 1);
+        if (x < W - 1) v = Math.min(v, d[i + W + 1] + B);
+        if (x > 0) v = Math.min(v, d[i + W - 1] + B);
+      }
+      d[i] = v;
     }
   }
 }
 
-// ─────────────────────────── the cat (cat units: origin = top platform centre) ───────────────────────────
+function blurF(a, W, H, r, passes) {
+  const tmp = new Float32Array(a.length), n = 2 * r + 1;
+  for (let p = 0; p < passes; p++) {
+    for (let y = 0; y < H; y++) {
+      const row = y * W;
+      let acc = 0;
+      for (let x = -r; x <= r; x++) acc += a[row + clamp(x, 0, W - 1)];
+      for (let x = 0; x < W; x++) {
+        tmp[row + x] = acc / n;
+        acc += a[row + Math.min(x + r + 1, W - 1)] - a[row + Math.max(x - r, 0)];
+      }
+    }
+    for (let x = 0; x < W; x++) {
+      let acc = 0;
+      for (let y = -r; y <= r; y++) acc += tmp[clamp(y, 0, H - 1) * W + x];
+      for (let y = 0; y < H; y++) {
+        a[y * W + x] = acc / n;
+        acc += tmp[Math.min(y + r + 1, H - 1) * W + x] - tmp[Math.max(y - r, 0) * W + x];
+      }
+    }
+  }
+}
 
-// his loaf, seen from the side: rump overhanging the left edge, back sloping
-// down from high hips to the shoulders, chest under the head
-const BODY = [[104, 6], [60, 11], [0, 12], [-56, 12], [-90, 16], [-112, 20], [-131, 14], [-145, -4], [-152, -36], [-144, -72], [-120, -100], [-84, -113], [-42, -108], [-4, -96], [30, -87], [60, -89], [92, -80], [112, -50], [116, -18]];
-// a round, full-cheeked head (Russian Blue / Chartreux)
-const HEAD = [[0, -39], [22, -37], [38, -27], [46, -10], [49, 8], [44, 24], [28, 35], [0, 40], [-28, 35], [-44, 24], [-49, 8], [-46, -10], [-38, -27], [-22, -37]];
-const EAR = [[-15, 4], [-12, -8], [-6, -19], [-1, -26], [3, -24], [8, -15], [13, -5], [16, 4]];
-const EAR_INNER = [[-8.5, 2], [-6.5, -7], [-3, -15.5], [-0.5, -19], [2, -15], [6, -7], [8.5, 2]];
-const HEAD_C = [98, -104];
-const HS = 1.14; // head scale
-const SHOULDER = [80, -38];
-const PAW_REST = [88, 9];
+const TINTS = [0, 0.3, 0.6];
+const ALPHAS = [0.26, 0.42, 0.6, 0.8];
+const WIDTHS = [0.42, 0.68, 1.0, 2.3];
 
-function paintBody(g, hit, dense) {
-  const R = rng(11);
-  const pts = closedSpline(BODY, 1.1);
+function fur(g, o) {
+  const [x0, y0, x1, y1] = o.box;
+  const R = rng(o.seed || 7);
+  const pts = closedSpline(o.outline, 0.7);
   const path = toPath(pts);
-  // the top of the back, per column
-  const back = new Float32Array(320).fill(1e9);
-  for (const [x, y] of pts) { const i = Math.round(x) + 180; if (i >= 0 && i < 320 && y < back[i]) back[i] = y; }
-  for (let i = 1; i < 320; i++) if (back[i] > 1e8) back[i] = back[i - 1];
-  for (let i = 318; i >= 0; i--) if (back[i] > 1e8) back[i] = back[i + 1];
-  const backY = (x) => back[clamp(Math.round(x) + 180, 0, 319)];
-
-  const gr = g.createLinearGradient(0, -104, 0, 14);
-  gr.addColorStop(0, rgba(FUR_TOP, 1));
-  gr.addColorStop(0.42, rgba(FUR_MID, 1));
-  gr.addColorStop(1, rgba(FUR_LOW, 1));
-  g.fillStyle = gr;
-  g.fill(path);
+  const q = o.q || 1.6;
+  const W = Math.ceil((x1 - x0) * q), H = Math.ceil((y1 - y0) * q), N = W * H;
+  const mc = document.createElement('canvas');
+  mc.width = W; mc.height = H;
+  const mg = mc.getContext('2d', { willReadFrequently: true });
+  mg.setTransform(q, 0, 0, q, -x0 * q, -y0 * q);
+  mg.fill(path);
+  const md = mg.getImageData(0, 0, W, H).data;
+  const ins = new Uint8Array(N), d = new Float32Array(N), h = new Float32Array(N);
+  let area = 0;
+  for (let i = 0; i < N; i++) { ins[i] = md[i * 4 + 3] > 127 ? 1 : 0; d[i] = ins[i]; area += ins[i]; }
+  for (let i = 0; i < N; i++) d[i] = d[i] ? 1e6 : 0;
+  chamfer(d, W, H);
+  area /= q * q;
+  const rr = (o.round || 20) * q, bumps = o.bumps || [];
+  for (let j = 0, i = 0; j < H; j++) {
+    for (let k = 0; k < W; k++, i++) {
+      if (!ins[i]) continue;
+      const t = Math.min(1, d[i] / rr);
+      let v = rr * Math.sqrt(1 - (1 - t) * (1 - t));
+      if (bumps.length) {
+        const x = x0 + (k + 0.5) / q, y = y0 + (j + 0.5) / q, fade = Math.min(1, t * 2.5);
+        for (const b of bumps) { const dx = x - b[0], dy = y - b[1]; v += b[3] * q * fade * Math.exp(-(dx * dx + dy * dy) / (2 * b[2] * b[2])); }
+      }
+      h[i] = v;
+    }
+  }
+  blurF(h, W, H, Math.max(1, Math.round(q * 1.3)), 2);
+  // a 3px apron round the shape so the clipped edge stays the right colour
+  const near = ins.slice();
+  for (let p = 0; p < 3; p++) {
+    const src = near.slice();
+    for (let i = W; i < N - W; i++) if (!src[i] && (src[i - 1] || src[i + 1] || src[i - W] || src[i + W])) near[i] = 1;
+  }
+  const [Lx, Ly, Lz] = o.light || KEY;
+  const V = new Float32Array(N), RIM = new Float32Array(N);
+  const img = mg.createImageData(W, H), px = img.data;
+  const c = [0, 0, 0];
+  const rimK = o.rim ?? 1, tone = o.tone ?? 1, amb = o.amb ?? 0.1, shade = o.shade || coat;
+  for (let j = 1; j < H - 1; j++) {
+    for (let k = 1; k < W - 1; k++) {
+      const i = j * W + k;
+      if (!near[i]) continue;
+      const gx = (h[i + 1] - h[i - 1]) * 0.5, gy = (h[i + W] - h[i - W]) * 0.5;
+      let nx = -gx, ny = -gy, nz = 1;
+      const l = Math.sqrt(nx * nx + ny * ny + 1);
+      nx /= l; ny /= l; nz /= l;
+      const dif = clamp((nx * Lx + ny * Ly + nz * Lz + 0.3) / 1.3);
+      const fil = clamp(-nx * 0.5 - ny * 0.12 + nz * 0.82);
+      const e = 1 - nz, nl = Math.sqrt(nx * nx + ny * ny) + 1e-6;
+      const rd = clamp((nx * 0.6 - ny * 0.8) / nl);
+      const x = x0 + (k + 0.5) / q, y = y0 + (j + 0.5) / q;
+      const ao = o.ao ? o.ao(x, y) : 1;
+      const v = clamp((amb + dif * 0.72 + fil * 0.2) * ao * tone);
+      const rim = clamp(e * 1.8) ** 2 * rd * rd * rimK * Math.min(1, ao * 1.15) * (o.rimAt ? o.rimAt(x, y) : 1);
+      V[i] = v; RIM[i] = rim;
+      shade(v, c);
+      const m = Math.min(0.7, rim * 0.62);
+      const p4 = i * 4;
+      px[p4] = c[0] + (SHEEN[0] - c[0]) * m;
+      px[p4 + 1] = c[1] + (SHEEN[1] - c[1]) * m;
+      px[p4 + 2] = c[2] + (SHEEN[2] - c[2]) * m;
+      px[p4 + 3] = 255;
+    }
+  }
+  mg.setTransform(1, 0, 0, 1, 0, 0);
+  mg.clearRect(0, 0, W, H);
+  mg.putImageData(img, 0, 0);
   g.save();
   g.clip(path);
-  // the soft grey sheen along his back, and on the round of the haunch
-  for (let x = -146; x <= 96; x += 4) stamp(g, x, backY(x) + 14, 18 + R() * 8, FUR_SHEEN, 0.1 + 0.05 * R(), 0.2);
-  stamp(g, -100, -66, 40, FUR_SHEEN, 0.1, 0.1);
-  stamp(g, 70, -60, 26, FUR_SHEEN, 0.06, 0.1);
-  // underside and the fold between haunch and belly
-  for (let x = -150; x <= 118; x += 7) stamp(g, x, 16, 26 + R() * 8, FUR_DARK, 0.13, 0.2);
-  stamp(g, -58, -6, 26, FUR_DARK, 0.15, 0.2);
-  stamp(g, -142, -24, 26, FUR_DARK, 0.12, 0.2);
-  // fur: back toward the tail, down the flanks, wrapping round the rump
-  hairs(g, path, hit, R, {
-    box: [-152, -112, 120, 16], n: dense ? 9000 : 6000, len: [3, 6.5], width: [0.5, 1.15],
+  g.imageSmoothingEnabled = true;
+  g.drawImage(mc, x0, y0, W / q, H / q);
+  g.restore();
+
+  const at = (x, y) => {
+    const k = Math.floor((x - x0) * q), j = Math.floor((y - y0) * q);
+    return k < 0 || j < 0 || k >= W || j >= H ? -1 : j * W + k;
+  };
+  const inside = (x, y) => { const i = at(x, y); return i >= 0 && ins[i] === 1; };
+
+  // strokes, batched by colour so thousands of them stay cheap to paint
+  const bins = new Map();
+  const add = (v, ti, ai, wi, xa, ya, xc, yc, xb, yb) => {
+    const vi = Math.round(clamp(v) * 40);
+    const key = ((ti * 41 + vi) * 4 + ai) * 4 + wi;
+    let b = bins.get(key);
+    if (!b) { b = { key, ti, vi, ai, wi, d: [] }; bins.set(key, b); }
+    b.d.push(xa, ya, xc, yc, xb, yb);
+  };
+  const hairAt = (x, y, a, L, v, ti, ai, wi) => {
+    const dx = Math.cos(a) * L, dy = Math.sin(a) * L, b = (R() - 0.5) * L * 0.4;
+    add(v, ti, ai, wi, x, y, x + dx * 0.5 - (dy / L) * b, y + dy * 0.5 + (dx / L) * b, x + dx, y + dy);
+  };
+  const [l0, l1] = o.len || [3, 7];
+  const lenAt = o.lenAt || (() => 1);
+  // painterly clumps first
+  const nClump = Math.round(area * (o.clump ?? 0.025));
+  for (let n = 0; n < nClump; n++) {
+    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0);
+    const i = at(x, y);
+    if (i < 0 || !ins[i]) continue;
+    const v = V[i] + (R() - 0.5) * 0.16;
+    hairAt(x, y, o.flow(x, y) + (R() - 0.5) * 0.3, l1 * (1.2 + R() * 0.6) * lenAt(x, y), v, 0, 0, 3);
+  }
+  const nFine = Math.round(area * (o.density ?? 0.4));
+  for (let n = 0; n < nFine; n++) {
+    const x = x0 + R() * (x1 - x0), y = y0 + R() * (y1 - y0);
+    const i = at(x, y);
+    if (i < 0 || !ins[i]) continue;
+    const v = V[i], rim = RIM[i];
+    const light = R() < 0.06 + v * 0.4 + rim * 0.9;
+    const vv = light ? v + 0.05 + R() * 0.14 : v - 0.05 - R() * 0.14;
+    const ti = light ? (rim > 0.32 ? 2 : rim > 0.1 ? 1 : 0) : 0;
+    hairAt(x, y, o.flow(x, y) + (R() - 0.5) * 0.5, lerp(l0, l1, R()) * lenAt(x, y), vv, ti, Math.floor(R() * 3), R() < 0.6 ? 0 : 1);
+  }
+  // the fringe round the silhouette
+  if (o.fringe) {
+    const [f0, f1] = o.fringeLen || [2, 5];
+    const nPer = o.fringeN ?? 2;
+    const step = 2;
+    for (let p = 0; p < pts.length; p += step) {
+      const [x, y] = pts[p];
+      const a0 = pts[(p - 2 + pts.length) % pts.length], a1 = pts[(p + 2) % pts.length];
+      let nx = a1[1] - a0[1], ny = -(a1[0] - a0[0]);
+      const l = Math.hypot(nx, ny) || 1;
+      nx /= l; ny /= l;
+      if (inside(x + nx * 1.5, y + ny * 1.5)) { nx = -nx; ny = -ny; }
+      const fl = o.fringe(x, y, nx, ny);
+      if (!fl) continue;
+      const i = at(x - nx * 2.5, y - ny * 2.5);
+      const v = i >= 0 ? V[i] : 0.3, rim = i >= 0 ? RIM[i] : 0;
+      const an = Math.atan2(ny, nx), af = o.flow(x, y);
+      const lean = clamp(wrapA(af - an), -1.2, 1.2) * 0.75;
+      const cnt = Math.floor(nPer) + (R() < nPer % 1 ? 1 : 0);
+      for (let k = 0; k < cnt; k++) {
+        const a = an + lean + (R() - 0.5) * 0.7;
+        const L = lerp(f0, f1, R()) * fl;
+        const lit = R() < rim * 1.5;
+        const vv = lit ? v + 0.16 + R() * 0.14 : v * (0.6 + R() * 0.25);
+        const sx = x - Math.cos(a) * 1.3, sy = y - Math.sin(a) * 1.3;
+        hairAt(sx, sy, a, L + 1.3, vv, lit ? (rim > 0.3 ? 2 : 1) : 0, lit ? 2 + Math.floor(R() * 2) : 1 + Math.floor(R() * 2), R() < 0.5 ? 0 : 1);
+      }
+    }
+  }
+  const order = [...bins.values()].sort((a, b) => a.key - b.key);
+  g.lineCap = 'round';
+  const wm = o.wmul || 1;
+  for (const b of order) {
+    shade(b.vi / 40, c);
+    const t = TINTS[b.ti];
+    g.strokeStyle = rgba([lerp(c[0], SHEEN[0], t), lerp(c[1], SHEEN[1], t), lerp(c[2], SHEEN[2], t)], ALPHAS[b.ai] * (b.wi === 3 ? 0.55 : 1));
+    g.lineWidth = WIDTHS[b.wi] * wm;
+    g.beginPath();
+    const dd = b.d;
+    for (let i = 0; i < dd.length; i += 6) { g.moveTo(dd[i], dd[i + 1]); g.quadraticCurveTo(dd[i + 2], dd[i + 3], dd[i + 4], dd[i + 5]); }
+    g.stroke();
+  }
+  if (o.after) o.after(g, { at, V, RIM, R, path, pts, inside });
+  return { path, pts };
+}
+
+// his parts, in cat units: origin at the centre of the top platform, y down.
+// The head and face use head units (HS of them per cat unit).
+
+// the loaf: back sloping down from high hips to the shoulders, chest under the head
+const TORSO = [[110, 9], [70, 13], [20, 14], [-40, 14], [-96, 14], [-126, 10], [-141, -6], [-147, -32], [-143, -62], [-128, -88], [-102, -106], [-66, -113], [-30, -107], [4, -99], [34, -96], [58, -98], [80, -94], [100, -82], [114, -60], [120, -34], [118, -10]];
+// the thigh, a big round shape over the back of the torso
+const HAUNCH = [[-42, 12], [-80, 15], [-118, 12], [-138, 0], [-147, -26], [-144, -56], [-130, -82], [-106, -98], [-78, -97], [-58, -82], [-46, -58], [-40, -32], [-37, -8]];
+// the fluffy ruff under his chin
+const CHEST = [[60, -86], [88, -95], [114, -89], [130, -71], [139, -46], [137, -20], [129, 0], [115, 12], [94, 15], [74, 11], [60, -4], [54, -30], [53, -60]];
+const NECK = ellipsePts(27, 36, 18, 0.08, 4);
+// a round, full-cheeked head
+const SKULL = [[0, -45], [17, -43], [31, -37], [41, -27], [47, -13], [51, 1], [55, 11], [58, 19], [53, 27], [43, 35], [28, 41], [13, 45], [0, 46.5], [-13, 45], [-28, 41], [-43, 35], [-53, 27], [-58, 19], [-55, 11], [-51, 1], [-47, -13], [-41, -27], [-31, -37], [-17, -43]];
+// his left ear (screen left); the other one is its mirror
+const EAR_L = [[-19, 5], [-20, -6], [-17, -18], [-12, -29], [-6, -37], [-1.5, -41], [2, -39], [5.5, -31], [10, -19], [14, -7], [17, 5]];
+const EAR_L_IN = [[-12, 3], [-13, -7], [-10.5, -18], [-6.5, -27], [-2, -33], [1, -30], [4.5, -20], [8.5, -9], [10.5, 3]];
+const LEG = [[-6, -11.5], [14, -11.5], [32, -10.5], [47, -9], [56, -7], [60, 0], [56, 7], [47, 9], [32, 10.5], [14, 11.5], [-6, 11.5], [-10, 0]];
+const PAW = [[-13, 0], [-12, -8], [-4, -11.5], [4, -11.5], [10, -10.5], [14.5, -7.5], [17.5, -3.6], [18.5, 0], [17.5, 3.6], [14.5, 7.5], [10, 10.5], [4, 11.5], [-4, 11.5], [-12, 8]];
+const PAW_TUCK = [[-15, 1], [-16, -5], [-12, -11], [-3, -13.5], [7, -13], [13.5, -10.5], [17, -5.5], [17.5, 0.5], [11, 3], [-5, 3]];
+
+const HS = 1.06;
+const HEAD_REST = [102, -97];
+const NECK_PIVOT = [78, -58];
+const SHOULDER_N = [94, -34];
+const SHOULDER_F = [74, -30];
+const PAW_N = [114, 13];
+const PAW_F = [92, 10];
+const TAIL_ROOT = [-126, 6];
+
+// top of the back, per column, for the flow field
+function topLine(outline) {
+  const pts = closedSpline(outline, 1);
+  const top = new Float32Array(360).fill(1e9);
+  for (const [x, y] of pts) { const i = Math.round(x) + 180; if (i >= 0 && i < 360 && y < top[i]) top[i] = y; }
+  for (let i = 1; i < 360; i++) if (top[i] > 1e8) top[i] = top[i - 1];
+  for (let i = 358; i >= 0; i--) if (top[i] > 1e8) top[i] = top[i + 1];
+  return (x) => top[clamp(Math.round(x) + 180, 0, 359)];
+}
+
+function paintTorso(g, dense, q) {
+  const backY = topLine(TORSO);
+  fur(g, {
+    box: [-160, -126, 132, 24], outline: TORSO, seed: 11, round: 44, q,
+    bumps: [[56, -84, 20, 7], [6, -50, 44, 10], [88, -12, 15, 5], [-60, -96, 26, 5]],
+    ao: (x, y) => (1 - 0.6 * smooth(-40, 14, y)) * (1 - 0.18 * smooth(60, 116, x) * smooth(-70, -10, y)),
     flow: (x, y) => {
       const by = backY(x), v = clamp((y - by) / Math.max(20, 12 - by));
-      let a = Math.PI - 0.2 - 0.95 * v;
-      a -= smooth(-104, -148, x) * (0.9 - 0.4 * v);
-      a += smooth(70, 112, x) * 0.9 * v; // chest: down
+      let a = Math.PI - 0.22 - 1.0 * v;
+      a -= smooth(-96, -146, x) * (0.9 - 0.4 * v);
+      a += smooth(70, 116, x) * 0.9 * v;
       return a;
     },
-    pick: (x, y, r) => {
-      const by = backY(x), v = clamp((y - by) / Math.max(20, 12 - by));
-      const light = r() < 0.55 * (1 - v) * (1 - v) + 0.05;
-      return light ? [FUR_SHEEN, 0.06 + r() * 0.13] : [FUR_DARK, 0.1 + r() * 0.2];
+    len: [3, 6.5], density: dense ? 0.42 : 0.3, clump: 0.03,
+    fringe: (x, y) => (y > 2 ? 0 : 1), fringeLen: [0.9, 2.6], fringeN: 1.5,
+    after: (g) => {
+      // the crease in front of his thigh
+      for (let k = 0; k <= 8; k++) { const u = k / 8; stamp(g, lerp(-58, -34, u) + 4, lerp(-82, 6, u), 9, FUR_DARK, 0.16, 0.3); }
+      // a light, broken ink line along his back, like the rest of the room
+      const top = closedSpline(TORSO, 3).filter(([x, y]) => x < 74 && x > -132 && y < -60).sort((p, q) => q[0] - p[0]);
+      stroke(g, { pts: top.map(([x, y]) => [x, y + 1.2]), width: 2.2, dry: 0.86, tone: 0.42, bleed: 0.06, rgb: INKC, seed: 21, bristles: 5 });
     },
   });
-  g.restore();
-  // a plush, fuzzy silhouette
-  const nrm = normalsOf(pts, path, hit);
-  fuzzEdge(g, pts, nrm, R, { keep: (x, y) => y < 2, lean: 0, cols: [[FUR_LOW, 0.4], [FUR_MID, 0.4], [FUR_SHEEN, 0.16]], n: 2, len: [1.2, 3.2], width: [0.5, 0.9] });
-  // confident dry-brush lines: the back, the haunch, the shoulder
-  stroke(g, { pts: [[62, -92], [30, -89], [-4, -98], [-42, -110], [-84, -115], [-120, -101], [-144, -73], [-152, -37], [-145, -6]], width: 4.4, dry: 0.62, tone: 0.82, bleed: 0.15, rgb: INKC, seed: 21, spread: 0.3 });
-  stroke(g, { pts: [[-132, 12], [-128, -22], [-106, -48], [-80, -48], [-62, -26], [-56, 6]], width: 2.4, dry: 0.75, tone: 0.42, bleed: 0.1, rgb: INKC, seed: 22 });
-  stroke(g, { pts: [[72, -64], [86, -36], [84, -6]], width: 2.2, dry: 0.75, tone: 0.32, bleed: 0.1, rgb: INKC, seed: 23 });
-  stroke(g, { pts: [[118, -26], [114, -6], [104, 8]], width: 2.6, dry: 0.6, tone: 0.55, bleed: 0.1, rgb: INKC, seed: 24 });
 }
 
-function paintHead(g, hit, dense) {
-  const R = rng(31);
-  const pts = closedSpline(HEAD, 0.9);
-  const path = toPath(pts);
-  const gr = g.createRadialGradient(-8, -18, 4, 0, 0, 52);
-  gr.addColorStop(0, rgba(mix(FUR_TOP, FUR_SHEEN, 0.15), 1));
-  gr.addColorStop(0.55, rgba(FUR_MID, 1));
-  gr.addColorStop(1, rgba(FUR_LOW, 1));
+function paintHaunch(g, dense, q) {
+  fur(g, {
+    box: [-160, -112, -26, 26], outline: HAUNCH, seed: 12, round: 34, q,
+    bumps: [[-100, -50, 30, 9], [-118, -78, 18, 4]],
+    ao: (x, y) => (1 - 0.55 * smooth(-30, 14, y)) * (1 - 0.22 * smooth(-70, -42, x)),
+    rimAt: (x, y) => 0.1 + 0.9 * Math.max(smooth(-60, -82, x), smooth(-76, -94, y)),
+    flow: (x, y) => {
+      const v = clamp((y + 96) / 100);
+      let a = Math.PI - 0.35 - 0.9 * v;
+      a -= smooth(-110, -146, x) * 0.5;
+      a += smooth(-60, -40, x) * 0.4;
+      return a;
+    },
+    len: [3, 6.5], density: dense ? 0.42 : 0.3, clump: 0.03,
+    fringe: (x, y) => (y > 2 || (x > -68 && y > -86) ? 0 : 1), fringeLen: [0.9, 2.8], fringeN: 1.5,
+    after: (g) => {
+      stroke(g, { pts: [[-124, -92], [-140, -66], [-146, -36], [-140, -6]], width: 2.2, dry: 0.8, tone: 0.32, bleed: 0.06, rgb: INKC, seed: 23, bristles: 5 });
+    },
+  });
+}
+
+function paintChest(g, dense, q) {
+  fur(g, {
+    box: [46, -104, 148, 24], outline: CHEST, seed: 13, round: 26, tone: 1.08, q,
+    bumps: [[108, -36, 24, 7]],
+    ao: (x, y) => (1 - 0.45 * smooth(-14, 14, y)) * (0.86 + 0.14 * smooth(-80, -50, y)),
+    flow: (x, y) => Math.PI / 2 + (x - 100) * 0.012 - smooth(-90, -60, y) * 0.5,
+    len: [4, 8.5], density: dense ? 0.5 : 0.36, clump: 0.04,
+    lenAt: (x, y) => 0.8 + 0.5 * smooth(-60, 0, y),
+    rimAt: (x) => 0.15 + 0.85 * smooth(86, 106, x),
+    fringe: (x, y) => (x < 84 && y < 0 ? 0 : y > -30 ? 1.3 : 0.8), fringeLen: [1.8, 4.6], fringeN: 2,
+  });
+  // melt the back edge into his body
+  g.globalCompositeOperation = 'destination-out';
+  const gr = g.createLinearGradient(50, 0, 94, 0);
+  gr.addColorStop(0, 'rgba(0,0,0,1)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = gr;
-  g.fill(path);
-  g.save();
-  g.clip(path);
-  // sheen on the brow, shadow under the cheeks and round the eyes
-  for (let i = 0; i < 9; i++) stamp(g, -26 + i * 6.5, -27 + Math.abs(i - 4) * 1.5, 13, FUR_SHEEN, 0.07, 0.2);
-  stamp(g, -30, 6, 18, FUR_SHEEN, 0.06, 0.2);
-  stamp(g, 0, 40, 30, FUR_DARK, 0.2, 0.2);
-  stamp(g, -46, 22, 16, FUR_DARK, 0.14, 0.2);
-  stamp(g, 46, 22, 16, FUR_DARK, 0.14, 0.2);
-  // fur radiates out from the nose
-  hairs(g, path, hit, R, {
-    box: [-50, -42, 50, 42], n: dense ? 2600 : 1900, len: [3, 6.5], width: [0.45, 1.05],
-    flow: (x, y) => Math.atan2(y - 12, x) + (y < 0 ? 0.12 * Math.sign(x) : 0),
-    pick: (x, y, r) => {
-      const light = r() < (y < -8 ? 0.42 : 0.22);
-      return light ? [FUR_SHEEN, 0.06 + r() * 0.13] : [FUR_DARK, 0.1 + r() * 0.2];
-    },
-  });
-  g.restore();
-  const nrm = normalsOf(pts, path, hit);
-  fuzzEdge(g, pts, nrm, R, { keep: (x, y) => y < 34, cols: [[FUR_LOW, 0.45], [FUR_MID, 0.4], [FUR_SHEEN, 0.16]], n: 2, len: [1, 2.8], width: [0.45, 0.85] });
-  // cheek tufts
-  fuzzEdge(g, pts, nrm, R, { keep: (x, y) => y > 6 && y < 30, cols: [[FUR_MID, 0.5], [FUR_LOW, 0.45]], n: 2, len: [2, 4.5] });
-  stroke(g, { pts: [[-45, -12], [-37, -28], [-20, -38], [2, -40], [22, -37], [38, -27], [46, -10]], width: 3.2, dry: 0.55, tone: 0.78, bleed: 0.12, rgb: INKC, seed: 33 });
-  stroke(g, { pts: [[-49, 2], [-47, 16], [-40, 27], [-28, 35]], width: 2.6, dry: 0.6, tone: 0.6, bleed: 0.1, rgb: INKC, seed: 34 });
-  stroke(g, { pts: [[49, 2], [47, 16], [41, 26]], width: 2.4, dry: 0.65, tone: 0.5, bleed: 0.1, rgb: INKC, seed: 35 });
+  g.fillRect(46, -104, 48, 128);
+  g.globalCompositeOperation = 'source-over';
 }
 
+function paintNeck(g) {
+  fur(g, {
+    box: [-34, -44, 34, 44], outline: NECK, seed: 14, round: 18, tone: 0.92,
+    flow: (x, y) => Math.PI / 2 + 0.3 + x * 0.01,
+    len: [3, 6], density: 0.36, clump: 0.03,
+    fringe: () => 1, fringeLen: [1.6, 4],
+  });
+}
+
+function paintSkull(g, dense, q) {
+  fur(g, {
+    box: [-66, -54, 66, 56], outline: SKULL, seed: 31, round: 32, q,
+    bumps: [[-32, 18, 15, 4], [32, 18, 15, 4], [0, -20, 24, 5], [0, 14, 16, 3]],
+    ao: (x, y) => 1 - 0.12 * smooth(26, 48, y),
+    flow: (x, y) => Math.atan2(y - 16, x) + (y < 0 ? 0.1 * Math.sign(x) : 0) + (Math.abs(x) > 34 && y > 0 ? 0.25 * Math.sign(x) : 0),
+    len: [2.6, 5.5], density: dense ? 0.55 : 0.4, clump: 0.025,
+    lenAt: (x, y) => (Math.abs(x) > 40 && y > 0 ? 1.4 : y > 30 ? 1.3 : 1),
+    fringe: (x, y) => (Math.abs(x) > 42 && y > 2 && y < 34 ? 1.8 : y > 32 ? 1.7 : 0.7), fringeLen: [1.2, 3.2], fringeN: 1.8,
+  });
+}
+
+function earShape(side) { return side < 0 ? EAR_L : mirror(EAR_L); }
+function earInner(side) { return side < 0 ? EAR_L_IN : mirror(EAR_L_IN); }
+
+function paintEarFront(g, side) {
+  fur(g, {
+    box: [-26, -48, 26, 10], outline: earShape(side), seed: 51 + side, round: 7, tone: 0.95,
+    flow: (x) => -Math.PI / 2 - x * 0.025, len: [2, 4], density: 0.6, clump: 0.02,
+    fringe: (x, y) => (y < 2 ? 1 : 0), fringeLen: [1.2, 3.2],
+    after: (g) => {
+      const inner = toPath(closedSpline(earInner(side), 0.5));
+      g.save();
+      g.clip(inner);
+      const gr = g.createLinearGradient(0, -34, 0, 4);
+      gr.addColorStop(0, rgba(mix(EAR_IN, [170, 150, 160], 0.3), 1));
+      gr.addColorStop(0.5, rgba(EAR_IN, 1));
+      gr.addColorStop(1, rgba(EAR_DEEP, 1));
+      g.fillStyle = gr;
+      g.fill(inner);
+      // the fold along the inside edge, and the deep bit at the bottom
+      for (let k = 0; k < 6; k++) stamp(g, -side * (9 - k * 1.2), -4 - k * 4.6, 5, EAR_DEEP, 0.2, 0.3);
+      stamp(g, side * 2, 0, 9, EAR_DEEP, 0.35, 0.3);
+      stamp(g, side * 3, -16, 5, [196, 170, 180], 0.22, 0.2);
+      g.restore();
+      // the furnishings: pale tufts growing from inside
+      const R = rng(57 + side);
+      g.lineCap = 'round';
+      for (let i = 0; i < 46; i++) {
+        const u = R();
+        const x = lerp(-side * 9, side * 6, R()) * (1 - u * 0.5), y = 2 - u * 22;
+        const a = -Math.PI / 2 + side * (0.15 + R() * 0.5) * (R() < 0.3 ? -1 : 1);
+        const L = 4 + R() * 8;
+        g.strokeStyle = rgba([214, 214, 226], 0.25 + R() * 0.35);
+        g.lineWidth = 0.35 + R() * 0.3;
+        g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a) * L * 0.5 + side * 1.5, y + Math.sin(a) * L * 0.5, x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
+      }
+      g.strokeStyle = rgba(FUR_DARK, 0.45); g.lineWidth = 0.7;
+      g.stroke(inner);
+    },
+  });
+}
+
+function paintEarBack(g, side) {
+  fur(g, {
+    box: [-26, -48, 26, 10], outline: earShape(side), seed: 61 + side, round: 9, tone: 0.82,
+    flow: (x) => -Math.PI / 2 + x * 0.02, len: [2, 4.5], density: 0.6, clump: 0.03,
+    fringe: (x, y) => (y < 2 ? 1 : 0), fringeLen: [1.2, 3.2],
+  });
+}
+
+// whisker pads, the bridge of the nose and the lip line, around the nose
 function paintMuzzle(g) {
-  // whisker pads, a lighter chin and soft shadows round the eyes
-  stamp(g, -8.5, 13, 10.5, [112, 117, 132], 0.3, 0.25);
-  stamp(g, 8.5, 13, 10.5, [112, 117, 132], 0.3, 0.25);
-  stamp(g, 0, 22, 8, [96, 100, 114], 0.22, 0.3);
-  stamp(g, -17, -3, 11, FUR_DARK, 0.2, 0.3);
-  stamp(g, 17, -3, 11, FUR_DARK, 0.2, 0.3);
   const R = rng(41);
-  g.fillStyle = rgba(FUR_DARK, 0.55);
+  for (let i = 0; i < 9; i++) stamp(g, 0.6, -26 + i * 3, 5 - i * 0.25, SHEEN, 0.035, 0.2);
+  stamp(g, -8, -4, 7, FUR_DARK, 0.12, 0.3);
+  for (const sx of [-1, 1]) {
+    stamp(g, sx * 7.4, 7.6, 10, [80, 86, 104], 0.68, 0.35);
+    stamp(g, sx * 6.4 + 1, 4.6, 6, [130, 138, 160], 0.36, 0.3);
+    stamp(g, sx * 9, 12, 6.5, FUR_DARK, 0.22, 0.3);
+  }
+  stamp(g, 0, 15.5, 10, FUR_DARK, 0.3, 0.25);
+  g.lineCap = 'round';
+  for (let i = 0; i < 180; i++) {
+    const sx = i % 2 ? 1 : -1;
+    const a = R() * TAU, r = Math.sqrt(R()) * 9;
+    const x = sx * 7.2 + Math.cos(a) * r, y = 7.2 + Math.sin(a) * r * 0.8;
+    const fa = Math.atan2(y - 3, x) + (R() - 0.5) * 0.4, L = 1.6 + R() * 2.4;
+    g.strokeStyle = R() < 0.55 ? rgba([118, 126, 146], 0.18 + R() * 0.2) : rgba(FUR_DARK, 0.25 + R() * 0.2);
+    g.lineWidth = 0.4 + R() * 0.3;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(fa) * L, y + Math.sin(fa) * L); g.stroke();
+  }
+  // where the whiskers grow from
+  g.fillStyle = rgba(FUR_DARK, 0.5);
   for (const sx of [-1, 1]) for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
     g.beginPath();
-    g.arc(sx * (5.5 + c * 2.6 + R() * 0.6), 12 + r * 2.4 + c * 0.4, 0.55, 0, TAU);
+    g.arc(sx * (6.4 + c * 2.5 + R() * 0.5), 5.8 + r * 2.2 + c * 0.5, 0.5, 0, TAU);
     g.fill();
   }
 }
 
-function paintEar(g, hit) {
-  const R = rng(51);
-  const pts = closedSpline(EAR, 0.6);
-  const path = toPath(pts);
-  const gr = g.createLinearGradient(0, -26, 0, 4);
-  gr.addColorStop(0, rgba(FUR_LOW, 1));
-  gr.addColorStop(1, rgba(FUR_MID, 1));
-  g.fillStyle = gr;
-  g.fill(path);
-  g.save();
-  g.clip(path);
-  const inner = toPath(closedSpline(EAR_INNER, 0.6));
-  g.fillStyle = rgba(EAR_IN, 0.42);
-  g.fill(inner);
-  stamp(g, 0, -6, 7, EAR_IN, 0.35, 0.3);
-  hairs(g, inner, hit, R, {
-    box: [-9, -20, 9, 3], n: 160, len: [3, 6], width: [0.35, 0.7],
-    flow: (x) => -Math.PI / 2 + x * 0.06, pick: (x, y, r) => [[226, 222, 228], 0.25 + r() * 0.25],
-  });
-  hairs(g, path, hit, R, {
-    box: [-16, -27, 17, 5], n: 220, len: [2, 4], width: [0.4, 0.8],
-    flow: () => -Math.PI / 2, pick: (x, y, r) => (hit.isPointInPath(inner, x, y) ? null : [FUR_SHEEN, 0.1 + r() * 0.12]),
-  });
-  g.restore();
-  const nrm = normalsOf(pts, path, hit);
-  fuzzEdge(g, pts, nrm, R, { keep: (x, y) => y < 2, cols: [[FUR_LOW, 0.5]], n: 1, len: [1.5, 3.5] });
-  stroke(g, { pts: [[-15, 3], [-11, -9], [-5, -20], [-0.5, -26.5], [4, -23], [9, -14], [15, -2]], width: 1.8, dry: 0.4, tone: 0.8, bleed: 0.1, rgb: INKC, seed: 52, bristles: 6 });
+function paintChin(g) {
+  const R = rng(43);
+  stamp(g, 0, 4, 9, [58, 63, 78], 0.4, 0.35);
+  stamp(g, 0, 2.5, 5, [84, 90, 108], 0.2, 0.3);
+  g.lineCap = 'round';
+  for (let i = 0; i < 60; i++) {
+    const x = (R() - 0.5) * 16, y = R() * 9;
+    const a = Math.PI / 2 + x * 0.06 + (R() - 0.5) * 0.3, L = 1.5 + R() * 2.5;
+    g.strokeStyle = R() < 0.5 ? rgba([110, 118, 138], 0.2) : rgba(FUR_DARK, 0.3);
+    g.lineWidth = 0.4 + R() * 0.3;
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
+  }
 }
 
-/** a plush cream disc of a cat tree, centred on its top face */
+// green, a darker ring, a lighter ring round the pupil, and light pooling low
+function paintIris(g) {
+  const R = rng(45);
+  const gr = g.createRadialGradient(0, 1.5, 0.5, 0, 0, 10);
+  gr.addColorStop(0, 'rgb(206,206,112)');
+  gr.addColorStop(0.32, 'rgb(162,190,92)');
+  gr.addColorStop(0.66, 'rgb(98,152,76)');
+  gr.addColorStop(0.88, 'rgb(58,108,62)');
+  gr.addColorStop(1, 'rgb(28,48,34)');
+  g.fillStyle = gr;
+  g.beginPath(); g.arc(0, 0, 10, 0, TAU); g.fill();
+  g.save();
+  g.beginPath(); g.arc(0, 0, 10, 0, TAU); g.clip();
+  stamp(g, 0.5, 5.5, 6.5, [224, 232, 150], 0.4, 0.3);
+  g.lineCap = 'round';
+  for (let i = 0; i < 90; i++) {
+    const a = R() * TAU, r0 = 2.4 + R() * 2, r1 = 6.5 + R() * 3.2;
+    g.strokeStyle = R() < 0.5 ? rgba([226, 232, 160], 0.14 + R() * 0.12) : rgba([30, 60, 34], 0.14 + R() * 0.14);
+    g.lineWidth = 0.3 + R() * 0.35;
+    const a1 = a + (R() - 0.5) * 0.2;
+    g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a1) * r1, Math.sin(a1) * r1); g.stroke();
+  }
+  g.restore();
+  g.strokeStyle = 'rgba(18,30,22,.75)';
+  g.lineWidth = 1.3;
+  g.beginPath(); g.arc(0, 0, 9.4, 0, TAU); g.stroke();
+}
+
+function paintLeg(g) {
+  fur(g, {
+    box: [-12, -16, 64, 16], outline: LEG, seed: 71, round: 9, light: FRONT, tone: 0.95,
+    flow: (x, y) => 0.12 * Math.sign(y), len: [2.5, 5], density: 0.6, clump: 0.03,
+    fringe: (x) => (x > 2 ? 1 : 0), fringeLen: [1.4, 3.4],
+  });
+  // fade the root so it melts into the chest
+  g.globalCompositeOperation = 'destination-out';
+  const gr = g.createLinearGradient(-10, 0, 14, 0);
+  gr.addColorStop(0, 'rgba(0,0,0,1)');
+  gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr;
+  g.fillRect(-12, -16, 26, 32);
+  g.globalCompositeOperation = 'source-over';
+}
+
+function paintPaw(g, beans) {
+  fur(g, {
+    box: [-18, -16, 23, 16], outline: PAW, seed: beans ? 73 : 72, round: 8, light: FRONT, tone: beans ? 0.85 : 1.05,
+    flow: (x, y) => 0.25 * Math.sign(y) * smooth(4, 16, x), len: [2, 4], density: 0.7, clump: 0.02,
+    fringe: () => 1, fringeLen: [1, 2.6],
+    after: (g) => {
+      g.lineCap = 'round';
+      if (beans) {
+        // toe beans, and the big pad
+        g.fillStyle = rgba(BEAN, 1);
+        g.beginPath();
+        g.moveTo(-6, -4); g.quadraticCurveTo(-1, -8, 4, -4.5); g.quadraticCurveTo(7, 0, 4, 4.5); g.quadraticCurveTo(-1, 8, -6, 4); g.quadraticCurveTo(-8.5, 0, -6, -4);
+        g.fill();
+        for (const [bx, by, r] of [[9, -7.2, 2.7], [12.6, -2.6, 2.8], [12.6, 2.6, 2.8], [9, 7.2, 2.7]]) {
+          g.beginPath(); g.ellipse(bx, by, r, r * 0.86, 0, 0, TAU); g.fill();
+        }
+        g.fillStyle = 'rgba(232,196,206,.55)';
+        g.beginPath(); g.ellipse(-1, -2.4, 3, 1.6, -0.3, 0, TAU); g.fill();
+        for (const [bx, by] of [[9, -7.2], [12.6, -2.6], [12.6, 2.6], [9, 7.2]]) { g.beginPath(); g.arc(bx - 0.6, by - 0.8, 0.9, 0, TAU); g.fill(); }
+      } else {
+        g.strokeStyle = rgba(FUR_DARK, 0.85); g.lineWidth = 0.9;
+        for (const [ax, ay, bx, by] of [[9, -5.6, 16.4, -3.4], [10, 0, 18, 0], [9, 5.6, 16.4, 3.4]]) { g.beginPath(); g.moveTo(ax, ay); g.quadraticCurveTo((ax + bx) / 2 + 1, (ay + by) / 2, bx, by); g.stroke(); }
+        g.strokeStyle = rgba(SHEEN, 0.3); g.lineWidth = 1;
+        g.beginPath(); g.moveTo(-6, -9.5); g.quadraticCurveTo(6, -12, 14, -7); g.stroke();
+      }
+    },
+  });
+}
+
+function paintTuck(g, far) {
+  fur(g, {
+    box: [-22, -20, 24, 7], outline: PAW_TUCK, seed: far ? 75 : 74, round: 8, tone: far ? 0.72 : 1.05,
+    ao: (x, y) => 1 - 0.4 * smooth(-4, 3, y),
+    flow: (x, y) => 0.15 + smooth(4, 16, x) * 1.2, len: [2, 4], density: 0.7, clump: 0.02,
+    fringe: (x, y) => (y < 0 ? 1 : 0.4), fringeLen: [1, 2.6],
+    after: (g) => {
+      g.lineCap = 'round';
+      g.strokeStyle = rgba(FUR_DARK, far ? 0.6 : 0.85); g.lineWidth = 0.9;
+      for (const x of [7, 11, 14.6]) { g.beginPath(); g.moveTo(x - 1, -9.5 + (x - 7) * 0.4); g.quadraticCurveTo(x + 0.4, -4, x - 0.2, 1.5); g.stroke(); }
+      if (!far) { g.strokeStyle = rgba(SHEEN, 0.3); g.lineWidth = 1; g.beginPath(); g.moveTo(-10, -11); g.quadraticCurveTo(2, -14.5, 13, -10); g.stroke(); }
+    },
+  });
+}
+
+// the tail, painted straight along +x and bent along a chain when drawn;
+// local up becomes his right side when it hangs, so the light still works
+const TAIL_LEN = 153;
+function paintTail(g) {
+  const top = [], bot = [];
+  for (let i = 0; i <= 12; i++) {
+    const x = (i / 12) * (TAIL_LEN + 4), r = lerp(12.5, 8.6, i / 12) * (i === 12 ? 0.75 : 1);
+    top.push([x, -r]); bot.unshift([x, r]);
+  }
+  fur(g, {
+    box: [-8, -18, TAIL_LEN + 22, 18], outline: [[-6, 0], ...top, [TAIL_LEN + 14, 0], ...bot], seed: 81, round: 11,
+    light: norm3(0.05, -0.78, 0.62), rim: 0.8,
+    ao: (x) => 1 - 0.25 * smooth(20, -6, x),
+    flow: (x, y) => y * 0.025, len: [3, 6.5], density: 0.5, clump: 0.04,
+    lenAt: (x) => 1 + smooth(TAIL_LEN - 30, TAIL_LEN + 10, x) * 0.6,
+    fringe: (x) => (x < 4 ? 0 : x > TAIL_LEN - 6 ? 2 : 1), fringeLen: [1.4, 3.6], fringeN: 1.6,
+  });
+}
+
+// his sprites, painted once per layout (u = css px per cat unit), as a list
+// of small jobs so the first paint can be spread over a few idle moments
+function catSteps(u, dpr, dense, out) {
+  const hu = u * HS;
+  const q = dense ? 1.6 : 1.25;
+  return [
+    () => { out.torso = makeSprite(-160, -126, 132, 24, u, dpr, (g) => paintTorso(g, dense, q)); },
+    () => { out.haunch = makeSprite(-160, -112, -26, 26, u, dpr, (g) => paintHaunch(g, dense, q)); },
+    () => { out.chest = makeSprite(46, -104, 148, 24, u, dpr, (g) => paintChest(g, dense, q)); },
+    () => { out.skull = makeSprite(-66, -54, 66, 56, hu, dpr, (g) => paintSkull(g, dense, q)); },
+    () => {
+      out.neck = makeSprite(-34, -44, 34, 44, u, dpr, paintNeck);
+      out.muzzle = makeSprite(-22, -30, 22, 24, hu, dpr, paintMuzzle);
+      out.chin = makeSprite(-14, -6, 14, 14, hu, dpr, paintChin);
+      out.iris = makeSprite(-11, -11, 11, 11, hu * 1.2, dpr, paintIris);
+    },
+    () => {
+      out.earFL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1));
+      out.earFR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1));
+      out.earBL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1));
+      out.earBR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1));
+    },
+    () => {
+      out.leg = makeSprite(-12, -16, 64, 16, u, dpr, paintLeg);
+      out.pawT = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, false));
+      out.pawB = makeSprite(-18, -16, 23, 16, u, dpr, (g) => paintPaw(g, true));
+      out.tuckN = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, false));
+      out.tuckF = makeSprite(-22, -20, 24, 7, u, dpr, (g) => paintTuck(g, true));
+    },
+    () => { out.tail = makeSprite(-8, -18, TAIL_LEN + 22, 18, u, dpr, paintTail); },
+  ];
+}
+function catSprites(u, dpr, dense) {
+  const out = {};
+  for (const f of catSteps(u, dpr, dense, out)) f();
+  return out;
+}
+
+// a pose: every channel the rig understands, at rest
+function restPose(o = {}) {
+  return Object.assign(o, {
+    bx: 0, by: 0, lift: 0, breath: 0, rumpY: 0, rumpA: 0,
+    hx: 0, hy: 0, yaw: 0.22, pitch: 0.05, roll: 0,
+    earFL: 0, earFR: 0, earSL: 0, earSR: 0, earTL: 0, earTR: 0,
+    lidU: 0.04, lidL: 0.04, happy: 0, brow: 0, pupil: 0.3, gx: 0, gy: 0,
+    jaw: 0, tongue: 0, lick: 0, fangs: 0, grin: 0, noseTw: 0, whisk: 0, chew: 0,
+    nUp: 0, nX: PAW_N[0], nY: PAW_N[1], nBeans: 0, nRot: 0,
+    fUp: 0, fX: PAW_F[0], fY: PAW_F[1], fBeans: 0, fRot: 0,
+    tPh: 0, tAmp: 0.12, tCurl: 0.5, tLift: 0, tFlick: 0,
+  });
+}
+
+// a point on his face (lon/lat on a sphere of radius r, in head units),
+// seen with the head's yaw and pitch; also the surface's east and south
+// directions there, so flat things (eyes, nose) can be drawn on it
+const FP = { x: 0, y: 0, z: 0, nx: 0, ny: 0, ex: 0, ey: 0, sx: 0, sy: 0 };
+function faceProj(lon, lat, r, yaw, pitch) {
+  const a = lon + yaw, ca = Math.cos(a), sa = Math.sin(a), cl = Math.cos(lat), sl = Math.sin(lat);
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  const X = sa * cl, Y = -sl, Z = ca * cl;
+  FP.nx = X; FP.ny = Y * cp + Z * sp; FP.z = -Y * sp + Z * cp;
+  FP.x = FP.nx * r; FP.y = FP.ny * r;
+  FP.ex = ca; FP.ey = -sa * sp;
+  FP.sx = sa * sl; FP.sy = cl * cp + ca * sl * sp;
+}
+const FACE_R = 44;
+const EYE_LON = 0.47, EYE_LAT = 0.06;
+const NOSE_LAT = -0.27;
+
+// where his head is: a 2D matrix from head units to cat units
+const HM = new Float64Array(6);
+function headMatrix(P) {
+  const ang = P.pitch * 0.32;
+  const vx = HEAD_REST[0] - NECK_PIVOT[0], vy = HEAD_REST[1] - NECK_PIVOT[1];
+  const c = Math.cos(ang), s = Math.sin(ang);
+  const cx = NECK_PIVOT[0] + P.bx + vx * c - vy * s + P.hx;
+  const cy = NECK_PIVOT[1] + P.by - P.lift + vx * s + vy * c + P.hy + P.breath * 1.2;
+  const cr = Math.cos(P.roll) * HS, sr = Math.sin(P.roll) * HS;
+  HM[0] = cr; HM[1] = sr; HM[2] = -sr; HM[3] = cr; HM[4] = cx; HM[5] = cy;
+  return HM;
+}
+// head units to cat units, and back
+const PT = { x: 0, y: 0 };
+function headToCat(x, y) { PT.x = HM[4] + HM[0] * x + HM[2] * y; PT.y = HM[5] + HM[1] * x + HM[3] * y; return PT; }
+function catToHead(x, y) {
+  const det = HM[0] * HM[3] - HM[1] * HM[2], dx = x - HM[4], dy = y - HM[5];
+  PT.x = (HM[3] * dx - HM[2] * dy) / det; PT.y = (-HM[1] * dx + HM[0] * dy) / det;
+  return PT;
+}
+// a face point straight to cat units (for paws reaching his mouth, treats, etc.)
+function facePoint(P, lon, lat, r) { headMatrix(P); faceProj(lon, lat, r, P.yaw, P.pitch); return headToCat(FP.x + P.yaw * 2.5, FP.y + P.pitch * 2); }
+
+const TAIL_N = 15, TAIL_SEG = 10.2;
+const tailX = new Float32Array(TAIL_N + 1), tailY = new Float32Array(TAIL_N + 1);
+function tailChain(P) {
+  let x = TAIL_ROOT[0] + P.bx * 0.4, y = TAIL_ROOT[1] + P.rumpY * 0.5;
+  tailX[0] = x; tailY[0] = y;
+  for (let i = 0; i < TAIL_N; i++) {
+    const u = (i + 1) / TAIL_N;
+    let a = Math.PI / 2 + 0.55 * (1 - smooth(0, 0.3, u)) + P.tLift * (1 - u) * 0.9;
+    a += P.tAmp * Math.sin(P.tPh - u * 2.6) * smooth(0.08, 1, u);
+    a -= P.tCurl * smooth(0.55, 1, u) * 1.55;
+    a += P.tFlick * smooth(0.5, 1, u);
+    x += Math.cos(a) * TAIL_SEG; y += Math.sin(a) * TAIL_SEG;
+    tailX[i + 1] = x; tailY[i + 1] = y;
+  }
+}
+
+// slices of the straight tail sprite, one per link, tip first so the base sits on top
+function drawTail(g, SP, P) {
+  tailChain(P);
+  const sp = SP.tail, k = sp.c.width / sp.w, ov = 2.2;
+  for (let i = TAIL_N - 1; i >= 0; i--) {
+    const a = Math.atan2(tailY[i + 1] - tailY[i], tailX[i + 1] - tailX[i]);
+    const xa = i === 0 ? sp.x0 : i * TAIL_SEG - ov, xb = i === TAIL_N - 1 ? sp.x0 + sp.w : (i + 1) * TAIL_SEG + ov;
+    g.save();
+    g.translate(tailX[i], tailY[i]);
+    g.rotate(a);
+    g.drawImage(sp.c, (xa - sp.x0) * k, 0, (xb - xa) * k, sp.c.height, xa - i * TAIL_SEG, sp.y0, xb - xa, sp.h);
+    g.restore();
+  }
+}
+
+function drawLeg(g, SP, ax, ay, px, py, up, beans, rot) {
+  const dx = px - ax, dy = py - ay, d = Math.hypot(dx, dy) || 1, a = Math.atan2(dy, dx);
+  g.save();
+  g.translate(ax, ay); g.rotate(a);
+  g.globalAlpha = clamp((up - 0.12) * 4);
+  g.scale(clamp(d / 54, 0.55, 1.6), 1);
+  blit(g, SP.leg);
+  g.restore();
+  g.save();
+  g.translate(px, py); g.rotate(a + rot);
+  g.globalAlpha = clamp((up - 0.08) * 6);
+  blit(g, beans > 0.5 ? SP.pawB : SP.pawT);
+  g.restore();
+  g.globalAlpha = 1;
+}
+
+// the near ear or the far one; returns false if we see its back
+const EM = new Float64Array(6);
+function earMatrix(side, P) {
+  faceProj(side * 1.0, 0.7, FACE_R, P.yaw, P.pitch);
+  const fl = side < 0 ? P.earFL : P.earFR, sw = side < 0 ? P.earSL : P.earSR, tw = side < 0 ? P.earTL : P.earTR;
+  const ang = Math.atan2(FP.ny - 0.7, FP.nx) + side * (fl * 1.05 + sw * 0.22) + tw;
+  const ul = 0.9 - fl * 0.28;
+  const ux = Math.cos(ang) * ul, uy = Math.sin(ang) * ul;
+  const facing = Math.cos(P.yaw * 0.9 + side * (0.35 + sw * 1.5 + fl * 0.5)) * Math.cos(P.pitch * 0.6);
+  const wl = (0.35 + 0.65 * Math.abs(facing)) / ul;
+  EM[0] = -uy * wl; EM[1] = ux * wl; EM[2] = -ux; EM[3] = -uy;
+  EM[4] = FP.x + P.yaw * 2.5; EM[5] = FP.y + P.pitch * 2;
+  return facing > 0;
+}
+
+function drawEye(g, SP, P, side) {
+  const ew = 11, eh = 8.9;
+  const xi = -side * ew, xo = side * ew, yi = 1.8, yo = -1.6;
+  const up = clamp(1 - P.lidU), lo = clamp(1 - P.lidL);
+  const br = P.brow;
+  // the socket and the brow above it
+  dab(g, 0, 0.6, ew * 1.32, FUR_DARK, 0.28, 0.3);
+  dab(g, side * 1.5, -eh * 1.5, ew * 1.05, SHEEN, 0.07, 0.2);
+  g.lineCap = 'round';
+  g.strokeStyle = '#0c0d11';
+  if (up < 0.07) {
+    // closed: a happy little arch, or a sleepy curve
+    const cy = lerp(eh * 0.5, -eh * 0.7, P.happy);
+    g.lineWidth = 1.9;
+    g.beginPath(); g.moveTo(xi, yi + 0.5); g.quadraticCurveTo(0, cy + 0.5, xo, yo + 0.5); g.stroke();
+    g.lineWidth = 1; g.beginPath(); g.moveTo(xi, yi + 0.5); g.lineTo(xi - side * 2.2, yi + 2.4); g.stroke();
+    return;
+  }
+  // a happy eye: the lower lid pushes up into a soft crescent
+  const hp = P.happy;
+  const c1x = xi * 0.45, c1y = yi - eh * 1.32 * up * (1 - 0.5 * Math.max(0, br));
+  const c2x = xo * 0.5, c2y = yo - eh * 1.38 * up * (1 - 0.4 * Math.max(0, -br));
+  const c3x = xo * 0.5, c3y = Math.max(c2y + 2, yo + eh * (1.08 * lo - 1.55 * hp));
+  const c4x = xi * 0.4, c4y = Math.max(c1y + 2, yi + eh * (0.98 * lo - 1.45 * hp));
+  g.save();
+  g.beginPath();
+  g.moveTo(xi, yi);
+  g.bezierCurveTo(c1x, c1y, c2x, c2y, xo, yo);
+  g.bezierCurveTo(c3x, c3y, c4x, c4y, xi, yi);
+  g.closePath();
+  g.clip();
+  g.fillStyle = '#16221a';
+  g.fillRect(-ew - 2, -eh * 2, ew * 2 + 4, eh * 4);
+  const ix = P.gx * ew * 0.32, iy = P.gy * eh * 0.3 + 0.4, ri = eh * 1.04, sc = ri / 10;
+  g.drawImage(SP.iris.c, ix - 11 * sc, iy - 11 * sc, 22 * sc, 22 * sc);
+  const pw = ri * (0.12 + 0.72 * P.pupil);
+  g.fillStyle = '#060709';
+  g.beginPath(); g.ellipse(ix, iy, pw, ri * 0.93, 0, 0, TAU); g.fill();
+  // the upper lid casts a little shadow
+  dab(g, 0, yo - eh * 1.1 * up + eh * 0.15, ew * 1.3, FUR_DARK, 0.6, 0.4);
+  g.fillStyle = 'rgba(255,255,255,.92)';
+  g.beginPath(); g.ellipse(ix + 2.8, iy - 3.3, 2, 1.55, -0.5, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.45)';
+  g.beginPath(); g.arc(ix - 2.8, iy + 3.6, 0.85, 0, TAU); g.fill();
+  g.restore();
+  g.lineWidth = 1.8;
+  g.beginPath(); g.moveTo(xi, yi); g.bezierCurveTo(c1x, c1y, c2x, c2y, xo, yo); g.stroke();
+  g.lineWidth = 0.9;
+  g.beginPath(); g.moveTo(xo, yo); g.bezierCurveTo(c3x, c3y, c4x, c4y, xi, yi); g.stroke();
+  g.lineWidth = 1.2;
+  g.beginPath(); g.moveTo(xi, yi); g.lineTo(xi - side * 2.4, yi + 2.3); g.stroke();
+}
+
+function browWhiskers(g, side, k) {
+  g.strokeStyle = WHISKER;
+  g.lineWidth = 0.5;
+  for (let j = 0; j < 3; j++) {
+    const x = side * (1 + j * 3), y = -14.5 - j * 0.8;
+    const L = (12 + j * 2) * k;
+    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + side * L * 0.35, y - L * 0.7, x + side * L * 0.8, y - L * 0.95); g.stroke();
+  }
+}
+
+// nose, lips, an open mouth when he needs one
+function drawMouth(g, SP, P) {
+  const J = P.jaw;
+  // the jaw and chin drop when he opens up
+  blit(g, SP.chin, P.chew * 1.2, 14 + J * 14.5);
+  if (J > 0.02) {
+    const mw = 5.5 + J * 4.2, top = 8.6, bot = 9 + J * 16;
+    g.fillStyle = MOUTH_S;
+    g.beginPath();
+    g.moveTo(-mw, top);
+    g.quadraticCurveTo(0, top - 1.2, mw, top);
+    g.quadraticCurveTo(mw * 0.95, bot - 1, 0, bot);
+    g.quadraticCurveTo(-mw * 0.95, bot - 1, -mw, top);
+    g.fill();
+    g.fillStyle = TONGUE_S;
+    g.beginPath(); g.ellipse(0, bot - 1.8 - J * 1.5, mw * 0.62, 1.4 + J * 2.6, 0, Math.PI, 0); g.fill();
+    g.beginPath(); g.ellipse(0, bot - 1.8 - J * 1.5, mw * 0.62, 1.2, 0, 0, Math.PI); g.fill();
+    if (P.fangs > 0.05) {
+      g.globalAlpha = clamp(P.fangs);
+      g.fillStyle = 'rgb(250,248,240)';
+      for (let sx = -1; sx <= 1; sx += 2) {
+        g.beginPath(); g.moveTo(sx * (mw - 2.6), top + 0.2); g.lineTo(sx * (mw - 1.2), top + 0.2); g.lineTo(sx * (mw - 1.8), top + 2.6 * P.fangs + 0.6); g.fill();
+        g.beginPath(); g.moveTo(sx * (mw - 2.4), bot - 0.6); g.lineTo(sx * (mw - 1.3), bot - 0.6); g.lineTo(sx * (mw - 1.8), bot - 2.2 * P.fangs); g.fill();
+      }
+      g.globalAlpha = 1;
+    }
+    g.strokeStyle = 'rgba(12,10,12,.9)'; g.lineWidth = 0.9;
+    g.beginPath(); g.moveTo(-mw, top); g.quadraticCurveTo(0, top - 1.2, mw, top); g.stroke();
+  }
+  blit(g, SP.muzzle);
+  // tongue out: a blep, or licking his lips
+  if (P.tongue > 0.02 && J < 0.25) {
+    const t = P.tongue, lk = P.lick;
+    g.fillStyle = TONGUE_S;
+    g.beginPath();
+    g.ellipse(lk * 3.4, 9.2 + t * 2.2 - lk * 3, 2.5 + t * 0.6, 1.3 + t * 1.7, lk * 0.7, 0, TAU);
+    g.fill();
+    g.strokeStyle = 'rgba(150,70,84,.6)'; g.lineWidth = 0.5;
+    g.beginPath(); g.moveTo(lk * 3.4, 8.4 - lk * 3); g.lineTo(lk * 3.4, 9.6 + t * 2.6 - lk * 3); g.stroke();
+  }
+  // the nose
+  g.save();
+  g.translate(0, P.noseTw * 1.1);
+  g.scale(1.5 + P.noseTw * 0.06, 1.5 - P.noseTw * 0.06);
+  g.fillStyle = NOSE_S;
+  g.beginPath();
+  g.moveTo(-4.7, -2.4); g.quadraticCurveTo(0, -3.9, 4.7, -2.4);
+  g.quadraticCurveTo(4.3, 0.3, 0.9, 2.9); g.quadraticCurveTo(0, 3.5, -0.9, 2.9);
+  g.quadraticCurveTo(-4.3, 0.3, -4.7, -2.4);
+  g.fill();
+  g.fillStyle = 'rgba(196,198,214,.55)';
+  g.beginPath(); g.ellipse(1.4, -1.6, 1.7, 0.75, -0.15, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(14,12,16,.7)'; g.lineWidth = 0.6;
+  g.beginPath(); g.moveTo(-2.9, 0.1); g.quadraticCurveTo(-1.6, 0.9, -1.1, 0.2); g.moveTo(2.9, 0.1); g.quadraticCurveTo(1.6, 0.9, 1.1, 0.2); g.stroke();
+  g.restore();
+  // lips: the little line down from the nose and its two curls
+  const cy = 7.8 - P.grin * 1.4;
+  g.strokeStyle = 'rgba(10,10,13,.92)'; g.lineWidth = 1.05; g.lineCap = 'round';
+  g.beginPath();
+  g.moveTo(0, 3.2 + P.noseTw); g.lineTo(0, 6.4);
+  if (J <= 0.02) {
+    g.moveTo(0, 6.4); g.quadraticCurveTo(-2.5, 9.6 + P.grin * 0.6, -6.4, cy);
+    g.moveTo(0, 6.4); g.quadraticCurveTo(2.5, 9.6 + P.grin * 0.6, 6.4, cy);
+  }
+  g.stroke();
+  // a little light catching the lower lip, so the mouth reads on such dark fur
+  if (J <= 0.02) {
+    g.strokeStyle = 'rgba(150,158,180,.28)'; g.lineWidth = 0.8;
+    g.beginPath();
+    g.moveTo(-5.6, cy + 1.6); g.quadraticCurveTo(-2.4, 10.8 + P.grin * 0.6, 0, 8);
+    g.quadraticCurveTo(2.4, 10.8 + P.grin * 0.6, 5.6, cy + 1.6);
+    g.stroke();
+  }
+}
+
+// whiskers grow from the pads; the far side is drawn first, behind the muzzle
+function whiskers(g, P, side, M) {
+  const vis = clamp(0.5 + 0.5 * Math.cos(P.yaw + side * 0.75));
+  const wk = P.whisk;
+  g.strokeStyle = WHISKER;
+  g.lineWidth = 0.55;
+  for (let j = 0; j < 5; j++) {
+    const lx = side * (5.4 + j * 0.9), ly = 5.6 + j * 1.5;
+    const x = M[4] + M[0] * lx + M[2] * ly, y = M[5] + M[1] * lx + M[3] * ly;
+    let a = -0.24 + j * 0.13 * (1 + wk * 0.35) - wk * 0.12 + (wk < 0 ? wk * 0.35 : 0);
+    a = side > 0 ? a : Math.PI - a;
+    const L = (40 - j * 2.6) * (0.5 + 0.5 * vis) * (wk < 0 ? 1 + wk * 0.25 : 1 + wk * 0.08);
+    const ex = x + Math.cos(a) * L, ey = y + Math.sin(a) * L;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.quadraticCurveTo(x + Math.cos(a) * L * 0.55, y + Math.sin(a) * L * 0.55 - 2.5, ex, ey + 3 + j * 0.4);
+    g.stroke();
+  }
+}
+
+const MM = new Float64Array(6);
+function drawHead(g, SP, P) {
+  headMatrix(P);
+  g.save();
+  g.transform(HM[0], HM[1], HM[2], HM[3], HM[4], HM[5]);
+  // ears sit behind the skull
+  for (let side = -1; side <= 1; side += 2) {
+    const front = earMatrix(side, P);
+    g.save();
+    g.transform(EM[0], EM[1], EM[2], EM[3], EM[4], EM[5]);
+    blit(g, front ? (side < 0 ? SP.earFL : SP.earFR) : (side < 0 ? SP.earBL : SP.earBR));
+    g.restore();
+  }
+  blit(g, SP.skull, P.yaw * 2.5, P.pitch * 2);
+  // the muzzle frame, used for whisker roots too
+  faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
+  MM[0] = FP.ex; MM[1] = FP.ey; MM[2] = FP.sx; MM[3] = FP.sy; MM[4] = FP.x + P.yaw * 2.5; MM[5] = FP.y + P.pitch * 2;
+  const far = P.yaw >= 0 ? 1 : -1;
+  whiskers(g, P, far, MM);
+  // eyes, far one first
+  for (let i = 0; i < 2; i++) {
+    const side = i ? -far : far;
+    faceProj(side * EYE_LON, EYE_LAT, FACE_R, P.yaw, P.pitch);
+    if (FP.z < 0.08) continue;
+    g.save();
+    g.transform(FP.ex, FP.ey, FP.sx, FP.sy, FP.x + P.yaw * 2.5, FP.y + P.pitch * 2);
+    drawEye(g, SP, P, side);
+    browWhiskers(g, side, clamp(FP.z * 1.4));
+    g.restore();
+  }
+  g.save();
+  g.transform(MM[0], MM[1], MM[2], MM[3], MM[4], MM[5]);
+  drawMouth(g, SP, P);
+  g.restore();
+  whiskers(g, P, -far, MM);
+  g.restore();
+}
+
+// the whole cat, back to front; hk.under runs just after the platform's lip
+// (things he sits on or scratches at), hk.front just before his head
+function drawCat(g, SP, P, hk) {
+  // a soft shadow where he presses into the cushion
+  g.save();
+  g.scale(1, 0.32);
+  for (let x = -130; x <= 110; x += 20) dab(g, x + P.bx * 0.5, 30, 34, SHADOW, 0.07, 0.3);
+  g.restore();
+  drawTail(g, SP, P);
+  g.save();
+  g.translate(P.bx, P.by);
+  const br = P.breath;
+  g.save();
+  g.translate(0, 12); g.scale(1 + br * 0.004, 1 + br * 0.016); g.translate(0, -12);
+  g.save();
+  g.translate(-40, 0); g.scale(1, 1 - P.lift / 260); g.translate(40, 0);
+  blit(g, SP.torso);
+  g.restore();
+  g.save();
+  g.translate(-92, 12 + P.rumpY); g.rotate(P.rumpA); g.translate(92, -12);
+  blit(g, SP.haunch);
+  g.restore();
+  g.restore();
+  g.translate(0, -P.lift);
+  // far leg, mostly hidden behind his chest
+  if (P.fUp > 0.15) drawLeg(g, SP, SHOULDER_F[0], SHOULDER_F[1], P.fX, P.fY, P.fUp, P.fBeans, P.fRot);
+  g.restore();
+  if (hk && hk.lip) hk.lip();
+  if (hk && hk.under) hk.under();
+  g.save();
+  g.translate(P.bx, P.by - P.lift);
+  if (P.fUp <= 0.15) blit(g, SP.tuckF, PAW_F[0], PAW_F[1]);
+  // the neck fills in when his head goes down for something
+  const hm = headMatrix(P);
+  const nx0 = NECK_PIVOT[0] - 6, ny0 = NECK_PIVOT[1] + 6;
+  const hx = hm[4] - P.bx, hy = hm[5] - P.by + P.lift + 20;
+  const dl = Math.hypot(hx - nx0, hy - ny0);
+  g.save();
+  g.translate((nx0 + hx) / 2, (ny0 + hy) / 2);
+  g.rotate(Math.atan2(hy - ny0, hx - nx0) - Math.PI / 2);
+  g.scale(1, clamp(dl / 60, 0.6, 2));
+  blit(g, SP.neck);
+  g.restore();
+  g.save();
+  g.translate(0, br * 1.1);
+  blit(g, SP.chest);
+  g.restore();
+  g.restore();
+  if (hk && hk.front) hk.front();
+  if (P.nUp <= 0.15) blit(g, SP.tuckN, PAW_N[0] + P.bx, PAW_N[1] + P.by - P.lift);
+  drawHead(g, SP, P);
+  if (P.nUp > 0.15) nearLeg(g, SP, P);
+}
+function nearLeg(g, SP, P) {
+  g.save();
+  g.translate(P.bx, P.by - P.lift);
+  drawLeg(g, SP, SHOULDER_N[0], SHOULDER_N[1], P.nX, P.nY, P.nUp, P.nBeans, P.nRot);
+  g.restore();
+}
+
+// a plush cream disc of the cat tree, centred on its top face
 function paintDisc(g, hit, rx, ry, th, seed) {
   const R = rng(seed);
   const rim = new Path2D();
@@ -469,7 +1374,7 @@ function paintDisc(g, hit, rx, ry, th, seed) {
   stroke(g, { pts: [[rx, 0], [rx + 0.4, th * 0.5], [rx, th]], width: 1.2, dry: 0.6, tone: 0.32, rgb: CREAM_INK, seed: seed + 5, bristles: 4 });
 }
 
-/** a sisal-wrapped post from y0 down to y1, ending on an ellipse */
+// a sisal-wrapped post from y0 down to y1, ending on an ellipse
 function paintPost(g, x, y0, y1, w, s, seed) {
   const R = rng(seed);
   const hw = w / 2, e = hw * 0.28;
@@ -508,7 +1413,8 @@ function paintPost(g, x, y0, y1, w, s, seed) {
   stroke(g, { pts: [[x + hw, y0], [x + hw + 0.3 * s, (y0 + y1) / 2], [x + hw, y1]], width: 1.3 * s, dry: 0.7, tone: 0.34, rgb: [96, 78, 56], seed: seed + 2, bristles: 4 });
 }
 
-// ─────────────────────────── the avocado (units: s, origin = centre of mass) ───────────────────────────
+
+// the avocado (s units, origin at its centre of mass)
 
 const AVO = [[0, -54], [8.5, -52], [14.5, -45], [17.5, -34], [20, -22], [25.5, -10], [29.5, 2], [29.5, 13], [24, 20.5], [13, 24.2], [0, 25], [-13, 24.2], [-24, 20.5], [-29.5, 13], [-29.5, 2], [-25.5, -10], [-20, -22], [-17.5, -34], [-14.5, -45], [-8.5, -52]];
 const AVO_SHAPES = [{ x: 0, y: -4, r: 28 }, { x: 0, y: -38, r: 16 }];
@@ -572,7 +1478,6 @@ function paintAvocado(g) {
   stroke(g, { pts: [...pts.slice(half), pts[0]], width: 2.4, dry: 0.45, tone: 0.9, bleed: 0.1, rgb: [16, 26, 12], seed: 64, bristles: 7 });
 }
 
-// ─────────────────────────── the room ───────────────────────────
 
 function paintRoom(g, L, hit, SP) {
   const { W, H, s } = L;
@@ -643,11 +1548,6 @@ function paintRoom(g, L, hit, SP) {
   g.fillStyle = gr; g.fillRect(0, 0, W, 30);
   g.restore();
 }
-/** draw a sprite painted in s-units at (x, y) */
-function blit2(g, sp, x, y, s) {
-  g.drawImage(sp.c, x + sp.x0 * s, y + sp.y0 * s, sp.w * s, sp.h * s);
-}
-
 function paintWindow(g, L, R) {
   const { s } = L;
   const { x0, y0, x1, y1 } = L.win;
@@ -774,18 +1674,172 @@ function paintSign(g, L, SP) {
   g.restore();
 }
 
-// ─────────────────────────── the component ───────────────────────────
+// a glass jar of fish treats with a cork lid (s units, origin at the bottom middle)
+function treatPath(g, x, y, a, k) {
+  g.save();
+  g.translate(x, y); g.rotate(a); g.scale(k, k);
+  g.beginPath();
+  g.moveTo(5.6, 0);
+  g.bezierCurveTo(5.2, -2.6, 1.6, -3.4, -1.4, -2.6);
+  g.lineTo(-4.6, -0.6); g.lineTo(-7.6, -3.2); g.lineTo(-6.8, 0); g.lineTo(-7.6, 3.2); g.lineTo(-4.6, 0.6);
+  g.lineTo(-1.4, 2.6);
+  g.bezierCurveTo(1.6, 3.4, 5.2, 2.6, 5.6, 0);
+  g.closePath();
+  g.restore();
+}
+function paintTreat(g) {
+  treatPath(g, 0, 0, 0, 1);
+  const gr = g.createLinearGradient(0, -3, 0, 3);
+  gr.addColorStop(0, 'rgb(214,160,98)'); gr.addColorStop(1, 'rgb(160,100,52)');
+  g.fillStyle = gr; g.fill();
+  g.strokeStyle = 'rgba(92,52,24,.85)'; g.lineWidth = 0.7; g.stroke();
+  g.fillStyle = 'rgba(60,32,16,.9)';
+  g.beginPath(); g.arc(2.8, -0.7, 0.6, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(255,236,200,.5)'; g.lineWidth = 0.6;
+  g.beginPath(); g.moveTo(-0.5, -1.8); g.quadraticCurveTo(2, -2.4, 4, -1.4); g.stroke();
+}
+function paintJar(g) {
+  const R = rng(141);
+  stamp(g, 0, 1, 30, [70, 54, 40], 0.2, 0.2);
+  const body = new Path2D();
+  body.moveTo(-16, -44); body.quadraticCurveTo(-22, -43, -22, -36);
+  body.lineTo(-22, -7); body.quadraticCurveTo(-22, 0, -14, 0);
+  body.lineTo(14, 0); body.quadraticCurveTo(22, 0, 22, -7);
+  body.lineTo(22, -36); body.quadraticCurveTo(22, -43, 16, -44);
+  body.closePath();
+  g.fillStyle = 'rgba(226,236,232,.6)';
+  g.fill(body);
+  g.save();
+  g.clip(body);
+  for (let i = 0; i < 34; i++) {
+    const y = -2 - Math.pow(R(), 0.8) * 26, x = (R() - 0.5) * 40;
+    treatPath(g, x, y, R() * TAU, 0.9 + R() * 0.3);
+    g.fillStyle = rgba(mix(TREAT, [226, 176, 112], R() * 0.6), 1);
+    g.fill();
+    g.strokeStyle = 'rgba(92,52,24,.5)'; g.lineWidth = 0.5; g.stroke();
+  }
+  // glass: a cool tint, the far wall of the jar, and two bright streaks
+  const gr = g.createLinearGradient(-22, 0, 22, 0);
+  gr.addColorStop(0, 'rgba(150,170,166,.35)');
+  gr.addColorStop(0.3, 'rgba(255,255,255,.05)');
+  gr.addColorStop(0.8, 'rgba(255,255,255,.12)');
+  gr.addColorStop(1, 'rgba(130,150,148,.4)');
+  g.fillStyle = gr;
+  g.fillRect(-23, -46, 46, 47);
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  g.fillRect(-16.5, -38, 2.6, 30);
+  g.fillStyle = 'rgba(255,255,255,.3)';
+  g.fillRect(-12, -38, 1.2, 22);
+  g.fillRect(15, -34, 1.4, 16);
+  g.restore();
+  // a paper label with a little fish on it
+  g.save();
+  g.translate(1, -30); g.rotate(-0.04);
+  g.fillStyle = '#f8f2e4';
+  g.fillRect(-12, -7, 24, 14);
+  g.strokeStyle = 'rgba(150,120,90,.55)'; g.lineWidth = 0.6;
+  g.strokeRect(-10.5, -5.5, 21, 11);
+  treatPath(g, 0, 0, 0, 1.15);
+  g.strokeStyle = 'rgba(40,30,26,.85)'; g.lineWidth = 0.8; g.stroke();
+  g.fillStyle = 'rgba(40,30,26,.9)'; g.beginPath(); g.arc(3.4, -0.8, 0.55, 0, TAU); g.fill();
+  g.restore();
+  // the cork
+  g.fillStyle = rgba(WOOD, 1);
+  g.beginPath();
+  g.moveTo(-15, -44); g.lineTo(-14, -52); g.quadraticCurveTo(0, -55, 14, -52); g.lineTo(15, -44); g.quadraticCurveTo(0, -42, -15, -44);
+  g.fill();
+  g.fillStyle = rgba(WOOD_L, 1);
+  g.beginPath(); g.ellipse(0, -52, 14, 2.6, 0, 0, TAU); g.fill();
+  for (let i = 0; i < 18; i++) { g.fillStyle = rgba(WOOD_D, 0.3); g.beginPath(); g.arc((R() - 0.5) * 26, -44 - R() * 8, 0.5, 0, TAU); g.fill(); }
+  const ol = (pts, w, tone, seed, rgb = [70, 66, 62]) => stroke(g, { pts, width: w, dry: 0.55, tone, bleed: 0.1, rgb, seed, bristles: 4 });
+  ol([[-22, -36], [-22.4, -20], [-22, -7], [-18, -0.5], [-8, 0.2]], 1.4, 0.5, 142);
+  ol([[22, -36], [22.3, -20], [22, -7], [18, -0.5], [8, 0.2]], 1.2, 0.4, 143);
+  ol([[-8, 0.2], [8, 0.2]], 1.2, 0.45, 144);
+  ol([[-15, -44], [-14, -52], [0, -54.6], [14, -52], [15, -44]], 1.2, 0.5, 145, WOOD_INK);
+}
+
+// a sparrow outside the window, and a leaf on the wind
+function drawBird(g, x, y, sc, flip, flap, peck) {
+  g.save();
+  g.translate(x, y); g.scale(sc * flip, sc);
+  g.fillStyle = '#5e4c3e';
+  g.beginPath(); g.moveTo(-5, -1); g.lineTo(-12, -4.5); g.lineTo(-11, -1); g.lineTo(-5, 2); g.fill();
+  g.fillStyle = '#86694f';
+  g.beginPath(); g.ellipse(0, 0, 7, 5.2, -0.15, 0, TAU); g.fill();
+  g.fillStyle = '#dccbb2';
+  g.beginPath(); g.ellipse(1.8, 2.2, 4.6, 2.9, -0.2, 0, TAU); g.fill();
+  const hy = -3.4 + peck * 3.2, hx = 5.4 + peck * 1.2;
+  g.fillStyle = '#6f5644';
+  g.beginPath(); g.arc(hx, hy, 3.6, 0, TAU); g.fill();
+  g.fillStyle = '#e4d6c0';
+  g.beginPath(); g.ellipse(hx + 1, hy + 1.6, 2.2, 1.4, 0, 0, TAU); g.fill();
+  g.fillStyle = '#2e2620';
+  g.beginPath(); g.moveTo(hx + 3.2, hy - 0.8); g.lineTo(hx + 6.4, hy + 0.3); g.lineTo(hx + 3.2, hy + 1); g.fill();
+  g.fillStyle = '#141010';
+  g.beginPath(); g.arc(hx + 1.4, hy - 0.8, 0.75, 0, TAU); g.fill();
+  if (flap === null) {
+    g.fillStyle = '#5e4a3a';
+    g.beginPath(); g.ellipse(-1.2, -0.6, 5, 2.8, -0.25, 0, TAU); g.fill();
+    g.strokeStyle = '#3a2e26'; g.lineWidth = 0.7;
+    g.beginPath(); g.moveTo(0, 4.6); g.lineTo(-0.4, 7.6); g.moveTo(2.2, 4.4); g.lineTo(2.2, 7.6); g.stroke();
+  } else {
+    const w = Math.sin(flap);
+    g.fillStyle = '#5e4a3a';
+    g.beginPath(); g.moveTo(-3, -1); g.quadraticCurveTo(-2, -1 - 9 * w, 3, -1 - 11 * w); g.lineTo(2, -1); g.fill();
+  }
+  g.restore();
+}
+function drawLeaf(g, x, y, sc, a) {
+  g.save();
+  g.translate(x, y); g.rotate(a); g.scale(sc, sc * (0.55 + 0.45 * Math.abs(Math.cos(a * 1.7))));
+  g.fillStyle = '#b4b04e';
+  g.beginPath(); g.moveTo(-7, 0); g.quadraticCurveTo(0, -5, 7, 0); g.quadraticCurveTo(0, 5, -7, 0); g.fill();
+  g.strokeStyle = 'rgba(96,90,30,.7)'; g.lineWidth = 0.6;
+  g.beginPath(); g.moveTo(-8.5, 0.6); g.lineTo(6, 0); g.stroke();
+  g.restore();
+}
+
+// the pompom, painted once
+function paintPom(g) {
+  const R = rng(77);
+  stamp(g, 0, 2, 19, CREAM_D, 0.3, 0.45);
+  const gr = g.createRadialGradient(-5, -6, 1.5, 0, 0, 15);
+  gr.addColorStop(0, 'rgb(255,253,246)'); gr.addColorStop(0.7, rgba(CREAM, 1)); gr.addColorStop(1, rgba(CREAM_S, 1));
+  g.fillStyle = gr;
+  g.beginPath(); g.arc(0, 0, 13.8, 0, TAU); g.fill();
+  g.lineCap = 'round';
+  for (let i = 0; i < 90; i++) {
+    const a = R() * TAU, r0 = 15 * (0.55 + R() * 0.3), r1 = 15 * (0.95 + R() * 0.24);
+    const lower = Math.sin(a) > 0.2;
+    g.strokeStyle = lower && R() < 0.6 ? rgba(CREAM_INK, 0.3) : 'rgba(255,252,244,.85)';
+    g.lineWidth = 0.8;
+    g.beginPath(); g.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); g.lineTo(Math.cos(a + 0.12) * r1, Math.sin(a + 0.12) * r1); g.stroke();
+  }
+}
+
+// how long each thing he does lasts, and what can interrupt what
+const PRI = { sleep: 0, groom: 1, yawn: 1, window: 1, tilt: 1, wake: 1, love: 1, pat: 2, boop: 2, eat: 3, bat: 3, pounce: 3, warn: 4, swat: 5, push: 5, bury: 5, sit: 5 };
+const DUR = { sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, pat: 900, boop: 1500, eat: 4400, bat: 380, pounce: 2000, warn: 720, swat: 600, push: 2900, bury: 2700, sit: 3800 };
+const DUR_RM = { pat: 800, boop: 1200, eat: 2600, bat: 600, pounce: 1400, warn: 900, swat: 1100, push: 1800, bury: 1700, sit: 2400, tilt: 900, wake: 400 };
+const BULLY = ['swat', 'push', 'bury', 'sit'];
 
 export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = false, sound = {}, name = '' } = {}) {
-  if (!root.querySelector('.cat-stage')) {
+  if (!root) return null;
+  if (!root.querySelector('.cat-btn--toy')) {
     root.classList.add('cat');
     root.innerHTML = CAT_INNER;
   }
   const $ = (q) => root.querySelector(q);
-  const stage = $('.cat-stage'), bgC = $('.cat-bg'), fgC = $('.cat-fg'), grabEl = $('.cat-grab');
+  const stage = $('.cat-stage'), bgC = $('.cat-bg'), fgC = $('.cat-fg');
+  const grabEl = $('.cat-grab:not(.cat-grab--toy)'), toyEl = $('.cat-grab--toy');
+  const fg = fgC.getContext && fgC.getContext('2d');
+  if (!fg || !bgC.getContext('2d')) return null;
   const capMain = $('.cat-caption-main'), capHint = $('.cat-caption-hint');
   const countN = $('.cat-count-n'), countNote = $('.cat-count-note');
-  const btnPoke = $('.cat-btn--poke'), btnSwat = $('.cat-btn--swat'), btnPet = $('.cat-btn--pet'), petText = $('.cat-btn-pet');
+  const btnRow = $('.cat-btns'), petText = $('.cat-btn-pet');
+  const btn = { poke: $('.cat-btn--poke'), swat: $('.cat-btn--swat'), pet: $('.cat-btn--pet'), boop: $('.cat-btn--boop'), treat: $('.cat-btn--treat'), toy: $('.cat-btn--toy') };
+  const tally = $('.cat-tally'), tallyPets = $('.cat-tally-pets'), tallyTreats = $('.cat-tally-treats');
+  const sayEl = $('.cat-say');
   const touchy = matchMedia('(hover: none)').matches;
   const hit = document.createElement('canvas').getContext('2d');
   const nm = String(name || '').trim();
@@ -796,33 +1850,50 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   };
   const play = (n, ...a) => { try { sound && typeof sound[n] === 'function' && sound[n](...a); } catch { /* no sound is fine */ } };
   const RM = !!reduceMotion;
+  const now0 = () => performance.now();
 
-  let L = null, SP = null, spKey = '', W = 0, H = 0, dpr = 0;
+  let L = null, SP = null, CS = null, spKey = '', csKey = '', W = 0, H = 0, dpr = 0;
   let active = true, destroyed = false, ready = false, raf = 0, last = 0, lastDraw = 0;
   const ac = new AbortController();
   const opt = { signal: ac.signal };
-  const now0 = () => performance.now();
+  const timers = new Set();
+  const later = (f, ms) => { const id = setTimeout(() => { timers.delete(id); if (!destroyed) f(); }, ms); timers.add(id); return id; };
 
   // the avocado
   const A = {
     x: 0, y: 0, vx: 0, vy: 0, ang: 0, w: 0, sq: 0, sqv: 0, sqA: -Math.PI / 2,
     alpha: 1, scale: 1, grab: null, place: null, fade: null, sleeping: true, restT: 0, grounded: false,
-    face: 'smug', faceUntil: 0, worriedAt: -1e9, touchedCat: false, lastMove: -1e9, fast: false, peak: 0,
+    face: 'smug', faceUntil: 0, worriedAt: -1e9, touchedCat: false, lastMove: -1e9, fast: false,
+    carry: null, under: false, mash: 0, sink: 0, ghost: 0,
   };
-  // the cat
+  // his pose: P is what's drawn, T is where it's heading this frame
+  const P = restPose(), T = restPose(), REST = restPose();
+  const KEYS = Object.keys(REST).filter((k) => k !== 'tPh');
+  const RATE = {};
+  for (const k of KEYS) RATE[k] = 9;
+  for (const k of ['nX', 'nY', 'nUp', 'fX', 'fY', 'fUp', 'jaw', 'noseTw', 'tongue', 'lick', 'chew', 'tFlick', 'earTL', 'earTR', 'gx', 'gy']) RATE[k] = 20;
+  for (const k of ['lidU', 'lidL', 'earFL', 'earFR', 'earSL', 'earSR']) RATE[k] = 13;
+  for (const k of ['yaw', 'pitch', 'roll', 'hx', 'hy']) RATE[k] = 6.5;
+  RATE.pupil = 3;
+  const rate = { ...RATE };
+  // the rest of him: moods, timers, what he's up to
   const C = {
-    yaw: 0.55, pitch: -0.2, tilt: 0, breath: 0, bph: 0, lid: 0, blink: null, blinkAt: 0,
-    tw: null, twAt: 0, earL: 0, earR: 0, flat: 0, agit: 0, dil: 0.45, happy: 0, petUntil: 0,
-    meowAt: -1e9, swat: null, lastSwat: -1e9, tailPh: 0, curlPh: 0, satisfiedAt: -1e9,
+    act: null, swat: null, lastBully: '', bph: 0, blink: null, blinkAt: 0, tw: null, twAt: 0, curlPh: 0,
+    happy: 0, petZone: 'back', petUntil: 0, stim: 0, stimMax: 4.4, grumpyUntil: 0,
+    disgust: 0, blepAt: 0, blepUntil: 0, alert: 0, meowAt: -1e9, mrrpAt: -1e9, lastSwat: -1e9,
+    lastUser: 0, idleAt: 0, zAt: 0, avoSeenAt: 0, toyT: -1e9, toyStill: 0, batAt: -1e9, pounceAt: -1e9, agit: 0, swishUntil: 0,
   };
-  const pom = { a: 0, w: 0, hitT: 0 };
-  const fx = { purrs: [], meows: [], seals: [], rings: [], strokes: [] };
+  const LK = { mode: 0, x: 0, y: 0, pupil: 0.3 };
+  const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0 };
+  const treat = { on: false, state: '', t0: 0, x: 0, y: 0, x0: 0, y0: 0, a: 0 };
+  const win = { kind: '', t0: 0, x: 0, y: 0, px: 0, py: 0, fx: 0, fy: 0, flip: 1, dur: 0, perched: false };
+  const fx = { purrs: [], words: [], seals: [], rings: [], strokes: [], zs: [], scratches: [] };
   const pointer = { x: 0, y: 0, t: -1e9 };
-  const pet = { dist: 0, lastX: null, dir: 0, flips: 0, t: 0, spawnT: 0 };
-  let tapCat = null;
-  let count = 0, lastMilestone = 0, lastPurr = -1e9;
+  const pet = { dist: 0, lastX: null, dir: 0, flips: 0, t: 0, spawnT: 0, sayT: -1e9, zone: '' };
+  let tapCat = null, jarT = -1e9;
+  let count = 0, lastMilestone = 0, lastPurr = -1e9, pets = 0, treats = 0, petIdx = 0;
 
-  // ── layout ──
+  // layout
   function computeLayout(w, h) {
     const narrow = w < 600;
     let s = narrow ? Math.min(w / 350, (h - 110) / 440) : Math.min((h - 70) / 440, w / 820);
@@ -839,30 +1910,36 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       ? { x0: w * 0.09, y0: 14, x1: w - 12, y1: topY + 36 * s }
       : { x0: catX - 74 * s, y0: Math.max(16, topY - 250 * s), x1: Math.min(w - 60, catX + 440 * s), y1: topY + 36 * s };
     const sign = !narrow && catX - 180 * s > 120 ? { x: Math.max(70 * s, (catX - 180 * s) * 0.55), y: topY - 60 * s } : null;
-    const P = {
+    const f = 15 * s;
+    const o = {
       W: w, H: h, s, narrow, floorY, topY, catX, plat, low, base, post, post2, win, sign,
       wallBase: floorY - 30 * s,
-      pom: { x: catX + 50 * s, y: topY + 40 * s, len: 80 * s, r: 15 * s },
+      pom: { x: catX + 50 * s, y: topY + 40 * s, len: 74 * s, r: 14 * s },
       home: { x: narrow ? w - 32 * s : Math.min(w - 90 * s, catX + 330 * s) },
+      jar: { x: narrow ? clamp((base.x - base.rx) * 0.5, 30 * s, base.x - base.rx - 24 * s) : Math.max(60 * s, base.x - base.rx - 70 * s), y: floorY + 4 * s },
+      glass: { x0: win.x0 + f, y0: win.y0 + f, x1: win.x1 - f, y1: win.y1 - f * 0.8 },
       G: 2500 * s,
     };
-    // colliders: capsules (a→b, radius); flat ones can be stood on
-    const cap = (ax, ay, bx, by, r, o = {}) => ({ ax, ay, bx, by, r, e: 0.35, mu: 0.5, ...o });
-    P.cols = [
+    // colliders: capsules (a to b, radius); flat ones can be stood on
+    const cap = (ax, ay, bx, by, r, x = {}) => ({ ax, ay, bx, by, r, e: 0.35, mu: 0.5, ...x });
+    o.cols = [
       cap(plat.x - plat.rx + 10 * s, topY + 10 * s, plat.x + plat.rx - 10 * s, topY + 10 * s, 10 * s, { flat: true, e: 0.3 }),
-      cap(catX - 104 * s, topY - 52 * s, catX + 64 * s, topY - 50 * s, 50 * s, { cat: true, e: 0.25, mu: 0.3 }),
-      cap(catX + HEAD_C[0] * s, topY + HEAD_C[1] * s, catX + HEAD_C[0] * s, topY + HEAD_C[1] * s, 48 * s, { cat: true, e: 0.25, mu: 0.3 }),
+      cap(catX - 104 * s, topY - 54 * s, catX + 64 * s, topY - 52 * s, 50 * s, { cat: true, e: 0.25, mu: 0.3 }),
+      cap(catX + HEAD_REST[0] * s, topY + HEAD_REST[1] * s, catX + HEAD_REST[0] * s, topY + HEAD_REST[1] * s, 50 * s, { cat: true, e: 0.25, mu: 0.3 }),
       cap(post.x, topY + 26 * s, post.x, base.y, post.w / 2),
       cap(low.x - low.rx + 10 * s, low.y + 10 * s, low.x + low.rx - 10 * s, low.y + 10 * s, 10 * s, { flat: true, e: 0.3 }),
       cap(post2.x, low.y + 24 * s, post2.x, base.y, post2.w / 2),
       cap(base.x - base.rx + 8 * s, base.y + 6 * s, base.x + base.rx - 8 * s, base.y + 6 * s, 6 * s, { flat: true, e: 0.3 }),
-      cap(win.x0 - 8 * s, win.y1 + 4 * s, win.x1 + 8 * s, win.y1 + 4 * s, 4 * s, { flat: true, e: 0.3 }),
+      cap(win.x0 - 8 * s, win.y1 + 4 * s, win.x1 + 8 * s, win.y1 + 4 * s, 4 * s, { flat: true, e: 0.3, sill: true }),
     ];
-    P.chest = { x: catX + 86 * s, y: topY - 40 * s };
-    return P;
+    o.chest = { x: catX + 86 * s, y: topY - 40 * s };
+    o.bang = `italic ${30 * s}px "Instrument Serif", Georgia, serif`;
+    return o;
   }
+  const cx = (x) => (x - L.catX) / L.s;
+  const cy = (y) => (y - L.topY) / L.s;
 
-  /** the first surface straight below (x, y): returns the y an object would rest on */
+  // the first surface straight below (x, y): the y an object would rest on
   function surfaceBelow(x, y) {
     let best = L.floorY;
     for (const c of L.cols) {
@@ -874,7 +1951,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     return best;
   }
   const avoBottom = () => 25 * L.s;
-  /** the ground under x: the floor, or the base of the cat tree */
+  // the ground under x: the floor, or the base of the cat tree
   function groundAt(x) {
     const b = L.cols[6];
     return x > b.ax && x < b.bx ? b.ay - b.r : L.floorY;
@@ -884,21 +1961,24 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     A.y = groundAt(A.x) - avoBottom();
     A.vx = A.vy = A.w = 0; A.ang = 0; A.sleeping = true;
   }
+  function resetToy() {
+    pom.x = L.pom.x; pom.y = L.pom.y + L.pom.len; pom.vx = pom.vy = 0;
+    pom.held = null; pom.pinned = null;
+  }
 
-  // ── painting ──
+  // painting
   function buildSprites() {
     const { s } = L;
     const key = `${s.toFixed(4)}|${dpr}`;
+    if (key !== csKey || !CS) { CS = catSprites(s, dpr, !mobile); csKey = key; }
     if (key === spKey && SP) return false;
     spKey = key;
-    const dense = !mobile;
     SP = {
-      body: makeSprite(-182, -122, 132, 26, s, dpr, (g) => paintBody(g, hit, dense)),
-      head: makeSprite(-60, -50, 60, 50, s * HS, dpr, (g) => paintHead(g, hit, dense)),
-      muzzle: makeSprite(-30, -18, 30, 36, s * HS, dpr, paintMuzzle),
-      ear: makeSprite(-22, -32, 22, 10, s * HS, dpr, (g) => paintEar(g, hit)),
       plat: makeSprite(-108, -36, 108, 64, s, dpr, (g) => paintDisc(g, hit, 98, 25, 22, 110)),
       avo: makeSprite(-36, -60, 36, 32, s, dpr, paintAvocado),
+      jar: makeSprite(-32, -60, 32, 8, s, dpr, paintJar),
+      treat: makeSprite(-9, -5, 7, 5, s, dpr, paintTreat),
+      pom: makeSprite(-20, -20, 20, 22, s, dpr, paintPom),
     };
     // the front lip of the top platform, drawn over his belly so he sits in the plush
     SP.lip = makeSprite(-108, -36, 108, 64, s, dpr, (g) => {
@@ -910,7 +1990,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       g.save(); g.clip(top);
       for (let x = -88; x <= 88; x += 4) stamp(g, x, 6.5, 6, [60, 50, 42], 0.09, 0.3);
       g.restore();
-      // keep only what is in front of him: below a gentle curve across the cushion
+      // keep only what's in front of him: below a gentle curve across the cushion
       g.globalCompositeOperation = 'destination-in';
       const keep = new Path2D();
       keep.moveTo(-110, 6);
@@ -922,7 +2002,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       g.fill(keep);
       g.filter = 'none';
     });
-    // the seal: 禁, forbidden
+    // the seal: forbidden
     const sz = Math.round(54 * s * dpr);
     const c = document.createElement('canvas');
     c.width = c.height = Math.ceil(sz * 1.2);
@@ -939,10 +2019,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     signFont = brushReady();
     paintRoom(g, L, hit, SP);
   }
-  // the sign's 출입금지 is in Nanum Brush Script: repaint the room once, when that font arrives
+  // the sign is in Nanum Brush Script: repaint the room once when that font arrives
+  // (with the text, since Google serves Korean fonts in unicode-range slices)
   let signFont = false;
-  // (with the text: Google serves Korean fonts in unicode-range slices, and checking or loading
-  // without it only covers the slice with a space in it)
   const SIGN_TEXT = '출입금지';
   const brushReady = () => { try { return !document.fonts || document.fonts.check('20px "Nanum Brush Script"', SIGN_TEXT); } catch { return true; } };
 
@@ -961,25 +2040,55 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     paintBg();
     grabEl.style.width = grabEl.style.height = `${Math.round(78 * L.s)}px`;
     grabEl.style.marginLeft = grabEl.style.marginTop = `${-Math.round(39 * L.s)}px`;
+    toyEl.style.width = toyEl.style.height = `${Math.round(52 * L.s)}px`;
+    toyEl.style.marginLeft = toyEl.style.marginTop = `${-Math.round(26 * L.s)}px`;
     // the avocado keeps its place in the room
+    if (A.carry || A.under) { if (C.act) C.act.hit = true; finishCarry(); }
     if (!old || A.sleeping) restOnFloorAt(old ? A.x * (w / old.W) : L.home.x);
     else { A.x *= w / old.W; A.y = Math.min(A.y * (h / old.H), L.floorY - avoBottom()); }
     if (A.place) { A.place = null; restOnFloorAt(L.home.x); }
-    // never leave it shrunk or faded out by an interrupted animation
     if (!A.fade) A.alpha = 1;
     A.scale = 1;
+    dropToy();
+    resetToy();
+    if (treat.on) { treat.state = 'rest'; placeTreat(); }
+    win.kind = '';
     draw(now0());
     kick();
   }
 
-  // ── the avocado: physics ──
+  // the avocado: physics
   const avoMass = 1;
   const inertia = () => 0.42 * (26 * L.s) ** 2;
-
+  // one contact against a surface with normal (nx, ny); the shape being tested is in K
+  const K = { I: 1, impact: 0, impN: 0, ox: 0, oy: 0, rad: 0 };
+  function contact(nx, ny, pen, e, mu, col) {
+    if (pen <= 0) return;
+    const { s } = L, I = K.I;
+    A.x += nx * pen; A.y += ny * pen;
+    const px = K.ox - nx * K.rad, py = K.oy - ny * K.rad;
+    const vcx = A.vx - A.w * py, vcy = A.vy + A.w * px;
+    const vn = vcx * nx + vcy * ny;
+    if (ny < -0.55) A.grounded = true;
+    if (col && col.cat) A.touchedCat = true;
+    if (vn >= 0) return;
+    const rn = px * ny - py * nx;
+    const ee = vn < -90 * s ? e : 0;
+    const j = (-(1 + ee) * vn) / (1 / avoMass + (rn * rn) / I);
+    A.vx += (j * nx) / avoMass; A.vy += (j * ny) / avoMass; A.w += (rn * j) / I;
+    const tx = -ny, ty = nx;
+    const vt = (A.vx - A.w * py) * tx + (A.vy + A.w * px) * ty;
+    const rt = px * ty - py * tx;
+    let jt = -vt / (1 / avoMass + (rt * rt) / I);
+    jt = clamp(jt, -mu * j, mu * j);
+    A.vx += (jt * tx) / avoMass; A.vy += (jt * ty) / avoMass; A.w += (rt * jt) / I;
+    if (-vn > K.impact) { K.impact = -vn; K.impN = Math.atan2(ny, nx); }
+  }
   function wake() { A.sleeping = false; A.restT = 0; }
 
   function stepAvocado(h, now) {
     const { s } = L;
+    if (A.carry) return true;
     if (A.grab && RM) { A.ang = 0; A.w = 0; A.lastMove = now; return true; }
     if (A.grab) {
       const gx = A.grab.tx, gy = A.grab.ty;
@@ -999,44 +2108,26 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     A.vx *= 1 - 0.05 * h;
     A.x += A.vx * h; A.y += A.vy * h; A.ang += A.w * h;
     A.grounded = false;
-    const I = inertia();
+    K.I = inertia();
     const ca = Math.cos(A.ang), sa = Math.sin(A.ang);
-    let impact = 0, impN = 0;
+    K.impact = 0; K.impN = 0;
     for (const sh of AVO_SHAPES) {
       const ox = (sh.x * ca - sh.y * sa) * s, oy = (sh.x * sa + sh.y * ca) * s;
       const rad = sh.r * s;
-      const contact = (nx, ny, pen, e, mu, col) => {
-        if (pen <= 0) return;
-        A.x += nx * pen; A.y += ny * pen;
-        const px = ox - nx * rad, py = oy - ny * rad;
-        const vcx = A.vx - A.w * py, vcy = A.vy + A.w * px;
-        const vn = vcx * nx + vcy * ny;
-        if (ny < -0.55) A.grounded = true;
-        if (col && col.cat) A.touchedCat = true;
-        if (vn >= 0) return;
-        const rn = px * ny - py * nx;
-        const ee = vn < -90 * s ? e : 0;
-        const j = (-(1 + ee) * vn) / (1 / avoMass + (rn * rn) / I);
-        A.vx += (j * nx) / avoMass; A.vy += (j * ny) / avoMass; A.w += (rn * j) / I;
-        const tx = -ny, ty = nx;
-        const vt = (A.vx - A.w * py) * tx + (A.vy + A.w * px) * ty;
-        const rt = px * ty - py * tx;
-        let jt = -vt / (1 / avoMass + (rt * rt) / I);
-        jt = clamp(jt, -mu * j, mu * j);
-        A.vx += (jt * tx) / avoMass; A.vy += (jt * ty) / avoMass; A.w += (rt * jt) / I;
-        if (-vn > impact) { impact = -vn; impN = Math.atan2(ny, nx); }
-      };
-      const cx = A.x + ox, cy = A.y + oy;
-      contact(0, -1, cy + rad - L.floorY, 0.38, 0.6);
-      contact(1, 0, rad - cx, 0.5, 0.4);
-      contact(-1, 0, cx + rad - L.W, 0.5, 0.4);
-      contact(0, 1, rad - cy, 0.4, 0.4);
+      K.ox = ox; K.oy = oy; K.rad = rad;
+      const cx2 = A.x + ox, cy2 = A.y + oy;
+      contact(0, -1, cy2 + rad - L.floorY, 0.38, 0.6);
+      contact(1, 0, rad - cx2, 0.5, 0.4);
+      contact(-1, 0, cx2 + rad - L.W, 0.5, 0.4);
+      contact(0, 1, rad - cy2, 0.4, 0.4);
       for (const c of L.cols) {
-        const cx2 = A.x + ox, cy2 = A.y + oy;
+        // pushed off the edge, it drops past the sill in front, not onto it
+        if (c.sill && now < A.ghost) continue;
+        const qx0 = A.x + ox, qy0 = A.y + oy;
         const dx = c.bx - c.ax, dy = c.by - c.ay, ll = dx * dx + dy * dy;
-        const k = ll ? clamp(((cx2 - c.ax) * dx + (cy2 - c.ay) * dy) / ll) : 0;
+        const k = ll ? clamp(((qx0 - c.ax) * dx + (qy0 - c.ay) * dy) / ll) : 0;
         const qx = c.ax + dx * k, qy = c.ay + dy * k;
-        let nx = cx2 - qx, ny = cy2 - qy;
+        let nx = qx0 - qx, ny = qy0 - qy;
         const d = Math.hypot(nx, ny);
         const pen = rad + c.r - d;
         if (pen <= 0) continue;
@@ -1044,10 +2135,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         contact(nx, ny, pen, c.e, c.mu, c);
       }
     }
+    const impact = K.impact;
     if (impact > 160 * s) {
       A.sqv -= Math.min(10, impact / (170 * s));
-      A.sqA = impN;
-      if (A.fast && impact > 500 * s) { setFace('dizzy', 1500); }
+      A.sqA = K.impN;
+      if (A.fast && impact > 500 * s) setFace('dizzy', 1500);
       A.fast = false;
     }
     // back on its feet: a smug little rock upright
@@ -1069,7 +2161,51 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
 
   function setFace(f, ms) { A.face = f; A.faceUntil = now0() + ms; }
 
-  // ── bullying ──
+  // the toy: an elastic cord from the platform, a pompom at the end
+  function stepToy(dt, now) {
+    const { s } = L, o = L.pom;
+    if (pom.pinned) {
+      pom.x = L.catX + (pom.pinned.x + P.bx) * s;
+      pom.y = L.topY + (pom.pinned.y + P.by - P.lift) * s;
+      pom.vx = pom.vy = 0;
+      return true;
+    }
+    if (pom.auto) autoHand(now);
+    if (pom.held) {
+      const kx = (pom.hx - pom.x) * 26, ky = (pom.hy - pom.y) * 26;
+      pom.vx = lerp(pom.vx, kx, 0.45); pom.vy = lerp(pom.vy, ky, 0.45);
+      if (RM) { pom.x = pom.hx; pom.y = pom.hy; } else { pom.x += pom.vx * dt; pom.y += pom.vy * dt; }
+    } else if (RM) {
+      pom.x = o.x; pom.y = o.y + o.len; pom.vx = pom.vy = 0;
+    } else {
+      const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
+      for (let i = 0; i < n; i++) {
+        pom.vy += 1500 * s * h;
+        const dx = pom.x - o.x, dy = pom.y - o.y, d = Math.hypot(dx, dy) || 1;
+        if (d > o.len) { const f = (d - o.len) * 150; pom.vx -= (dx / d) * f * h; pom.vy -= (dy / d) * f * h; }
+        pom.vx *= 1 - 1.6 * h; pom.vy *= 1 - 1.6 * h;
+        pom.x += pom.vx * h; pom.y += pom.vy * h;
+      }
+      // a breath of air keeps it swaying a little
+      pom.vx += Math.sin(now / 1300) * 6 * s * dt;
+    }
+    const dx = pom.x - o.x, dy = pom.y - o.y, d = Math.hypot(dx, dy), max = o.len * 4.4;
+    if (d > max) { pom.x = o.x + (dx / d) * max; pom.y = o.y + (dy / d) * max; }
+    pom.x = clamp(pom.x, 10, L.W - 10); pom.y = clamp(pom.y, 10, L.floorY - 8 * s);
+    pom.speed = Math.hypot(pom.vx, pom.vy);
+    return pom.held || pom.speed > 30 * s;
+  }
+  // the toy button: an invisible hand takes the pompom for a little dance
+  function autoHand(now) {
+    const { s } = L, e = now - pom.auto.t0;
+    const ax = L.catX + 186 * s, ay = L.topY - 92 * s;
+    if (e < 700) { const k = easeInOut(e / 700); pom.hx = lerp(pom.auto.x0, ax, k); pom.hy = lerp(pom.auto.y0, ay, k); }
+    else if (e < 2300) { const k = (e - 700) / 1000; pom.hx = ax + Math.sin(k * 5.2) * 46 * s; pom.hy = ay + Math.sin(k * 7.4) * 20 * s - 10 * s; }
+    else if (e < 4200) { pom.hx = L.catX + 172 * s; pom.hy = L.topY - 66 * s + Math.sin(e / 300) * 2 * s; }
+    else { pom.held = null; pom.auto = null; }
+  }
+
+  // bullying
   function bully() {
     count++;
     renderCount(true);
@@ -1081,7 +2217,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     A.worriedAt = now;
     play('pluck', 0, { gain: 0.24, pan: clamp((A.x / L.W) * 1.4 - 0.7, -0.7, 0.7) });
     fx.rings.push({ x: px ?? A.x, y: py ?? A.y - 6 * s, t0: now });
-    if (!RM && !A.place) {
+    if (!RM && !A.place && !A.carry) {
       wake();
       const side = px != null ? Math.sign(A.x - px) || (Math.random() < 0.5 ? -1 : 1) : (Math.random() < 0.5 ? -1 : 1);
       if (A.grounded || A.sleeping || Math.abs(A.vy) < 50 * s) A.vy = -240 * s;
@@ -1097,55 +2233,51 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const { s } = L;
     const d = Math.hypot(A.x - L.chest.x, A.y - L.chest.y);
     if (d < 182 * s && A.y < L.topY + 44 * s && A.x > L.catX - 160 * s) return true;
-    // sitting on his back, even up on the rump: that will not be tolerated either
+    // sitting on his back, even up on the rump: that won't be tolerated either
     return A.grounded && !A.grab && A.y < L.topY - 70 * s && A.x > L.catX - 170 * s && A.x < L.catX + 130 * s;
   }
-  function startSwat(now) {
-    C.swat = { t0: now, hit: false, dur: RM ? 1100 : 600 };
-    C.lastSwat = now;
+  // resting on the cushion in front of him, where he can deal with it properly
+  function onPlatform() {
+    const { s } = L;
+    return Math.abs(A.y + avoBottom() - L.topY) < 9 * s && A.x > L.catX - 40 * s && A.x < L.catX + 100 * s;
+  }
+  function pickBully() {
+    if (!onPlatform()) return 'swat';
+    if (C.nextBully) { const k = C.nextBully; C.nextBully = ''; return k; }
+    // the classic first, then he mixes it up
+    if (!C.lastBully) return 'swat';
+    const opts = BULLY.filter((k) => k !== C.lastBully);
+    return opts[Math.floor(Math.random() * opts.length)];
+  }
+  function startBully(kind) {
+    const a = start(kind);
+    if (!a) return;
+    C.lastBully = kind;
+    C.lastSwat = now0();
     wake();
+    say(`cat.say.${kind}`);
   }
   function handleIt() {
-    if (!L || C.swat || A.place) return;
+    if (!L || (C.act && PRI[C.act.kind] === 5) || A.place || A.carry) return;
     const now = now0();
+    noteUser(now);
     if (A.grab) endGrab(null);
-    A.place = { t0: now, from: [A.x, A.y], landed: false };
+    A.place = { t0: now, landed: false };
     A.touchedCat = false;
     kick();
   }
-
-  function pawPos(k) {
-    // in cat units; the target follows the avocado until the strike lands, then stays put
-    // (otherwise the paw would chase it across the room like a rubber arm)
-    const { s } = L;
-    if (!C.swat.tgt || !C.swat.hit) C.swat.tgt = [(A.x - L.catX) / s, (A.y - 14 * s - L.topY) / s];
-    const [ax, ay] = C.swat.tgt;
-    const S = SHOULDER;
-    let dx = ax - S[0], dy = ay - S[1];
-    const d = Math.hypot(dx, dy) || 1;
-    dx /= d; dy /= d;
-    const reach = clamp(d - 22, 30, 160);
-    const T = [S[0] + dx * reach, S[1] + dy * reach];
-    const cock = [S[0] + 44, S[1] - 34];
-    const thru = [T[0] + dx * 12, T[1] + dy * 12];
-    if (RM) return { p: k < 0.85 ? T : PAW_REST, beans: false };
-    if (k < 0.36) return { p: lerpP(PAW_REST, cock, easeOut(k / 0.36)), beans: true };
-    if (k < 0.48) return { p: lerpP(cock, T, easeIn((k - 0.36) / 0.12)), beans: false };
-    if (k < 0.6) return { p: lerpP(T, thru, easeOut((k - 0.48) / 0.12)), beans: false };
-    return { p: lerpP(thru, PAW_REST, easeInOut((k - 0.6) / 0.4)), beans: false };
+  function seal(x, y, now) {
+    fx.seals.push({ x, y, t0: now, rot: (Math.random() - 0.5) * 0.3 });
+    play('pluck', 1, { gain: 0.26, pan: clamp((x / L.W) * 1.4 - 0.7, -0.7, 0.7) });
+    play('pluck', 6, { gain: 0.08 });
+    bully();
   }
-  const lerpP = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
-
   function swatHit(now) {
     const { s } = L;
     const side = A.x >= L.catX + 20 * s ? 1 : -1;
-    fx.seals.push({ x: A.x, y: A.y - 12 * s, t0: now, rot: (Math.random() - 0.5) * 0.3 });
-    play('pluck', 1, { gain: 0.26, pan: clamp((A.x / L.W) * 1.4 - 0.7, -0.7, 0.7) });
-    play('pluck', 6, { gain: 0.08 });
+    seal(A.x, A.y - 12 * s, now);
     A.place = null;
     A.touchedCat = false;
-    bully();
-    C.satisfiedAt = now + (RM ? 1100 : 650);
     if (RM) {
       // no flight: it fades out of his reach and comes back on the floor
       fadeAvo(() => restOnFloorAt(side > 0 ? Math.max(L.home.x, L.catX + 230 * s) : 60 * s), 260, 420);
@@ -1160,35 +2292,50 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     A.fast = true;
     setFace('squeeze', 900);
   }
-
   function fadeAvo(mid, outMs, delayIn) {
-    const t0 = now0();
-    A.fade = { t0, outMs, delayIn, mid, midDone: false };
+    A.fade = { t0: now0(), outMs, delayIn, mid, midDone: false };
+  }
+  // if a carry gets cut short (resize, a new action), put the avocado somewhere sensible
+  function finishCarry() {
+    if (!A.carry && !A.under) return;
+    A.carry = null; A.under = false; A.mash = 0; A.sink = 0;
+    if (L) restOnFloorAt(L.home.x);
   }
 
-  // ── grabbing ──
+  // grabbing the avocado
   function local(e) {
     const r = stage.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   }
   function onAvocado(x, y, pad) {
-    if (!L || A.alpha < 0.5) return false;
+    if (!L || A.alpha < 0.5 || A.carry) return false;
     const { s } = L;
     const ca = Math.cos(-A.ang), sa = Math.sin(-A.ang);
     const dx = x - A.x, dy = y - A.y;
     const lx = (dx * ca - dy * sa) / s, ly = (dx * sa + dy * ca) / s;
     return AVO_SHAPES.some((sh) => Math.hypot(lx - sh.x, ly - sh.y) < sh.r + pad / s);
   }
-  function onCat(x, y) {
-    if (!L) return false;
-    const { s } = L;
-    const cx = (x - L.catX) / s, cy = (y - L.topY) / s;
-    if (Math.hypot(cx - HEAD_C[0], cy - HEAD_C[1]) < 60) return true;
-    if (cx > -150 && cx < 118 && cy > -110 && cy < 14) {
-      const k = clamp((cx + 104) / 168), py = lerp(-52, -50, k), px = lerp(-104, 64, k);
-      return Math.hypot(cx - px, cy - py) < 58 || (cy > -92 && cx > -138 && cx < 116);
+  const onToy = (x, y, pad) => L && !pom.pinned && Math.hypot(x - pom.x, y - pom.y) < L.pom.r + pad + 4 * L.s;
+  const onJar = (x, y) => L && Math.abs(x - L.jar.x) < 26 * L.s && y > L.jar.y - 60 * L.s && y < L.jar.y + 6 * L.s;
+
+  // which part of him is under the pointer
+  const TOP = topLine(TORSO);
+  function zoneAt(x, y) {
+    if (!L) return null;
+    const ux = cx(x), uy = cy(y);
+    headMatrix(P);
+    const hp = catToHead(ux, uy);
+    const hx = hp.x - P.yaw * 2.5, hy = hp.y - P.pitch * 2;
+    if ((hx / 60) ** 2 + ((hy - 2) / 50) ** 2 < 1 || (hy < -20 && hy > -80 && Math.abs(hx) < 54)) {
+      faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
+      if (Math.hypot(hx - FP.x, hy - FP.y) < 9) return 'nose';
+      if (hy < -15) return 'head';
+      if (hy > 13 || Math.abs(hx - FP.x) > 30) return 'chin';
+      return 'face';
     }
-    return false;
+    const bx = ux - P.bx, by = uy - P.by;
+    if (bx > -152 && bx < 142 && by < 16 && by > TOP(bx) - 6) return by < TOP(bx) + 36 && bx < 92 ? 'back' : 'body';
+    return null;
   }
 
   function startGrab(e, x, y) {
@@ -1230,7 +2377,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (sp > max) { vx *= max / sp; vy *= max / sp; }
     if (RM) {
       setFace('worried', 1200);
-      if (inZone()) { startSwat(now); kick(); return; }
+      if (inZone()) { startBully(onPlatform() ? pickBully() : 'swat'); kick(); return; }
       const x = A.x;
       fadeAvo(() => { A.x = x; A.y = surfaceBelow(x, A.y + 20 * s) - avoBottom(); A.ang = 0; A.sleeping = true; }, 160, 200);
       if (sp > 450 * s) bully();
@@ -1246,62 +2393,167 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     kick();
   }
 
-  // ── petting and talking ──
-  function petNow(now, ms = 900) {
+  // grabbing the pompom
+  function grabToy(e, x, y) {
+    pom.auto = null;
+    pom.held = { id: e.pointerId, ox: pom.x - x, oy: pom.y - y };
+    pom.hx = pom.x; pom.hy = pom.y;
+    stage.classList.add('is-grabbing');
+    try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
+    C.toyT = now0();
+    kick();
+  }
+  function dropToy() {
+    if (!pom.held) return;
+    pom.held = null; pom.auto = null;
+    stage.classList.remove('is-grabbing');
+    kick();
+  }
+  function autoDangle() {
+    if (!L || pom.pinned) return;
+    const now = now0();
+    noteUser(now);
+    pom.held = { id: -1 };
+    pom.auto = { t0: now, x0: pom.x, y0: pom.y };
+    pom.hx = pom.x; pom.hy = pom.y;
+    C.toyT = now;
+    say('cat.say.toy');
+    kick();
+  }
+
+  // treats
+  function placeTreat() {
+    treat.x = L.catX + 72 * L.s; treat.y = L.topY + 12 * L.s; treat.a = -0.3;
+  }
+  function tossTreat() {
+    if (!L) return;
+    const now = now0();
+    noteUser(now);
+    jarT = now;
+    play('rattle', { gain: 0.2 });
+    if (treat.on) return;
+    treat.on = true; treat.state = RM ? 'rest' : 'fly'; treat.t0 = now;
+    treat.x0 = L.jar.x; treat.y0 = L.jar.y - 58 * L.s;
+    if (RM) placeTreat(); else { treat.x = treat.x0; treat.y = treat.y0; }
+    if (RM) start('eat');
+    say('cat.say.treat');
+    kick();
+  }
+
+  // petting
+  function petNow(zone, now, ms, fromButton) {
+    noteUser(now);
+    if (now < C.grumpyUntil) {
+      if (fromButton) say('cat.say.grumpy');
+      return false;
+    }
+    const fresh = now > C.petUntil + 600 || C.petZone !== zone;
+    C.petZone = zone;
     C.petUntil = Math.max(C.petUntil, now + ms);
+    if (fromButton) C.stim += zone === 'head' ? 0.9 : zone === 'chin' ? 0.5 : 0.7;
+    if (fresh) { pets++; renderTally(); }
+    if (fromButton || (fresh && now - pet.sayT > 5000)) { pet.sayT = now; say(`cat.say.${zone}`); }
     if (now - lastPurr > 1700) {
       lastPurr = now;
-      play('purr', { gain: 0.24, seconds: 1.9 });
+      play('purr', { gain: zone === 'chin' ? 0.34 : 0.24, seconds: 1.9 });
     }
     kick();
+    return true;
+  }
+  function petButton() {
+    if (!L) return;
+    const now = now0();
+    const zone = ['back', 'chin', 'head'][petIdx++ % 3];
+    if (!petNow(zone, now, zone === 'head' ? 1300 : 2400, true)) return;
+    if (zone === 'head') start('pat');
+    if (!RM) fx.strokes.push({ t0: now, zone });
+  }
+  function boop(fromButton) {
+    if (!L) return;
+    const now = now0();
+    noteUser(now);
+    const a = start('boop');
+    if (!a) return;
+    headMatrix(P); faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
+    const n = headToCat(FP.x + P.yaw * 2.5, FP.y + P.pitch * 2);
+    fx.rings.push({ x: L.catX + n.x * L.s, y: L.topY + n.y * L.s, t0: now });
+    if (fromButton) say('cat.say.boop');
   }
   function meow(now) {
     if (now - C.meowAt < 450) return;
     C.meowAt = now;
-    fx.meows.push({ t0: now, side: Math.random() < 0.5 ? -1 : 1 });
+    word('야옹', 30);
     play('meow', { gain: 0.16 });
     kick();
   }
+  function word(text, size) {
+    fx.words.push({ t0: now0(), text, size, side: Math.random() < 0.5 ? -1 : 1 });
+  }
 
-  // ── pointer events ──
+  // someone's here: keep him awake, push the next idle thing back
+  function noteUser(now) {
+    C.lastUser = now;
+    C.idleAt = Math.max(C.idleAt, now + 4500);
+    const a = C.act;
+    if (a && a.kind === 'sleep') {
+      C.act = null;
+      if (!RM) start('wake');
+    } else if (a && PRI[a.kind] === 1 && a.kind !== 'wake' && a.kind !== 'tilt') endAct(a, now);
+  }
+
+  // pointer events
   stage.addEventListener('pointerdown', (e) => {
     if (!L || (e.button !== undefined && e.button > 0)) return;
     const [x, y] = local(e);
-    pointer.x = x; pointer.y = y; pointer.t = now0();
+    const now = now0();
+    pointer.x = x; pointer.y = y; pointer.t = now;
+    noteUser(now);
     const pad = e.pointerType === 'touch' ? 14 : 6;
-    if (e.target === grabEl || onAvocado(x, y, pad)) {
-      e.preventDefault();
-      startGrab(e, x, y);
-      return;
-    }
-    if (onCat(x, y)) tapCat = { id: e.pointerId, x, y, t0: now0(), moved: 0 };
+    if (e.target === toyEl || onToy(x, y, pad)) { e.preventDefault(); grabToy(e, x, y); return; }
+    if (e.target === grabEl || onAvocado(x, y, pad)) { e.preventDefault(); startGrab(e, x, y); return; }
+    if (onJar(x, y)) { tossTreat(); return; }
+    const z = zoneAt(x, y);
+    if (z) tapCat = { id: e.pointerId, x, y, t0: now, moved: 0, zone: z };
   }, opt);
   stage.addEventListener('pointermove', (e) => {
     if (!L) return;
     const [x, y] = local(e);
     const now = now0();
     if (A.grab && e.pointerId === A.grab.id) { moveGrab(x, y); return; }
-    if (e.pointerType === 'mouse' || e.buttons) { pointer.x = x; pointer.y = y; pointer.t = now; }
-    if (tapCat && tapCat.id === e.pointerId) tapCat.moved += Math.hypot(x - tapCat.x, y - tapCat.y), tapCat.x = x, tapCat.y = y;
-    const overCat = onCat(x, y);
-    if (e.pointerType === 'mouse') stage.style.cursor = onAvocado(x, y, 6) ? 'grab' : overCat ? 'pointer' : '';
+    if (pom.held && pom.held.id === e.pointerId) { pom.hx = x + pom.held.ox; pom.hy = y + pom.held.oy; pointer.x = x; pointer.y = y; pointer.t = now; kick(); return; }
+    if (e.pointerType === 'mouse' || e.buttons) { pointer.x = x; pointer.y = y; pointer.t = now; noteUser(now); }
+    if (tapCat && tapCat.id === e.pointerId) { tapCat.moved += Math.hypot(x - tapCat.x, y - tapCat.y); tapCat.x = x; tapCat.y = y; }
+    const z = zoneAt(x, y);
+    if (e.pointerType === 'mouse') stage.style.cursor = onToy(x, y, 6) || onAvocado(x, y, 6) ? 'grab' : z || onJar(x, y) ? 'pointer' : '';
     // stroking him: back and forth over his fur
-    if (overCat && (e.pointerType === 'mouse' || e.buttons)) {
+    if (z && z !== 'nose' && (e.pointerType === 'mouse' || e.buttons)) {
       if (now - pet.t > 650) { pet.dist = 0; pet.flips = 0; pet.lastX = x; pet.dir = 0; }
       const dx = x - (pet.lastX ?? x);
-      pet.dist += Math.abs(dx) + Math.abs(e.movementY || 0) * 0.3;
+      pet.dist += Math.abs(dx) + Math.abs(e.movementY || 0) * 0.4;
       const dir = Math.abs(dx) > 1.5 ? Math.sign(dx) : 0;
       if (dir && pet.dir && dir !== pet.dir) pet.flips++;
       if (dir) pet.dir = dir;
       pet.lastX = x; pet.t = now;
-      if (pet.dist > 70 && (pet.flips >= 1 || pet.dist > 170)) petNow(now);
+      if (pet.dist > 70 && (pet.flips >= 1 || pet.dist > 170)) {
+        const zone = z === 'head' ? 'head' : z === 'chin' || z === 'face' ? 'chin' : 'back';
+        petNow(zone, now, 900, false);
+        pet.zone = zone;
+      }
     }
     kick();
   }, opt);
   const up = (e) => {
     if (A.grab && e.pointerId === A.grab.id) endGrab(e.type === 'pointerup' ? e : null);
+    if (pom.held && pom.held.id === e.pointerId) dropToy();
     if (tapCat && tapCat.id === e.pointerId) {
-      if (e.type === 'pointerup' && tapCat.moved < 10 && now0() - tapCat.t0 < 450) meow(now0());
+      const now = now0();
+      if (e.type === 'pointerup' && tapCat.moved < 10 && now - tapCat.t0 < 450) {
+        const z = tapCat.zone;
+        if (z === 'nose') boop(false);
+        else if (z === 'head') { if (petNow('head', now, 900, false)) start('pat'); }
+        else if (z === 'chin') petNow('chin', now, 1500, false);
+        else meow(now);
+      }
       tapCat = null;
     }
   };
@@ -1309,28 +2561,380 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   stage.addEventListener('pointercancel', up, opt);
   stage.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') pointer.t = -1e9; }, opt);
   grabEl.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
+  toyEl.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
 
-  btnPoke.addEventListener('click', () => {
-    if (!L) return;
-    if (A.grab) return;
-    poke(null, null);
-  }, opt);
-  btnSwat.addEventListener('click', () => handleIt(), opt);
-  btnPet.addEventListener('click', () => {
-    if (!L) return;
+  btn.poke.addEventListener('click', () => { if (!L || A.grab || A.carry) return; noteUser(now0()); poke(null, null); }, opt);
+  btn.swat.addEventListener('click', () => handleIt(), opt);
+  btn.pet.addEventListener('click', () => petButton(), opt);
+  btn.boop.addEventListener('click', () => boop(true), opt);
+  btn.treat.addEventListener('click', () => tossTreat(), opt);
+  btn.toy.addEventListener('click', () => autoDangle(), opt);
+
+  // the things he does: one at a time, the more important ones win
+  function start(kind, data) {
+    if (!L) return null;
     const now = now0();
-    petNow(now, 2400);
-    if (!RM) fx.strokes.push({ t0: now });
-  }, opt);
+    const cur = C.act;
+    if (cur && (PRI[cur.kind] > PRI[kind] || (PRI[cur.kind] === 5 && PRI[kind] === 5))) return null;
+    if (cur) endAct(cur, now);
+    const a = { kind, t0: now, dur: (RM && DUR_RM[kind]) || DUR[kind], hit: false, init: false, pawOver: false };
+    if (data) Object.assign(a, data);
+    C.act = a;
+    if (kind === 'swat') C.swat = a;
+    if (kind === 'warn' || kind === 'swat' || kind === 'push' || kind === 'bury' || kind === 'sit') C.petUntil = 0;
+    kick();
+    return a;
+  }
+  function endAct(a, now) {
+    if (C.act === a) C.act = null;
+    if (C.swat === a) C.swat = null;
+    // cut short with the avocado still in his paws: let it go somewhere sensible
+    if (!a.hit && (a.kind === 'push' || a.kind === 'bury' || a.kind === 'sit') && A.carry) {
+      a.hit = true;
+      finishCarry();
+      seal(A.x, A.y - 12 * L.s, now);
+    }
+    if (a.kind === 'pounce') pom.pinned = null;
+  }
+  // x, y in cat units; legs are drawn in his own shifted frame
+  function paw(w, x, y, up, beans = 0, rot = 0, fast = 0) {
+    const ox = P.bx, oy = P.by - P.lift;
+    if (w === 'n') {
+      T.nX = x - ox; T.nY = y - oy; T.nUp = up; T.nBeans = beans; T.nRot = rot;
+      if (fast) rate.nX = rate.nY = rate.nUp = fast;
+    } else {
+      T.fX = x - ox; T.fY = y - oy; T.fUp = up; T.fBeans = beans; T.fRot = rot;
+      if (fast) rate.fX = rate.fY = rate.fUp = fast;
+    }
+  }
+  // a quick strike: cock the paw, hit the target, follow through, come home
+  function strike(k, tx, ty, ck, beansUp) {
+    const S0 = SHOULDER_N[0], S1 = SHOULDER_N[1];
+    let dx = tx - S0, dy = ty - S1;
+    const d = Math.hypot(dx, dy) || 1;
+    dx /= d; dy /= d;
+    const reach = clamp(d - 18, 30, 165);
+    const Tx = S0 + dx * reach, Ty = S1 + dy * reach;
+    const cx0 = S0 + ck[0], cy0 = S1 + ck[1];
+    const thx = Tx + dx * 12, thy = Ty + dy * 12;
+    if (RM) { if (k < 0.85) paw('n', Tx, Ty, 1, 0, 0, 1e3); else paw('n', PAW_N[0], PAW_N[1], 0, 0, 0, 1e3); return; }
+    let px, py, beans = 0;
+    if (k < 0.36) { const u = easeOut(k / 0.36); px = lerp(PAW_N[0], cx0, u); py = lerp(PAW_N[1], cy0, u); beans = beansUp; }
+    else if (k < 0.48) { const u = easeIn((k - 0.36) / 0.12); px = lerp(cx0, Tx, u); py = lerp(cy0, Ty, u); }
+    else if (k < 0.6) { const u = easeOut((k - 0.48) / 0.12); px = lerp(Tx, thx, u); py = lerp(Ty, thy, u); }
+    else { const u = easeInOut((k - 0.6) / 0.4); px = lerp(thx, PAW_N[0], u); py = lerp(thy, PAW_N[1], u); }
+    paw('n', px, py, k < 0.95 ? 1 : 0, beans, 0, 1e3);
+  }
 
-  // ── the loop ──
+  // where he looks during an action (1: a point, 2: straight at you)
+  function actLook(a, e, now) {
+    const { s } = L;
+    switch (a.kind) {
+      case 'swat': case 'bury':
+        if (!a.hit || a.kind === 'swat') { LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; LK.pupil = 0.7; } else LK.mode = 2;
+        break;
+      case 'sit': if (e < (RM ? 500 : 1000)) { LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; } else LK.mode = 2; break;
+      case 'push': case 'boop': case 'love': case 'tilt': case 'wake': LK.mode = 2; break;
+      case 'warn': LK.mode = 1; LK.x = a.lx ?? pointer.x; LK.y = a.ly ?? pointer.y; LK.pupil = 0.8; break;
+      case 'bat': case 'pounce': LK.mode = 1; LK.x = pom.x; LK.y = pom.y; LK.pupil = 1; break;
+      case 'window': if (win.kind) { LK.mode = 1; LK.x = win.x; LK.y = win.y; LK.pupil = 1; } break;
+      case 'eat': if (treat.on && treat.state === 'fly') { LK.mode = 1; LK.x = treat.x; LK.y = treat.y; } LK.pupil = 0.7; break;
+      default: break;
+    }
+  }
+
+  function actPose(a, e, now) {
+    const { s } = L;
+    const k = clamp(e / a.dur);
+    switch (a.kind) {
+      case 'swat': {
+        if (!a.hit) { a.tx = cx(A.x); a.ty = cy(A.y - 14 * s); }
+        strike(k, a.tx, a.ty, [46, -40], 1);
+        T.earFL = T.earFR = 0.55; T.brow = 0.7; T.lidU = 0.3; T.happy = 0; T.whisk = -0.5;
+        T.bx = 4 * hump(k);
+        a.pawOver = true;
+        if (!a.hit && k >= (RM ? 0.25 : 0.48)) { a.hit = true; if (inZone() || A.place) swatHit(now); }
+        break;
+      }
+      case 'push': {
+        // stare right at you, paw on the avocado, and over the edge it goes
+        if (!a.init) { a.init = true; A.carry = 'push'; A.place = null; a.x0 = A.x; a.edge = L.catX + 104 * s; A.vx = A.vy = A.w = 0; }
+        const t1 = RM ? 300 : 520, t2 = RM ? 1200 : 2100, t3 = t2 + (RM ? 200 : 450);
+        let prog = 0;
+        if (e >= t2) prog = 1;
+        else if (e > t1) { const u = (e - t1) / (t2 - t1); prog = RM ? 0 : clamp(u + 0.05 * Math.sin(u * TAU * 3)); }
+        if (!a.hit) {
+          A.x = lerp(a.x0, a.edge, easeInOut(prog));
+          A.y = L.topY - avoBottom();
+          A.ang = prog * 0.5;
+          if (prog >= 1) {
+            a.hit = true; A.carry = null;
+            seal(A.x, A.y - 12 * s, now);
+            setFace('squeeze', 900);
+            if (RM) fadeAvo(() => restOnFloorAt(Math.max(L.home.x, L.catX + 230 * s)), 220, 420);
+            else { wake(); A.vx = 150 * s; A.vy = -40 * s; A.w = 4; A.fast = false; A.ghost = now + 700; }
+            a.hx = cx(A.x) - 10; a.hy = cy(A.y) - 40;
+          }
+        }
+        const qx = a.hit ? a.hx : cx(A.x) - 10, qy = a.hit ? a.hy : cy(A.y) - 40;
+        if (e < t1) { const u = easeOut(e / t1); paw('n', lerp(PAW_N[0], qx, u), lerp(PAW_N[1], qy, u) - 26 * hump(u), 1, 0, 0.5, 30); }
+        else if (e < t3) paw('n', qx, qy, 1, 0, 0.5, 30);
+        else { const u = easeInOut((e - t3) / (a.dur - t3)); paw('n', lerp(qx, PAW_N[0], u), lerp(qy, PAW_N[1], u), 1 - u, 0, 0.5, 30); }
+        T.lidU = 0.48; T.lidL = 0.12; T.brow = 0.25; T.happy = 0; T.whisk = -0.1; T.grin = 0; T.tongue = 0;
+        T.earSL = T.earSR = 0.1; T.earFL = T.earFR = 0;
+        a.pawOver = true;
+        break;
+      }
+      case 'bury': {
+        if (!a.init) { a.init = true; A.carry = 'bury'; A.place = null; a.ax = cx(A.x); A.vx = A.vy = A.w = 0; A.ang = 0; }
+        const tS = RM ? 300 : 520, tE = RM ? 1100 : 2100;
+        if (e < tS) { T.noseTw = RM ? 0.5 : Math.sin(e / 40) * 0.8; T.pitch += 0.16; T.whisk = 0.4; }
+        if (e >= tS && e < tE) {
+          // rake the cushion toward it, like covering something gross
+          const n = RM ? 1 : 4, seg = (tE - tS) / n, i = Math.min(n - 1, Math.floor((e - tS) / seg)), u = ((e - tS) - i * seg) / seg;
+          const x0 = a.ax + 52, x1 = a.ax + 32;
+          let px, py;
+          if (RM) { px = x1; py = 6; }
+          else if (u < 0.3) { const v = easeOut(u / 0.3); px = lerp(x1 + 4, x0, v); py = lerp(4, -14, v); }
+          else if (u < 0.45) { const v = easeIn((u - 0.3) / 0.15); px = x0; py = lerp(-14, 6, v); }
+          else { const v = easeInOut((u - 0.45) / 0.55); px = lerp(x0, x1, v); py = 6; }
+          paw('n', px, py, 1, 0, 0.6, 32);
+          if (u >= 0.45 && a.sc !== i) { a.sc = i; fx.scratches.push({ t0: now, x: a.ax + 42, y: 9 + i * 1.6, i }); }
+        } else if (e >= tE) {
+          const v = easeInOut((e - tE) / (a.dur - tE));
+          paw('n', lerp(a.ax + 32, PAW_N[0], v), lerp(6, PAW_N[1], v), 1 - v, 0, 0.6, 20);
+          if (e < tE + 500) T.lidU = Math.max(T.lidU, hump((e - tE) / 500));
+          T.happy = 0.5;
+        }
+        if (!a.hit) A.sink = RM ? 0 : smooth(tS + (tE - tS) * 0.5, tE, e);
+        if (!a.hit && e >= tE) {
+          a.hit = true;
+          seal(A.x, A.y - 2 * s, now);
+          A.carry = null; A.sink = 0; A.alpha = 0;
+          fadeAvo(() => restOnFloorAt(L.home.x), 1, RM ? 400 : 800);
+        }
+        a.pawOver = true;
+        break;
+      }
+      case 'sit': {
+        if (!a.init) { a.init = true; A.carry = 'sit'; A.place = null; a.x0 = A.x; a.x1 = L.catX + 106 * s; A.vx = A.vy = A.w = 0; A.ang = 0; }
+        const tA = RM ? 300 : 700, tB = RM ? 500 : 1050, tC = RM ? 1900 : 3000;
+        if (e < tA && !a.hit) {
+          // paw over the top, then pull it in under his chest
+          const u = e / tA, ax = cx(A.x), ay = cy(A.y) - 48;
+          if (u < 0.45) { const v = easeOut(u / 0.45); paw('n', lerp(PAW_N[0], ax, v), lerp(PAW_N[1], ay, v) - 20 * hump(v), 1, 0, 0.3, 25); }
+          else {
+            const v = easeInOut((u - 0.45) / 0.55);
+            A.x = lerp(a.x0, a.x1, v);
+            A.under = v > 0.05;
+            paw('n', cx(A.x) - 4, cy(A.y) - 44, 1 - v * 0.5, 0, 0.3, 25);
+          }
+          A.y = L.topY - avoBottom();
+        } else if (!a.hit) {
+          A.x = a.x1; A.under = true;
+          A.mash = RM ? 1 : smooth(tA, tB, e);
+          T.lift = 9; rate.lift = 8;
+        }
+        if (e >= tB && e < tC) {
+          T.lidU = 1; T.happy = 1; T.grin = 0.5; T.tCurl = 1.2; T.tAmp = 0.05;
+          if (!a.purr && e > tB + 200) { a.purr = true; play('purr', { gain: 0.2, seconds: 1.6 }); }
+        }
+        if (!a.hit && e >= tC) {
+          a.hit = true;
+          A.under = false; A.mash = 0; A.carry = null;
+          A.y = L.topY - avoBottom() - 4 * s;
+          seal(A.x, A.y - 12 * s, now);
+          setFace('squeeze', 900);
+          if (RM) fadeAvo(() => restOnFloorAt(Math.max(L.home.x, L.catX + 230 * s)), 200, 420);
+          else { wake(); A.vx = 560 * s; A.vy = -420 * s; A.w = 9; A.fast = true; A.sqv -= 8; A.sqA = Math.PI; }
+        }
+        if (e >= tC) T.by += 3 * hump((e - tC) / 400);
+        break;
+      }
+      case 'warn': {
+        if (!a.init) {
+          a.init = true;
+          let tx = 178, ty = -72;
+          if (now - pointer.t < 1500) { tx = Math.max(140, cx(pointer.x)); ty = clamp(cy(pointer.y), -170, -30); }
+          // aimed at your hand, but it always stops short
+          const dx = tx - SHOULDER_N[0], dy = ty - SHOULDER_N[1], d = Math.hypot(dx, dy) || 1, r = clamp(d - 16, 40, 110);
+          a.tx = SHOULDER_N[0] + (dx / d) * r; a.ty = SHOULDER_N[1] + (dy / d) * r;
+          a.lx = L.catX + tx * s; a.ly = L.topY + ty * s;
+          C.grumpyUntil = now + 3400; C.stim = C.stimMax * 0.25; C.petUntil = 0;
+          say('cat.say.over');
+        }
+        strike(k, a.tx, a.ty, [40, -46], 1);
+        T.earSL = T.earSR = 0.95; T.earFL = T.earFR = 0.45; T.brow = 1; T.lidU = 0.25; T.happy = 0; T.whisk = -0.9; T.grin = -0.4;
+        rate.lidU = rate.happy = rate.earSL = rate.earSR = 30;
+        T.tAmp = 0.6;
+        if (!a.hit && k >= 0.5) { a.hit = true; fx.rings.push({ x: L.catX + a.tx * s, y: L.topY + a.ty * s, t0: now }); play('pluck', 3, { gain: 0.08 }); }
+        break;
+      }
+      case 'boop': {
+        const pull = hump(clamp(e / 280));
+        T.hx -= 3 * pull; T.pitch -= 0.06 * pull; T.earFL += 0.25 * pull; T.earFR += 0.25 * pull;
+        T.noseTw = RM ? 0 : e < 700 ? Math.sin(e / 36) * (1 - e / 700) : 0;
+        const b0 = RM ? 150 : 240, b1 = RM ? 600 : 720, b2 = RM ? 800 : 920, b3 = RM ? 1100 : 1320;
+        const lid = e < b0 ? 0 : e < b1 ? easeInOut((e - b0) / (b1 - b0)) : e < b2 ? 1 : 1 - easeInOut((e - b2) / (b3 - b2));
+        T.lidU = Math.max(T.lidU * (1 - pull), lid); T.happy = 0.7; T.whisk = 0.4; T.grin = 0.3; T.brow = 0;
+        if (!a.hit && e >= (RM ? 300 : 430)) { a.hit = true; C.mrrpAt = now; word('냥?', 26); play('mrrp', { gain: 0.16 }); }
+        break;
+      }
+      case 'love': {
+        const lid = e < 300 ? 0 : e < 800 ? easeInOut((e - 300) / 500) : e < 1050 ? 1 : 1 - easeInOut((e - 1050) / 500);
+        T.lidU = Math.max(T.lidU, lid); T.happy = 0.6; T.grin = 0.25;
+        break;
+      }
+      case 'pat': {
+        const f = e < 140 ? e / 140 : e < 420 ? 1 : 1 - (e - 420) / 480;
+        T.earFL = T.earFR = 0.92 * f; T.earSL = T.earSR = 0.25 * f;
+        T.lidU = lerp(T.lidU, 0.92, f); T.hy += 3.5 * f; T.pitch += 0.1 * f;
+        rate.earFL = rate.earFR = 30;
+        break;
+      }
+      case 'eat': {
+        const tL = RM ? 1 : 500, tS = RM ? 400 : 1200, tB = RM ? 600 : 1350, tC = RM ? 1700 : 2900, tK = RM ? 2100 : 3400;
+        if (e < tB) { T.pitch = 0.62; T.hx = -26; T.hy = 58; T.yaw = 0.1; T.gx = 0; T.gy = 0.7; }
+        else if (e < tC) { T.pitch = 0.28; T.hx = -10; T.hy = 24; T.yaw = 0.16; T.gx = 0; T.gy = 0.2; }
+        rate.hx = rate.hy = rate.pitch = 5;
+        if (e >= tL && e < tS) { T.noseTw = RM ? 0.5 : Math.sin(e / 34) * 0.9; T.whisk = 0.7; T.lidU = 0.25; }
+        if (e >= tS && e < tB) T.jaw = 0.35;
+        if (!a.hit && e >= tB - 50) { a.hit = true; treat.on = false; treats++; renderTally(); play('chew', { gain: 0.22 }); word('냠냠', 24); }
+        if (e >= tB && e < tC) {
+          const c = (e - tB) / 300;
+          T.jaw = RM ? 0.15 : 0.1 + 0.16 * (0.5 - 0.5 * Math.cos(c * TAU));
+          T.chew = RM ? 0 : Math.sin(c * TAU);
+          T.roll += RM ? 0 : 0.05 * Math.sin(c * TAU);
+          T.lidU = 0.55; T.happy = 0.3;
+          rate.jaw = 30;
+        }
+        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; }
+        if (e >= tK) {
+          T.lidU = 1; T.happy = 1; T.grin = 0.5; T.tCurl = 1.2;
+          if (!a.m) { a.m = true; C.mrrpAt = now; play('mrrp', { gain: 0.12 }); }
+        }
+        break;
+      }
+      case 'bat': {
+        if (!a.hit) { a.tx = cx(pom.x); a.ty = cy(pom.y); }
+        strike(k, a.tx, a.ty, [30, -44], 1);
+        T.pupil = 1; T.whisk = 0.9; T.earSL = T.earSR = 0; T.lidU = 0; T.happy = 0;
+        if (!a.hit && k >= 0.46) {
+          a.hit = true;
+          const px = P.nX + P.bx, py = P.nY + P.by - P.lift, tx = cx(pom.x), ty = cy(pom.y);
+          const dx = tx - px, dy = ty - py, d = Math.hypot(dx, dy) || 1;
+          if (d < 40) {
+            pom.vx += (dx / d) * 520 * s + 120 * s; pom.vy += (dy / d) * 300 * s - 240 * s;
+            if (pom.held) { pom.x += 16 * s; pom.y -= 10 * s; }
+            play('pluck', 4, { gain: 0.1 });
+          }
+        }
+        break;
+      }
+      case 'pounce': {
+        const tW = RM ? 300 : 850, tL = RM ? 400 : 1150, tH = RM ? 1000 : 1600;
+        if (e < tW) {
+          // the butt wiggle
+          if (!RM) { T.rumpY = -6 + Math.sin(e / 34) * 2.6; T.rumpA = Math.sin(e / 48) * 0.05; T.tFlick = Math.sin(e / 55) * 0.4; }
+          T.by = 3; T.hy += 6; rate.rumpY = rate.rumpA = 30;
+          a.tx = cx(pom.x); a.ty = cy(pom.y);
+        } else if (e < tH) {
+          const v = RM ? 1 : easeOut((e - tW) / (tL - tW));
+          T.bx = 24 * v; T.by = -10 * v; T.hx += 6 * v;
+          const tx = clamp(a.tx, 120, 235), ty = clamp(a.ty, -130, 8);
+          paw('n', tx, ty, 1, 0, 0, 40);
+          paw('f', tx - 14, ty + 10, 1, 0, 0, 40);
+          rate.bx = rate.by = 25;
+          if (!a.hit && e >= (tW + tL) / 2) {
+            a.hit = true;
+            if (Math.hypot(cx(pom.x) - tx, cy(pom.y) - ty) < 95) {
+              pom.pinned = { x: tx + 4, y: ty + 2 };
+              if (pom.held) { pom.held = null; pom.auto = null; stage.classList.remove('is-grabbing'); }
+              play('pluck', 5, { gain: 0.12 });
+            }
+          }
+        } else if (pom.pinned) pom.pinned = null;
+        T.pupil = 1; T.lidU = 0; T.whisk = 0.9; T.earSL = T.earSR = 0; T.happy = 0;
+        break;
+      }
+      case 'groom': {
+        const m = facePoint(P, 0, -0.55, FACE_R * 1.05), mx = m.x + 8, my = m.y + 12;
+        if (e < 500) { const v = easeOut(e / 500); paw('n', lerp(PAW_N[0], mx, v), lerp(PAW_N[1], my, v), 1, 1, -0.8); T.pitch = 0.22; T.yaw = 0.3; }
+        else if (e < 1800) {
+          const c = ((e - 500) % 325) / 325;
+          paw('n', mx, my, 1, 1, -0.8);
+          T.pitch = 0.22 + 0.08 * hump(c); T.yaw = 0.3; T.tongue = 1; T.jaw = 0.12; T.lidU = 0.7;
+        } else if (e < 3200) {
+          const c = ((e - 1800) % 700) / 700;
+          const p0 = facePoint(P, 0.55, -0.25, FACE_R), x0 = p0.x + 6, y0 = p0.y + 4;
+          const p1 = facePoint(P, 0.85, 0.6, FACE_R), x1 = p1.x + 4, y1 = p1.y;
+          const v = hump(c);
+          paw('n', lerp(x0, x1, v), lerp(y0, y1, v), 1, 0, -1.2, 25);
+          T.roll = 0.22; T.yaw = -0.2; T.pitch = 0.12; T.lidU = 1; T.happy = 0; T.earFR = 0.5 * v;
+        } else { const v = easeInOut((e - 3200) / 600); paw('n', lerp(mx, PAW_N[0], v), lerp(my, PAW_N[1], v), 1 - v, 0, 0); }
+        T.gx = 0; T.gy = 0;
+        break;
+      }
+      case 'yawn': {
+        const J = e < 700 ? easeInOut(e / 700) : e < 1300 ? 1 : e < 1700 ? 1 - easeInOut((e - 1300) / 400) : 0;
+        T.jaw = J; T.fangs = J; T.lidU = lerp(T.lidU, 1, smooth(0, 0.4, J)); T.happy = 0; T.pitch = -0.3 * J;
+        T.earFL = T.earFR = 0.45 * J; T.earSL = T.earSR = 0.2 * J; T.whisk = -0.4 * J; T.hy -= 3 * J;
+        rate.jaw = 8;
+        if (e > 1700) { T.tongue = 1; T.lick = hump((e - 1700) / 500); }
+        break;
+      }
+      case 'window': {
+        if (!win.kind) { a.dur = 0; break; }
+        T.pupil = 1; T.whisk = 0.8; T.lidU = 0; T.earSL = T.earSR = 0; T.earFL = T.earFR = 0; T.happy = 0;
+        if (win.kind === 'bird' && win.perched) {
+          T.jaw = 0.1 + 0.09 * Math.sin(e / 30); rate.jaw = 40;
+          T.tFlick = Math.sin(e / 70) * 0.25;
+          if (!a.chat) { a.chat = true; play('chatter', { gain: 0.14 }); }
+        }
+        break;
+      }
+      case 'tilt': {
+        const v = hump(k);
+        T.roll += 0.34 * v * a.dir; T.pupil = 0.6;
+        if (a.dir > 0) T.earSR += 0.6 * v; else T.earSL += 0.6 * v;
+        break;
+      }
+      case 'sleep': {
+        T.lidU = 1; T.happy = 0; T.hy += 16; T.pitch = 0.4; T.roll = -0.08; T.yaw = 0.1; T.gx = 0; T.gy = 0;
+        T.earSL = T.earSR = 0.22; T.tAmp = 0.02; T.tCurl = 0.95; T.whisk = -0.2; T.grin = 0.2;
+        rate.hy = rate.pitch = 1.2;
+        if (now - C.zAt > 1800) {
+          C.zAt = now;
+          headMatrix(P);
+          const z = headToCat(34, -52);
+          fx.zs.push({ t0: now, x: z.x, y: z.y });
+        }
+        break;
+      }
+      case 'wake': {
+        T.lidU = lerp(1, 0.1, smooth(0, 0.7, k));
+        const J = hump(clamp((k - 0.2) / 0.5)) * 0.55;
+        T.jaw = J; T.fangs = J; T.pitch = -0.2 * hump(clamp((k - 0.2) / 0.6));
+        break;
+      }
+      default: break;
+    }
+    if (e >= a.dur) endAct(a, now);
+  }
+
+  // drop effects that have run their course; true if any are left
+  function life(arr, ms, now) {
+    for (let i = arr.length - 1; i >= 0; i--) if (now - arr[i].t0 > ms) arr.splice(i, 1);
+    return arr.length > 0;
+  }
+
+  // the loop
   function update(dt, now) {
     const { s } = L;
     let hot = false;
     // avocado
     const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
     for (let i = 0; i < n; i++) if (stepAvocado(h, now)) hot = true;
-    // squash spring
     if (Math.abs(A.sq) > 0.002 || Math.abs(A.sqv) > 0.01) {
       if (RM) { A.sq = 0; A.sqv = 0; } else {
         for (let i = 0; i < n; i++) { A.sqv += (-460 * A.sq - 16 * A.sqv) * h; A.sq += A.sqv * h; }
@@ -1339,7 +2943,6 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       }
     }
     if (A.face !== 'smug' && now > A.faceUntil && !A.grab) A.face = 'smug';
-    // fades (reduced motion, and the swat there)
     if (A.fade) {
       const e = now - A.fade.t0, f = A.fade;
       if (e < f.outMs) A.alpha = 1 - e / f.outMs;
@@ -1350,14 +2953,14 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       }
       hot = true;
     }
-    // "let him handle it": up onto the platform, a smug moment, then the paw
+    // "let him handle it": up onto the platform, a smug moment, then he decides
     if (A.place) {
       const p = A.place, e = now - p.t0;
-      const px = L.catX + 52 * s, py = L.topY + 18 * s - avoBottom();
+      const px = L.catX + 62 * s, py = L.topY - avoBottom();
       if (RM) {
         if (e < 180) A.alpha = 1 - e / 180;
         else { A.x = px; A.y = py; A.ang = 0; A.alpha = clamp((e - 180) / 200); }
-        if (e > 900 && !C.swat) startSwat(now);
+        if (e > 900) startBully(pickBully());
       } else {
         if (e < 170) A.scale = 1 - easeIn(e / 170);
         else if (e < 470) {
@@ -1365,467 +2968,407 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           A.x = px; A.y = py - 80 * s * (1 - k * k); A.ang = 0; A.w = 0;
           A.scale = Math.min(1, easeBack(clamp(k * 1.8)));
         } else {
-          if (!p.landed) { p.landed = true; A.y = py; A.scale = 1; A.sqv -= 6; A.sqA = -Math.PI / 2; setFace('smug', 0); }
-          if (e > 900 && !C.swat) startSwat(now);
+          if (!p.landed) { p.landed = true; A.x = px; A.y = py; A.ang = 0; A.scale = 1; A.sqv -= 6; A.sqA = -Math.PI / 2; setFace('smug', 0); }
+          if (e > 850) startBully(pickBully());
         }
       }
       A.vx = A.vy = 0;
       A.sleeping = true;
       hot = true;
     }
-    // the swat
-    if (!C.swat && !A.grab && !A.place && !A.fade && now - C.lastSwat > 500 && inZone()) {
+    // it came near him on its own
+    const bullying = C.act && PRI[C.act.kind] === 5;
+    if (!bullying && !A.grab && !A.place && !A.fade && !A.carry && now - C.lastSwat > 500 && inZone()) {
       const slow = Math.hypot(A.vx, A.vy) < 720 * s;
-      if (slow || A.touchedCat) startSwat(now);
-    }
+      if (onPlatform() && slow && (A.sleeping || A.grounded)) {
+        if (!C.avoSeenAt) C.avoSeenAt = now;
+        else if (now - C.avoSeenAt > (RM ? 200 : 420)) { C.avoSeenAt = 0; startBully(pickBully()); }
+      } else if (slow || A.touchedCat) startBully('swat');
+    } else if (!inZone()) C.avoSeenAt = 0;
     if (!inZone()) A.touchedCat = false;
-    if (C.swat) {
-      const k = (now - C.swat.t0) / C.swat.dur;
-      if (!C.swat.hit && k >= (RM ? 0.25 : 0.48)) {
-        C.swat.hit = true;
-        if (inZone() || A.place) swatHit(now);
-      }
-      if (k >= 1) C.swat = null;
-      hot = true;
+    if (A.carry || A.under) hot = true;
+
+    // the pompom
+    if (stepToy(dt, now)) hot = true;
+    const toyHot = !!(pom.held || pom.pinned || pom.speed > 160 * s);
+    if (toyHot) C.toyT = now;
+    if (pom.speed > 260 * s || !pom.held) C.toyStill = now;
+    if (toyHot && !pom.pinned && L) {
+      const tx = cx(pom.x), ty = cy(pom.y);
+      const d = Math.hypot(tx - SHOULDER_N[0], ty - SHOULDER_N[1]);
+      const free = !C.act || PRI[C.act.kind] < 3;
+      if (free && d < 128 && tx > 70 && ty < 24 && now - C.batAt > 650) { C.batAt = now; start('bat'); }
+      else if (free && pom.held && d < 200 && tx > 80 && now - C.toyStill > (RM ? 400 : 850) && now - C.pounceAt > 2600) { C.pounceAt = now; start('pounce'); }
     }
 
-    // the cat
-    const tgtAvo = A.alpha > 0.4 && (A.grab || A.place || C.swat || now - A.lastMove < 1400);
-    let tx, ty;
-    if (tgtAvo) { tx = A.x; ty = A.y - 10 * s; }
-    else if (!RM && now - pointer.t < 2600) { tx = pointer.x; ty = pointer.y; }
-    else {
-      // idle: mostly out of the window, sometimes at you, sometimes a glare at the avocado
-      const phase = Math.floor(now / 5200), mode = RM ? 1 : [0, 1, 0, 2, 1, 0][phase % 6];
-      if (mode === 0) { tx = L.catX + 380 * s + Math.sin(now / 4100) * 60 * s; ty = L.topY - 150 * s + Math.sin(now / 2900) * 30 * s; }
-      else if (mode === 1) { tx = L.catX + HEAD_C[0] * s + 10 * s; ty = L.topY + 40 * s; }
-      else { tx = A.x; ty = A.y; }
+    // the treat, flying up to him
+    if (treat.on) {
+      hot = true;
+      if (treat.state === 'fly') {
+        const e = (now - treat.t0) / 700;
+        const x1 = L.catX + 72 * s, y1 = L.topY + 12 * s;
+        if (e >= 1) { treat.state = 'rest'; placeTreat(); play('pluck', 7, { gain: 0.06 }); }
+        else {
+          treat.x = lerp(treat.x0, x1, e);
+          treat.y = lerp(treat.y0, y1, e) - Math.sin(Math.PI * e) * 150 * s;
+          treat.a = e * 9;
+        }
+      }
+      if (treat.state === 'rest' && (!C.act || PRI[C.act.kind] < 3)) start('eat');
     }
-    const hx = L.catX + HEAD_C[0] * s, hy = L.topY + HEAD_C[1] * s;
-    const yawT = Math.tanh((tx - hx) / (200 * s)), pitchT = clamp(Math.tanh((ty - hy) / (170 * s)), -0.8, 1);
-    if (RM) { C.yaw = yawT; C.pitch = pitchT; } else {
-      const kk = 1 - Math.exp(-dt * (tgtAvo ? 11 : 5));
-      C.yaw += (yawT - C.yaw) * kk; C.pitch += (pitchT - C.pitch) * kk;
+    if (now - jarT < 500) hot = true;
+
+    // out of the window
+    if (stepWindowLife(now)) hot = true;
+
+    // too much petting
+    const petting = now < C.petUntil;
+    if (petting) C.stim += dt * (C.petZone === 'head' ? 0.5 : C.petZone === 'chin' ? 0.28 : 0.4);
+    else C.stim = Math.max(0, C.stim - dt * 0.28);
+    if (C.stim >= C.stimMax && (!C.act || PRI[C.act.kind] < 4)) {
+      C.stimMax = 3.8 + Math.random() * 1.2;
+      start('warn');
     }
-    C.tilt = C.yaw * 0.07 - C.pitch * 0.04 + (RM ? 0 : Math.sin(now / 3700) * 0.03) + C.happy * 0.1;
-    const near = Math.hypot(A.x - hx, A.y - hy) < 240 * s;
-    const flatT = (C.swat || (near && (A.grab || A.place || now - A.lastMove < 600))) ? 1 : 0;
-    const agitT = (C.swat || A.grab || A.place || now - A.lastMove < 900) ? 1 : 0;
-    const dilT = tgtAvo ? 1 : now - pointer.t < 2600 ? 0.62 : 0.4;
-    const happyT = now < C.petUntil ? 1 : 0;
-    const ease = (v, tg, up, dn) => v + (tg - v) * (1 - Math.exp(-dt * (tg > v ? up : dn)));
-    C.flat = RM ? flatT : ease(C.flat, flatT, 9, 2.5);
-    C.agit = RM ? 0 : ease(C.agit, agitT, 4, 0.8);
-    C.dil = RM ? dilT : ease(C.dil, dilT, 6, 1.5);
-    C.happy = RM ? happyT : ease(C.happy, happyT, 7, 2.2);
-    if (!RM) {
-      C.bph += dt * TAU / (C.happy > 0.5 ? 2.6 : 3.4);
-      C.breath = (Math.sin(C.bph) * 0.5 + 0.5);
-      C.tailPh += dt * (1.05 + C.agit * 3.2);
-      C.curlPh += dt * 0.55;
-      // blinks: quick ones, and slow ones (a cat's "I love you")
-      if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: Math.random() < 0.4 };
-      if (now - C.satisfiedAt > 0 && now - C.satisfiedAt < 40 && !C.blink) C.blink = { t0: now, slow: true };
-      if (C.blink) {
-        const d = C.blink.slow ? [300, 420, 380] : [80, 50, 110];
-        const e = now - C.blink.t0;
-        C.lid = e < d[0] ? easeInOut(e / d[0]) : e < d[0] + d[1] ? 1 : 1 - easeInOut((e - d[0] - d[1]) / d[2]);
-        if (e > d[0] + d[1] + d[2]) { C.blink = null; C.lid = 0; C.blinkAt = now + 2200 + Math.random() * 4200; }
+
+    // left alone for a while: little things, then a nap
+    if (!RM && !C.act && now > C.idleAt && now - C.lastUser > 3500 && !A.grab && !A.carry && !pom.held && !treat.on) {
+      if (now - C.lastUser > 42000) start('sleep');
+      else {
+        const r = Math.random();
+        if (r < 0.26) start('groom');
+        else if (r < 0.4) start('yawn');
+        else if (r < 0.7) { if (spawnWindow(now)) start('window', { dur: 1e9 }); }
+        else if (r < 0.85) start('love');
+        else C.swishUntil = now + 2600;
       }
-      // ear twitches
-      if (!C.tw && now > C.twAt) C.tw = { t0: now, ear: Math.random() < 0.5 ? 'L' : 'R', n: Math.random() < 0.35 ? 2 : 1 };
-      C.earL = C.earR = 0;
-      if (C.tw) {
-        const e = (now - C.tw.t0) / 170;
-        const v = e < C.tw.n ? Math.sin(Math.PI * (e % 1)) * 0.42 : 0;
-        if (C.tw.ear === 'L') C.earL = -v; else C.earR = v;
-        if (e >= C.tw.n) { C.tw = null; C.twAt = now + 2600 + Math.random() * 5200; }
-      }
-      // the pom-pom sways
-      const dWind = Math.sin(now / 1300) * 0.08 + Math.sin(now / 517) * 0.03;
-      pom.w += (-(L.G / L.pom.len) * Math.sin(pom.a - dWind * 0.3) * 0.25 - pom.w * 0.9) * dt;
-      pom.a += pom.w * dt;
-      const bx = L.pom.x + Math.sin(pom.a) * L.pom.len, by = L.pom.y + Math.cos(pom.a) * L.pom.len;
-      if (Math.hypot(A.x - bx, A.y - by) < L.pom.r + 30 * s && now - pom.hitT > 300 && Math.hypot(A.vx, A.vy) > 80 * s) {
-        pom.hitT = now; pom.w += clamp(A.vx / L.pom.len, -6, 6);
-      }
-      // purr marks while he is being stroked
-      if (C.petUntil > now && now - pet.spawnT > 320) {
-        pet.spawnT = now;
-        fx.purrs.push({ t0: now, x: -100 + Math.random() * 140, y: -112 - Math.random() * 10, seed: Math.random() * 100 });
-      }
-    } else {
-      C.breath = 0; C.lid = 0;
-      if (C.petUntil > now && fx.purrs.length < 3) fx.purrs.push({ t0: now, x: -90 + fx.purrs.length * 55, y: -120 - (fx.purrs.length % 2) * 14, seed: fx.purrs.length * 7 });
+      C.idleAt = now + 6500 + Math.random() * 6500;
     }
+
+    pose(dt, now);
+
     // effects
-    const life = (arr, ms) => { for (let i = arr.length - 1; i >= 0; i--) if (now - arr[i].t0 > ms) arr.splice(i, 1); return arr.length > 0; };
-    if (life(fx.purrs, 1500)) hot = true;
-    if (life(fx.meows, 1300)) hot = true;
-    if (life(fx.seals, 1600)) hot = true;
-    if (life(fx.rings, 500)) hot = true;
-    if (life(fx.strokes, 2300)) hot = true;
-    if (C.happy > 0.01 || C.petUntil > now || now - A.worriedAt < 1800 || A.face !== 'smug') hot = true;
-    if (A.grab) hot = true;
+    if (petting && !RM && now - pet.spawnT > 320) {
+      pet.spawnT = now;
+      let px = -100 + Math.random() * 140, py = -112 - Math.random() * 10;
+      if (C.petZone !== 'back') { headMatrix(P); const q = headToCat(C.petZone === 'chin' ? 30 + Math.random() * 20 : -10 + Math.random() * 30, C.petZone === 'chin' ? 40 : -66); px = q.x; py = q.y; }
+      fx.purrs.push({ t0: now, x: px, y: py, seed: Math.random() * 100 });
+    } else if (petting && RM && fx.purrs.length < 3) fx.purrs.push({ t0: now, x: -90 + fx.purrs.length * 55, y: -120 - (fx.purrs.length % 2) * 14, seed: fx.purrs.length * 7 });
+    if (life(fx.purrs, 1500, now)) hot = true;
+    if (life(fx.words, 1300, now)) hot = true;
+    if (life(fx.seals, 1600, now)) hot = true;
+    if (life(fx.rings, 500, now)) hot = true;
+    if (life(fx.strokes, 2300, now)) hot = true;
+    if (life(fx.zs, 2600, now)) hot = true;
+    if (life(fx.scratches, 1800, now)) hot = true;
+    if (C.act || C.happy > 0.01 || petting || now - A.worriedAt < 1800 || A.face !== 'smug' || A.grab) hot = true;
+    if (now - C.meowAt < 700 || now - C.mrrpAt < 400 || C.stim > 0.01 || now < C.grumpyUntil) hot = true;
     return hot;
   }
 
-  // ── drawing ──
+  // settle the pose: rest, where he's looking, his moods, what he's doing, then ease toward it
+  function pose(dt, now) {
+    const { s } = L;
+    for (let i = 0; i < KEYS.length; i++) T[KEYS[i]] = REST[KEYS[i]];
+    Object.assign(rate, RATE);
+    const a = C.act, e = a ? now - a.t0 : 0;
+    // where to look
+    LK.mode = 0; LK.pupil = 0.28;
+    const toyHot = pom.held || pom.pinned || pom.speed > 160 * s;
+    if (toyHot) { LK.mode = 1; LK.x = pom.x; LK.y = pom.y; LK.pupil = 0.95; }
+    else if (treat.on && treat.state === 'fly') { LK.mode = 1; LK.x = treat.x; LK.y = treat.y; LK.pupil = 0.75; }
+    else if (A.alpha > 0.4 && (A.grab || A.place || A.carry || now - A.lastMove < 1400)) { LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; LK.pupil = A.fast ? 0.92 : 0.62; }
+    else if (!RM && now - pointer.t < 2600) { LK.mode = 1; LK.x = pointer.x; LK.y = pointer.y; LK.pupil = 0.45; }
+    else {
+      // idle: mostly out of the window, sometimes at you, now and then a glare at the avocado
+      const mode = RM ? 1 : [0, 1, 0, 2, 1, 0][Math.floor(now / 5200) % 6];
+      if (mode === 0) { LK.mode = 1; LK.x = L.catX + 380 * s + Math.sin(now / 4100) * 60 * s; LK.y = L.topY - 150 * s + Math.sin(now / 2900) * 30 * s; }
+      else if (mode === 1) LK.mode = 2;
+      else { LK.mode = 1; LK.x = A.x; LK.y = A.y; }
+    }
+    if (a) actLook(a, e, now);
+    headMatrix(P);
+    const hx = L.catX + HM[4] * s, hy = L.topY + HM[5] * s;
+    if (LK.mode === 2) { T.yaw = 0.04; T.pitch = 0.02; T.gx = 0; T.gy = 0; }
+    else if (LK.mode === 1) {
+      const yawD = Math.atan2(LK.x - hx, 240 * s), pitchD = Math.atan2(LK.y - hy, 260 * s);
+      T.yaw = clamp(0.1 + yawD * 0.85, -0.85, 0.95);
+      T.pitch = clamp(pitchD * 0.75, -0.48, 0.6);
+      T.gx = clamp((0.1 + yawD - P.yaw) * 1.7, -1, 1);
+      T.gy = clamp((pitchD - P.pitch) * 1.7, -1, 1);
+    }
+    T.pupil = LK.pupil;
+    T.roll = P.yaw * 0.05 - P.pitch * 0.04 + (RM ? 0 : Math.sin(now / 3700) * 0.03);
+    // tail
+    C.curlPh += dt * 0.55;
+    T.tCurl = RM ? 0.7 : 0.55 + 0.45 * Math.sin(C.curlPh);
+    const agitT = A.grab || A.place || A.carry || now - A.lastMove < 900 ? 1 : 0;
+    C.agit = RM ? 0 : C.agit + (agitT - C.agit) * (1 - Math.exp(-dt * (agitT ? 4 : 0.8)));
+    let tAmp = 0.12 + 0.3 * C.agit, tSpd = 1.05 + 2.6 * C.agit;
+    if (now < C.swishUntil) { tAmp += 0.3; tSpd += 1.5; }
+
+    // moods
+    const petting = now < C.petUntil && now >= C.grumpyUntil;
+    C.happy = RM ? (petting ? 1 : 0) : C.happy + ((petting ? 1 : 0) - C.happy) * (1 - Math.exp(-dt * (petting ? 6 : 2.2)));
+    if (C.happy > 0.01) {
+      const hh = C.happy, z = C.petZone;
+      if (z === 'chin') {
+        T.lidU = lerp(T.lidU, 1, hh); T.happy = hh; T.pitch = lerp(T.pitch, -0.42, hh); T.roll += 0.18 * hh; T.hx += 5 * hh;
+        T.yaw = lerp(T.yaw, 0.3, hh); T.gx *= 1 - hh; T.gy *= 1 - hh; T.grin = 0.5 * hh; T.earSL += 0.15 * hh; T.earSR += 0.15 * hh; T.whisk = 0.3 * hh;
+      } else if (z === 'head') {
+        T.lidU = lerp(T.lidU, 0.7, hh); T.happy = 0.45 * hh; T.earFL += 0.4 * hh; T.earFR += 0.4 * hh; T.hy += 2.5 * hh; T.pitch += 0.12 * hh;
+      } else {
+        T.lidU = lerp(T.lidU, 0.42, hh); T.happy = 0.65 * hh; T.grin = 0.3 * hh; T.earSL += 0.12 * hh; T.earSR += 0.12 * hh;
+      }
+      T.tCurl += 0.6 * hh; tAmp -= 0.06 * hh;
+    }
+    const sig = smooth(C.stimMax * 0.6, C.stimMax, C.stim);
+    const grumpy = now < C.grumpyUntil ? clamp((C.grumpyUntil - now) / 1200) : 0;
+    const cross = Math.max(sig, grumpy);
+    if (cross > 0) {
+      T.earSL += 0.7 * cross; T.earSR += 0.7 * cross; T.lidU = lerp(T.lidU, 0.3, cross); T.happy *= 1 - cross;
+      T.brow = Math.max(T.brow, 0.6 * cross); T.whisk = lerp(T.whisk, -0.5, cross); T.hx -= 3 * grumpy;
+      tAmp += 0.45 * cross; tSpd += 5 * cross;
+    }
+    // that avocado is far too close
+    const near = A.alpha > 0.5 && !A.under && !A.sink && Math.hypot(A.x - hx, A.y - hy) < 200 * s;
+    const dT = near || (a && a.kind === 'bury') ? 1 : 0;
+    C.disgust = RM ? dT : C.disgust + (dT - C.disgust) * (1 - Math.exp(-dt * (dT ? 5 : 2)));
+    const dg = C.disgust;
+    if (dg > 0.01) {
+      T.hx -= 6 * dg; T.pitch -= 0.06 * dg; T.lidU = lerp(T.lidU, 0.48, dg); T.lidL = lerp(T.lidL, 0.45, dg); T.brow = lerp(T.brow, 0.9, dg);
+      T.earSL += 0.45 * dg; T.earSR += 0.45 * dg; T.earFL += 0.15 * dg; T.earFR += 0.15 * dg;
+      T.whisk = lerp(T.whisk, -0.7, dg); T.grin = lerp(T.grin, -0.9, dg); T.happy *= 1 - dg;
+      if (!RM && dg > 0.6 && now > C.blepAt) { C.blepUntil = now + 750; C.blepAt = now + 2600 + Math.random() * 2400; }
+      if (now < C.blepUntil) T.tongue = 1;
+    }
+    // something worth hunting
+    const al = toyHot || (a && a.kind === 'window') ? 1 : 0;
+    if (al) { T.whisk = 0.8; T.lidU = Math.min(T.lidU, 0.05); T.earSL = T.earSR = 0; if (!RM) T.tFlick = Math.sin(now / 60) * 0.18; }
+    // sleepy when nobody's around
+    const drowsy = RM || (a && a.kind !== 'sleep' && a.kind !== 'love') ? 0 : smooth(26000, 40000, now - C.lastUser);
+    T.lidU = Math.max(T.lidU, 0.6 * drowsy);
+
+    T.tAmp = tAmp;
+    if (a) actPose(a, e, now);
+    if (C.act && C.act.kind === 'sleep') tSpd = 0.3;
+
+    // little sounds with an open mouth
+    const mk = (now - C.meowAt) / 600;
+    if (mk < 1) { T.jaw = Math.max(T.jaw, 0.55 * hump(mk)); T.fangs = Math.max(T.fangs, 0.3 * hump(mk)); rate.jaw = 25; }
+    const rk = (now - C.mrrpAt) / 320;
+    if (rk < 1) { T.jaw = Math.max(T.jaw, 0.26 * hump(rk)); rate.jaw = 25; }
+    // blinks: quick ones, and slow ones (a cat's "I love you")
+    if (!RM) {
+      if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: Math.random() < 0.4 };
+      if (C.blink) {
+        const d = C.blink.slow ? [300, 420, 380] : [80, 50, 110];
+        const be = now - C.blink.t0;
+        const lid = be < d[0] ? easeInOut(be / d[0]) : be < d[0] + d[1] ? 1 : 1 - easeInOut((be - d[0] - d[1]) / d[2]);
+        T.lidU = Math.max(T.lidU, lid); rate.lidU = 40;
+        if (be > d[0] + d[1] + d[2]) { C.blink = null; C.blinkAt = now + 2200 + Math.random() * 4200; }
+      }
+      // ear twitches
+      if (!C.tw && now > C.twAt) C.tw = { t0: now, ear: Math.random() < 0.5 ? 'L' : 'R', n: Math.random() < 0.35 ? 2 : 1 };
+      if (C.tw) {
+        const te = (now - C.tw.t0) / 170;
+        const v = te < C.tw.n ? Math.sin(Math.PI * (te % 1)) * 0.38 : 0;
+        if (C.tw.ear === 'L') T.earTL = -v; else T.earTR = v;
+        rate.earTL = rate.earTR = 40;
+        if (te >= C.tw.n) { C.tw = null; C.twAt = now + 2600 + Math.random() * 5200; }
+      }
+    }
+    T.earFL = clamp(T.earFL); T.earFR = clamp(T.earFR); T.earSL = clamp(T.earSL); T.earSR = clamp(T.earSR);
+    // ease toward it all
+    for (let i = 0; i < KEYS.length; i++) {
+      const k = KEYS[i];
+      if (RM) { P[k] = T[k]; continue; }
+      const r = k === 'pupil' ? (T.pupil > P.pupil ? 6 : 1.4) : rate[k];
+      P[k] += (T[k] - P[k]) * (1 - Math.exp(-dt * r));
+    }
+    if (!RM) P.tPh += dt * tSpd;
+    const sleeping = C.act && C.act.kind === 'sleep';
+    C.bph += dt * TAU / (sleeping ? 4.4 : C.happy > 0.5 ? 2.6 : 3.4);
+    P.breath = RM ? 0 : (Math.sin(C.bph) * 0.5 + 0.5) * (sleeping ? 1.5 : 1);
+  }
+
+  // a bird or a leaf, outside the window
+  function spawnWindow(now) {
+    const G = L.glass, { s } = L;
+    const hx = L.catX + HEAD_REST[0] * s;
+    const left = G.x0 + 26 * s, right = G.x1 - 26 * s;
+    const roomL = hx - 80 * s - left, roomR = right - hx - 80 * s;
+    if (Math.max(roomL, roomR) < 30 * s) return false;
+    const px = roomR >= roomL ? lerp(hx + 80 * s, right, 0.3 + Math.random() * 0.6) : lerp(left, hx - 80 * s, 0.1 + Math.random() * 0.6);
+    win.kind = Math.random() < 0.62 ? 'bird' : 'leaf';
+    win.t0 = now;
+    win.px = px; win.py = G.y1 - 9 * s;
+    const fromRight = px > hx;
+    win.fx = px + (fromRight ? 150 : -150) * s; win.fy = G.y0 - 30 * s;
+    win.flip = fromRight ? -1 : 1;
+    win.dur = win.kind === 'bird' ? 5200 : 4400;
+    win.perched = false;
+    win.x = win.fx; win.y = win.fy;
+    return true;
+  }
+  function stepWindowLife(now) {
+    if (!win.kind) return false;
+    const e = now - win.t0, { s } = L;
+    if (e > win.dur) { win.kind = ''; win.perched = false; return false; }
+    if (win.kind === 'bird') {
+      if (e < 900) {
+        const k = easeOut(e / 900);
+        win.x = lerp(win.fx, win.px, k); win.y = lerp(win.fy, win.py, k) - Math.sin(k * Math.PI) * 20 * s; win.perched = false;
+      } else if (e < 4000) {
+        const hop = e > 2000 && e < 2300 ? (e - 2000) / 300 : e >= 2300 ? 1 : 0;
+        win.x = win.px - hop * 9 * s * win.flip; win.y = win.py - Math.sin(Math.PI * clamp(hop)) * 6 * s * (hop < 1 ? 1 : 0);
+        win.perched = true;
+      } else {
+        const k = easeIn((e - 4000) / 1200);
+        win.x = win.px - 9 * s * win.flip - k * 220 * s * win.flip; win.y = win.py - k * 170 * s; win.perched = false;
+      }
+    } else {
+      const k = e / win.dur;
+      win.x = win.px + Math.sin(k * 7) * 24 * s - (k - 0.5) * 50 * s;
+      win.y = lerp(L.glass.y0 - 10 * s, L.glass.y1 + 6 * s, k);
+    }
+    return true;
+  }
+
+  // drawing
+  let nowDraw = 0;
+  const toStage = (g) => { g.save(); g.scale(1 / L.s, 1 / L.s); g.translate(-L.catX, -L.topY); };
+  const HOOKS = {
+    lip: () => blit(fg, SP.lip),
+    under: () => drawScratches(fg, nowDraw),
+    front: () => {
+      if (A.under) { toStage(fg); drawAvocado(fg, nowDraw); fg.restore(); }
+      if (treat.on && treat.state === 'rest') { toStage(fg); drawTreat(fg); fg.restore(); }
+    },
+  };
+
   function draw(now) {
-    if (!L || !SP) return;
-    const g = fgC.getContext('2d');
+    if (!L || !SP || !CS) return;
+    nowDraw = now;
+    const g = fg;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, fgC.width, fgC.height);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const { s } = L;
+    drawWindowLife(g, now);
     drawAvoShadow(g);
-    drawPom(g);
+    drawJar(g, now);
+    if (pom.pinned) drawToy(g);
     g.save();
     g.translate(L.catX, L.topY);
     g.scale(s, s);
-    drawTail(g, now);
-    // breathing: the loaf rises and falls from the platform
-    const br = C.breath * 0.016;
-    g.save();
-    g.translate(0, 12); g.scale(1 + br * 0.2, 1 + br); g.translate(0, -12);
-    blit(g, SP.body);
-    g.restore();
-    blit(g, SP.lip);
-    drawPaw(g, 60, 10, 0.92, -0.06);
-    const sw = C.swat ? pawPos((now - C.swat.t0) / C.swat.dur) : null;
-    if (!sw) drawPaw(g, PAW_REST[0], PAW_REST[1], 1, 0.06);
-    drawHead(g, now, br);
+    drawCat(g, CS, P, HOOKS);
     drawStrokes(g, now);
     drawPurrs(g, now);
-    drawMeows(g, now);
+    drawZs(g, now);
+    drawWords(g, now);
     g.restore();
+    if (!pom.pinned) drawToy(g);
     drawRings(g, now);
-    drawAvocado(g, now);
-    // the paw lands on top of the avocado, and the seal is pressed over where it sat
-    if (sw) {
-      g.save();
-      g.translate(L.catX, L.topY);
-      g.scale(s, s);
-      drawLeg(g, SHOULDER, sw.p, sw.beans);
+    if (!A.under) drawAvocado(g, now);
+    // the paw lands on top of the avocado
+    if (C.act && C.act.pawOver && P.nUp > 0.15) {
+      g.save(); g.translate(L.catX, L.topY); g.scale(s, s);
+      nearLeg(g, CS, P);
       g.restore();
     }
+    if (treat.on && treat.state === 'fly') drawTreat(g);
     drawSeals(g, now);
-    // the grab handle follows the avocado
-    grabEl.style.transform = `translate(${A.x.toFixed(1)}px, ${(A.y - 14 * s).toFixed(1)}px)`;
-    grabEl.style.visibility = A.alpha > 0.5 ? 'visible' : 'hidden';
+    // the grab handles follow the avocado and the pompom
+    handle(grabEl, HA, A.x, A.y - 14 * s, A.alpha > 0.5 && !A.carry);
+    handle(toyEl, HT, pom.x, pom.y, !pom.pinned);
     lastDraw = now;
   }
 
-  function drawPom(g) {
-    const { s } = L;
-    const { x, y, len, r } = L.pom;
-    const bx = x + Math.sin(pom.a) * len, by = y + Math.cos(pom.a) * len;
-    g.strokeStyle = 'rgba(180,166,140,.9)';
+  const HA = { x: -1e9, y: -1e9, on: null }, HT = { x: -1e9, y: -1e9, on: null };
+  function handle(el, h, x, y, on) {
+    if (Math.abs(x - h.x) > 0.25 || Math.abs(y - h.y) > 0.25) { h.x = x; h.y = y; el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; }
+    if (on !== h.on) { h.on = on; el.style.visibility = on ? 'visible' : 'hidden'; }
+  }
+
+  function drawWindowLife(g, now) {
+    if (!win.kind) return;
+    const G = L.glass, e = now - win.t0, { s } = L;
+    g.save();
+    g.beginPath(); g.rect(G.x0, G.y0, G.x1 - G.x0, G.y1 - G.y0); g.clip();
+    g.globalAlpha = 0.9;
+    if (win.kind === 'bird') {
+      const peck = win.perched ? Math.max(hump((e - 1400) / 220), hump((e - 2700) / 220), hump((e - 3350) / 200)) : 0;
+      drawBird(g, win.x, win.y, 1.3 * s, win.flip, win.perched ? null : e / 38, peck);
+    } else drawLeaf(g, win.x, win.y, 1.4 * s, e / 600 + Math.sin(e / 420));
+    g.restore();
+  }
+
+  function drawJar(g, now) {
+    const e = now - jarT, wob = e < 500 && !RM ? Math.sin(e / 32) * 0.09 * (1 - e / 500) : 0;
+    g.save();
+    g.translate(L.jar.x, L.jar.y);
+    g.rotate(wob);
+    blit2(g, SP.jar, 0, 0, L.s);
+    g.restore();
+  }
+  function drawTreat(g) {
+    g.save();
+    g.translate(treat.x, treat.y);
+    g.rotate(treat.a);
+    blit2(g, SP.treat, 0, 0, L.s * 1.2);
+    g.restore();
+  }
+  function drawToy(g) {
+    const { s } = L, o = L.pom;
+    const d = Math.hypot(pom.x - o.x, pom.y - o.y);
+    const sag = Math.max(0, o.len * 1.1 - d) * 0.5;
+    g.strokeStyle = 'rgba(176,160,132,.95)';
     g.lineWidth = 1.1 * s;
-    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo((x + bx) / 2 + pom.w * 2 * s, (y + by) / 2, bx, by - r * 0.6); g.stroke();
-    // fluffy ball
-    stamp(g, bx, by + r * 0.15, r * 1.35, CREAM_D, 0.3, 0.45);
-    const gr = g.createRadialGradient(bx - r * 0.35, by - r * 0.4, r * 0.1, bx, by, r);
-    gr.addColorStop(0, 'rgb(255,253,246)'); gr.addColorStop(0.7, rgba(CREAM, 1)); gr.addColorStop(1, rgba(CREAM_S, 1));
-    g.fillStyle = gr;
-    g.beginPath(); g.arc(bx, by, r * 0.92, 0, TAU); g.fill();
-    const R = rng(77);
     g.lineCap = 'round';
-    for (let i = 0; i < 70; i++) {
-      const a = R() * TAU, r0 = r * (0.6 + R() * 0.3), r1 = r * (0.95 + R() * 0.22);
-      const lower = Math.sin(a) > 0.2;
-      g.strokeStyle = lower && R() < 0.6 ? rgba(CREAM_INK, 0.3) : 'rgba(255,252,244,.85)';
-      g.lineWidth = 0.8 * s;
-      g.beginPath(); g.moveTo(bx + Math.cos(a) * r0, by + Math.sin(a) * r0); g.lineTo(bx + Math.cos(a + 0.12) * r1, by + Math.sin(a + 0.12) * r1); g.stroke();
-    }
-  }
-
-  function tailPoints() {
-    const N = 13, seg = 11.2;
-    let x = -126, y = 10;
-    const pts = [[x, y]];
-    const amp = RM ? 0 : 0.14 + 0.36 * C.agit;
-    const curl = RM ? 0.7 : 0.55 + 0.45 * Math.sin(C.curlPh) + C.happy * 0.5;
-    for (let i = 0; i < N; i++) {
-      const u = (i + 1) / N;
-      let a = Math.PI / 2 + 0.55 * (1 - smooth(0, 0.3, u));
-      a += amp * Math.sin(C.tailPh - u * 2.4) * smooth(0.12, 1, u);
-      a -= curl * smooth(0.62, 1, u) * 1.5;
-      x += Math.cos(a) * seg; y += Math.sin(a) * seg;
-      pts.push([x, y]);
-    }
-    return pts;
-  }
-  const TAIL_R = (() => { const R = rng(91); return Array.from({ length: 600 }, () => R()); })();
-  function drawTail(g) {
-    const P = tailPoints();
-    const n = P.length;
-    const left = [], right = [];
-    for (let i = 0; i < n; i++) {
-      const a = P[Math.max(0, i - 1)], b = P[Math.min(n - 1, i + 1)];
-      let nx = -(b[1] - a[1]), ny = b[0] - a[0];
-      const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-      const u = i / (n - 1);
-      const w = lerp(14, 8, u) * (u > 0.9 ? Math.sqrt(Math.max(0, 1 - (u - 0.9) / 0.12)) * 0.6 + 0.4 : 1);
-      left.push([P[i][0] + nx * w, P[i][1] + ny * w]);
-      right.push([P[i][0] - nx * w, P[i][1] - ny * w]);
-    }
-    const tip = P[n - 1], pre = P[n - 2];
-    const tdx = tip[0] - pre[0], tdy = tip[1] - pre[1], tl = Math.hypot(tdx, tdy) || 1;
     g.beginPath();
-    left.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
-    g.quadraticCurveTo(tip[0] + (tdx / tl) * 9, tip[1] + (tdy / tl) * 9, right[n - 1][0], right[n - 1][1]);
-    for (let i = n - 1; i >= 0; i--) g.lineTo(right[i][0], right[i][1]);
-    g.closePath();
-    const gr = g.createLinearGradient(-150, 0, -110, 0);
-    gr.addColorStop(0, rgba(FUR_LOW, 1)); gr.addColorStop(1, rgba(FUR_MID, 1));
-    g.fillStyle = gr;
-    g.fill();
-    g.lineCap = 'round'; g.lineJoin = 'round';
-    // sheen on the window side, ink on the shadow side
-    g.beginPath();
-    for (let i = 1; i < n - 1; i++) {
-      const x = lerp(P[i][0], right[i][0], 0.45), y = lerp(P[i][1], right[i][1], 0.45);
-      i === 1 ? g.moveTo(x, y) : g.lineTo(x, y);
-    }
-    g.strokeStyle = rgba(FUR_SHEEN, 0.1); g.lineWidth = 7; g.stroke();
-    g.strokeStyle = rgba(FUR_SHEEN, 0.1); g.lineWidth = 3; g.stroke();
-    g.beginPath();
-    left.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y)));
-    g.strokeStyle = rgba(FUR_DARK, 0.7); g.lineWidth = 1.6; g.stroke();
-    // short plush hairs along the tail, silver toward the light
-    g.lineWidth = 0.7;
-    for (let i = 1; i < n; i++) {
-      const dx = P[i][0] - P[i - 1][0], dy = P[i][1] - P[i - 1][1], l = Math.hypot(dx, dy) || 1;
-      const ux = dx / l, uy = dy / l;
-      for (let k = 0; k < 7; k++) {
-        const r1 = TAIL_R[(200 + i * 21 + k * 3) % 600], r2 = TAIL_R[(201 + i * 21 + k * 3) % 600], r3 = TAIL_R[(202 + i * 21 + k * 3) % 600];
-        const across = r1 * 1.7 - 0.85; // -: shadow side, +: window side
-        const bx = lerp(P[i - 1][0], P[i][0], r2), by = lerp(P[i - 1][1], P[i][1], r2);
-        const w = Math.hypot(left[i][0] - P[i][0], left[i][1] - P[i][1]);
-        const x0 = bx + (right[i][0] - P[i][0]) / (w || 1) * w * across, y0 = by + (right[i][1] - P[i][1]) / (w || 1) * w * across;
-        const L2 = 3 + r3 * 3.5;
-        g.strokeStyle = across > 0.15 && r3 < 0.6 ? rgba(FUR_SHEEN, 0.16) : rgba(FUR_DARK, 0.28);
-        g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + ux * L2 + (r2 - 0.5), y0 + uy * L2); g.stroke();
-      }
-    }
-    // fuzz
-    for (let i = 1; i < n; i++) {
-      const dx = P[i][0] - P[i - 1][0], dy = P[i][1] - P[i - 1][1], l = Math.hypot(dx, dy) || 1;
-      for (let k = 0; k < 4; k++) {
-        const r = TAIL_R[(i * 4 + k) % 200], side = k % 2 ? left : right;
-        const sx = side[i][0], sy = side[i][1];
-        const ox = side[i][0] - P[i][0], oy = side[i][1] - P[i][1], ol = Math.hypot(ox, oy) || 1;
-        const L2 = 1.5 + r * 2.5;
-        g.strokeStyle = k < 2 ? rgba(FUR_LOW, 0.6) : rgba(FUR_SHEEN, 0.2);
-        g.lineWidth = 0.8;
-        g.beginPath();
-        g.moveTo(sx - (ox / ol) * 1.5, sy - (oy / ol) * 1.5);
-        g.lineTo(sx + (ox / ol) * L2 * 0.6 + (dx / l) * L2, sy + (oy / ol) * L2 * 0.6 + (dy / l) * L2);
-        g.stroke();
-      }
-    }
-  }
-
-  function drawPaw(g, x, y, k, rot) {
+    g.moveTo(o.x, o.y);
+    g.quadraticCurveTo((o.x + pom.x) / 2 - pom.vx * 0.012, (o.y + pom.y) / 2 + sag, pom.x, pom.y - 10 * s);
+    g.stroke();
     g.save();
-    g.translate(x, y); g.rotate(rot); g.scale(k, k);
-    const gr = g.createLinearGradient(0, -7, 0, 8);
-    gr.addColorStop(0, rgba(mix(FUR_TOP, FUR_SHEEN, 0.3), 1)); gr.addColorStop(0.55, rgba(FUR_MID, 1)); gr.addColorStop(1, rgba(FUR_LOW, 1));
-    g.fillStyle = gr;
-    g.beginPath();
-    g.moveTo(-12, 2);
-    g.bezierCurveTo(-12, -7, -4, -8.5, 1, -8.5);
-    g.bezierCurveTo(8, -8.5, 13, -5, 13, 1);
-    g.bezierCurveTo(13, 6, 9, 7.5, 0, 7.5);
-    g.bezierCurveTo(-8, 7.5, -12, 6, -12, 2);
-    g.fill();
-    // toes: little dents along the front
-    g.strokeStyle = rgba(FUR_DARK, 0.8); g.lineWidth = 1; g.lineCap = 'round';
-    for (const tx of [-4.5, 0.5, 5.5]) { g.beginPath(); g.moveTo(tx, 3.6); g.quadraticCurveTo(tx + 0.3, 5.6, tx + 0.2, 7.2); g.stroke(); }
-    g.strokeStyle = rgba(FUR_DARK, 0.6); g.lineWidth = 1.2;
-    g.beginPath(); g.moveTo(-11.5, 3); g.bezierCurveTo(-10, 7, -4, 7.8, 0, 7.6); g.bezierCurveTo(7, 7.6, 12, 6, 12.6, 2); g.stroke();
-    g.strokeStyle = rgba(FUR_SHEEN, 0.45); g.lineWidth = 1.2;
-    g.beginPath(); g.moveTo(-8, -3); g.quadraticCurveTo(0, -6.5, 8, -3.5); g.stroke();
-    // chest fur falling over the top of the paw
-    const R = rng(Math.round(x * 7));
-    for (let i = 0; i < 16; i++) {
-      const px = -11 + i * 1.5 + R(), py = -8.5 - R() * 2, L2 = 2.5 + R() * 3.5;
-      g.strokeStyle = rgba(R() < 0.7 ? FUR_LOW : FUR_MID, 0.75);
-      g.lineWidth = 0.9;
-      g.beginPath(); g.moveTo(px, py); g.lineTo(px - 0.6 + R() * 1.2, py + L2); g.stroke();
-    }
+    g.translate(pom.x, pom.y);
+    g.rotate(clamp(pom.vx / (900 * s), -0.5, 0.5));
+    blit2(g, SP.pom, 0, 0, s);
     g.restore();
   }
 
-  function drawLeg(g, S, P, beans) {
-    const dx = P[0] - S[0], dy = P[1] - S[1], d = Math.hypot(dx, dy) || 1;
-    const ux = dx / d, uy = dy / d, nx = -uy, ny = ux;
-    const w0 = 13, w1 = 9.5;
-    const mx = (S[0] + P[0]) / 2, my = (S[1] + P[1]) / 2;
-    g.beginPath();
-    g.moveTo(S[0] + nx * w0, S[1] + ny * w0);
-    g.quadraticCurveTo(mx + nx * (w0 + w1) * 0.55, my + ny * (w0 + w1) * 0.55, P[0] + nx * w1, P[1] + ny * w1);
-    g.lineTo(P[0] - nx * w1, P[1] - ny * w1);
-    g.quadraticCurveTo(mx - nx * (w0 + w1) * 0.55, my - ny * (w0 + w1) * 0.55, S[0] - nx * w0, S[1] - ny * w0);
-    g.closePath();
-    const gr = g.createLinearGradient(S[0] + nx * w0, S[1] + ny * w0, S[0] - nx * w0, S[1] - ny * w0);
-    gr.addColorStop(0, rgba(FUR_MID, 1)); gr.addColorStop(1, rgba(FUR_LOW, 1));
-    g.fillStyle = gr;
-    g.fill();
-    g.strokeStyle = rgba(FUR_DARK, 0.7); g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(S[0] + nx * w0, S[1] + ny * w0); g.quadraticCurveTo(mx + nx * (w0 + w1) * 0.55, my + ny * (w0 + w1) * 0.55, P[0] + nx * w1, P[1] + ny * w1); g.stroke();
-    g.strokeStyle = rgba(FUR_SHEEN, 0.3); g.lineWidth = 2;
-    g.beginPath(); g.moveTo(S[0] - nx * w0 * 0.4, S[1] - ny * w0 * 0.4); g.lineTo(P[0] - nx * w1 * 0.4, P[1] - ny * w1 * 0.4); g.stroke();
-    g.save();
-    g.translate(P[0], P[1]);
-    g.rotate(Math.atan2(uy, ux));
-    g.fillStyle = rgba(FUR_MID, 1);
-    g.beginPath(); g.ellipse(3, 0, 12.5, 10.5, 0, 0, TAU); g.fill();
-    g.strokeStyle = rgba(FUR_DARK, 0.8); g.lineWidth = 1.3;
-    g.beginPath(); g.ellipse(3, 0, 12.5, 10.5, 0, -1.3, 1.3); g.stroke();
-    if (beans) {
-      // toe beans!
-      g.fillStyle = rgba(BEAN, 0.95);
-      g.beginPath(); g.ellipse(1, 0, 4.2, 5, 0, 0, TAU); g.fill();
-      for (const [bx, by] of [[8.5, -6], [11, -1.6], [11, 2.8], [8.5, 6.8]]) { g.beginPath(); g.arc(bx, by, 1.9, 0, TAU); g.fill(); }
-    } else {
-      g.lineWidth = 1;
-      for (const ty of [-4, 0, 4]) { g.beginPath(); g.moveTo(11, ty); g.lineTo(15, ty * 1.1); g.stroke(); }
-    }
-    g.restore();
-  }
-
-  function drawHead(g, now, br) {
-    const yaw = C.yaw, pitch = C.pitch;
-    const hx = HEAD_C[0] + yaw * 4, hy = HEAD_C[1] + pitch * 3 - br * 110;
-    g.save();
-    g.translate(hx, hy);
-    g.rotate(C.tilt);
-    g.scale(HS, HS);
-    // ears, behind the skull
-    const flat = C.flat;
-    const earL = -0.4 - flat * 0.55 + C.earL - C.happy * 0.12;
-    const earR = 0.4 + flat * 0.55 + C.earR + C.happy * 0.12;
-    drawEar(g, -24 - yaw * 5, -27 + flat * 3, earL, 1 - 0.28 * Math.max(0, -yaw), -1);
-    drawEar(g, 24 - yaw * 5, -28 + flat * 3, earR, 1 - 0.28 * Math.max(0, yaw), 1);
-    blit(g, SP.head);
-    const fx0 = yaw * 13, fy0 = pitch * 7;
-    blit(g, SP.muzzle, fx0, fy0);
-    // eyes
-    const meowK = clamp(1 - (now - C.meowAt) / 600);
-    const lid = Math.max(C.lid, C.happy > 0.5 ? 1 : 0);
-    for (const side of [-1, 1]) {
-      const fore = 1 - 0.3 * Math.max(0, side * yaw);
-      const ex = fx0 + side * (17 - 3.5 * Math.max(0, side * yaw)) - side * 1.5 * Math.max(0, -side * yaw);
-      const ey = fy0 - 3;
-      drawEye(g, ex, ey, side, fore, lid, C.happy > 0.5);
-    }
-    // nose and mouth
-    const nx = fx0 + yaw * 2, ny = fy0 + 11;
-    g.fillStyle = rgba([58, 52, 62], 1);
-    g.beginPath();
-    g.moveTo(nx - 4, ny - 2); g.quadraticCurveTo(nx, ny - 3.6, nx + 4, ny - 2);
-    g.quadraticCurveTo(nx + 3.4, ny + 0.4, nx + 0.7, ny + 2.6); g.quadraticCurveTo(nx, ny + 3.2, nx - 0.7, ny + 2.6);
-    g.quadraticCurveTo(nx - 3.4, ny + 0.4, nx - 4, ny - 2);
-    g.fill();
-    g.fillStyle = 'rgba(170,170,184,.5)';
-    g.beginPath(); g.ellipse(nx - 1.2, ny - 1.6, 1.4, 0.7, 0, 0, TAU); g.fill();
-    g.strokeStyle = rgba(FUR_DARK, 0.95); g.lineWidth = 1.15; g.lineCap = 'round';
-    if (meowK > 0) {
-      const o = Math.sin(Math.PI * clamp((now - C.meowAt) / 600)) ;
-      g.fillStyle = rgba([54, 26, 32], 1);
-      g.beginPath(); g.ellipse(nx, ny + 7.5, 3.6, 1.5 + 3 * o, 0, 0, TAU); g.fill();
-      g.fillStyle = rgba([196, 120, 128], 1);
-      g.beginPath(); g.ellipse(nx, ny + 8.5 + 1.6 * o, 2.2, 1.2 * o, 0, 0, TAU); g.fill();
-    } else {
+  function drawScratches(g, now) {
+    g.lineCap = 'round';
+    g.strokeStyle = 'rgb(112,96,76)';
+    g.lineWidth = 1.4;
+    for (const f of fx.scratches) {
+      const e = (now - f.t0) / 1800;
+      g.globalAlpha = 0.75 * clamp(e < 0.12 ? e / 0.12 : 1 - (e - 0.12) / 0.88);
       g.beginPath();
-      g.moveTo(nx, ny + 2.6); g.lineTo(nx, ny + 5);
-      g.moveTo(nx, ny + 5); g.quadraticCurveTo(nx - 2.4, ny + 8.4, nx - 5.4, ny + 6.2);
-      g.moveTo(nx, ny + 5); g.quadraticCurveTo(nx + 2.4, ny + 8.4, nx + 5.4, ny + 6.2);
+      for (let j = 0; j < 3; j++) { g.moveTo(f.x + 12 - j * 1.6, f.y - 2.6 + j * 2.6); g.quadraticCurveTo(f.x + 1, f.y + 0.6 + j * 2.6, f.x - 11 - j * 1.6, f.y - 1.4 + j * 2.6); }
       g.stroke();
     }
-    // whiskers
-    g.lineWidth = 0.55;
-    for (const side of [-1, 1]) {
-      for (let i = 0; i < 3; i++) {
-        const sx = nx + side * 9, sy = ny + 4 + i * 1.8;
-        const a = (i - 1) * 0.16 + 0.06, L2 = 30 - i * 3 + (side * yaw > 0 ? -6 : 3);
-        const ex = sx + side * Math.cos(a) * L2, ey = sy + Math.sin(a) * L2;
-        g.strokeStyle = 'rgba(222,222,230,.55)';
-        g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo((sx + ex) / 2, (sy + ey) / 2 - 2, ex, ey + 2); g.stroke();
-      }
-    }
-    g.restore();
+    g.globalAlpha = 1;
   }
 
-  function drawEar(g, x, y, rot, sx, mirror) {
-    g.save();
-    g.translate(x, y); g.rotate(rot); g.scale(sx * mirror, 1);
-    blit(g, SP.ear);
-    g.restore();
-  }
-
-  function drawEye(g, ex, ey, side, fore, lid, happy) {
-    const ew = 9 * fore, eh = 6.9;
-    const ix = ex - side * ew, ox = ex + side * ew; // inner / outer corners
-    const iy = ey + 1, oy = ey - 1.4;
-    if (happy) {
-      g.strokeStyle = rgba(FUR_DARK, 1); g.lineWidth = 2; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(ix, iy + 1.5); g.quadraticCurveTo(ex, ey - eh * 1.5, ox, oy + 1.5); g.stroke();
-      return;
+  // a soft hand of light gliding over the spot the pet button picked
+  const BACK_PATH = [[70, -102], [34, -100], [0, -104], [-34, -112], [-70, -117], [-104, -110]];
+  function strokeAt(zone, u) {
+    if (zone === 'back') {
+      const f = u * (BACK_PATH.length - 1), i = Math.min(BACK_PATH.length - 2, Math.floor(f)), r = f - i;
+      PT.x = lerp(BACK_PATH[i][0], BACK_PATH[i + 1][0], r); PT.y = lerp(BACK_PATH[i][1], BACK_PATH[i + 1][1], r);
+      return PT;
     }
-    if (lid > 0.9) {
-      g.strokeStyle = rgba(FUR_DARK, 1); g.lineWidth = 1.8; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(ix, iy); g.quadraticCurveTo(ex, ey + eh * 0.8, ox, oy); g.stroke();
-      return;
-    }
-    const upY = lerp(ey - eh * 1.9, ey + eh * 1.6, lid);
-    const almond = new Path2D();
-    almond.moveTo(ix, iy);
-    almond.quadraticCurveTo(ex, upY, ox, oy);
-    almond.quadraticCurveTo(ex, ey + eh * 1.7, ix, iy);
-    almond.closePath();
-    // dark socket rim
-    g.fillStyle = rgba(FUR_DARK, 0.9);
-    g.save(); g.translate(ex, ey); g.scale(1.18, 1.25); g.translate(-ex, -ey); g.fill(almond); g.restore();
-    g.save();
-    g.clip(almond);
-    const lx = C.yaw * 2.2, ly = C.pitch * 1.6;
-    const gr = g.createRadialGradient(ex + lx * 0.5, ey + ly * 0.5 + 1, 0.5, ex, ey, ew * 1.1);
-    gr.addColorStop(0, 'rgb(214,214,118)');
-    gr.addColorStop(0.42, 'rgb(156,190,92)');
-    gr.addColorStop(0.8, 'rgb(92,132,64)');
-    gr.addColorStop(1, 'rgb(46,70,40)');
-    g.fillStyle = gr;
-    g.fillRect(ex - ew - 2, ey - eh * 2, ew * 2 + 4, eh * 4);
-    // the pupil: wide when the avocado is on the move
-    const pw = ew * (0.16 + 0.42 * C.dil);
-    g.fillStyle = 'rgb(10,10,12)';
-    g.beginPath(); g.ellipse(ex + lx, ey + ly, pw, eh * 0.98, 0, 0, TAU); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.88)';
-    g.beginPath(); g.arc(ex + lx - side * 0.5 - 2.4, ey + ly - 2.6, 1.5, 0, TAU); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.5)';
-    g.beginPath(); g.arc(ex + lx + 2.2, ey + ly + 2.2, 0.7, 0, TAU); g.fill();
-    g.restore();
-    g.strokeStyle = rgba(FUR_DARK, 1); g.lineWidth = 1.6; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(ix, iy); g.quadraticCurveTo(ex, upY, ox, oy); g.stroke();
+    headMatrix(P);
+    return zone === 'chin' ? headToCat(lerp(-26, 30, u), 46 - Math.sin(u * Math.PI) * 4) : headToCat(lerp(-30, 26, u), -46 - Math.sin(u * Math.PI) * 4);
   }
-
   function drawStrokes(g, now) {
-    // a soft hand of light gliding along his back
     for (const st of fx.strokes) {
       const e = (now - st.t0) / 2300;
-      const pass = Math.min(2, Math.floor(e * 3)), k = (e * 3) % 1;
-      const path = [[66, -100], [30, -100], [-6, -106], [-44, -116], [-82, -118], [-116, -106]];
-      const pt = (u) => {
-        const f = u * (path.length - 1), i = Math.min(path.length - 2, Math.floor(f)), r = f - i;
-        return lerpP(path[i], path[i + 1], r);
-      };
+      const k = (e * 3) % 1;
       for (let j = 0; j < 8; j++) {
         const u = clamp(easeInOut(k) - j * 0.035);
-        const [x, y] = pt(u);
-        stamp(g, x, y, 14 - j, [255, 250, 236], (0.22 - j * 0.025) * Math.sin(Math.PI * k) * (pass < 3 ? 1 : 0), 0.3);
+        const p = strokeAt(st.zone, st.zone === 'back' ? u : 1 - u);
+        dab(g, p.x, p.y, (st.zone === 'back' ? 14 : 10) - j, GLOW, (0.22 - j * 0.025) * Math.sin(Math.PI * k), 0.3);
       }
     }
   }
@@ -1843,7 +3386,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         g.translate(x, y);
         g.rotate(Math.sin(p.seed) * 0.25);
         g.scale(k, k);
-        g.fillStyle = rgba(SEAL_RGB, a * 0.85);
+        g.globalAlpha = a * 0.85;
+        g.fillStyle = 'rgb(184,50,42)';
         g.beginPath();
         g.moveTo(0, 5.5);
         g.bezierCurveTo(-7.5, 0, -6.5, -6.5, -3.2, -6.5);
@@ -1855,7 +3399,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         continue;
       }
       // a purr: a little wavering ink line, like the hum it is
-      g.strokeStyle = rgba([52, 44, 40], a * 0.9);
+      g.globalAlpha = a * 0.9;
+      g.strokeStyle = 'rgb(52,44,40)';
       g.lineWidth = 1.5;
       g.beginPath();
       for (let i = 0; i <= 20; i++) {
@@ -1864,27 +3409,44 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       }
       g.stroke();
     }
+    g.globalAlpha = 1;
   }
 
-  function drawMeows(g, now) {
-    for (const m of fx.meows) {
+  // his little words, in pen, over his head (kept inside the picture on narrow screens)
+  function drawWords(g, now) {
+    headMatrix(P);
+    for (const m of fx.words) {
       const e = (now - m.t0) / 1300;
       const pop = RM ? 1 : easeBack(clamp(e * 4));
       const a = e < 0.7 ? 1 : 1 - (e - 0.7) / 0.3;
+      const mx = Math.min(HM[4] + 50 + P.yaw * 8, (L.W - 34 - L.catX) / L.s);
+      const my = Math.max(HM[5] - 56, (30 - L.topY) / L.s) - (RM ? 0 : e * 14);
       g.save();
-      // above his head, but kept inside the picture on narrow screens
-      const mx = Math.min(HEAD_C[0] + 46 + C.yaw * 8, (L.W - 34 - L.catX) / L.s);
-      const my = Math.max(HEAD_C[1] - 54, (30 - L.topY) / L.s) - (RM ? 0 : e * 14);
       g.translate(mx, my);
       g.rotate(-0.12);
-      g.scale(pop, pop);
+      g.scale(pop * m.size / 30, pop * m.size / 30);
       g.globalAlpha = clamp(a);
       g.font = '30px "Nanum Pen Script", "Gowun Batang", cursive';
       g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillStyle = 'rgba(22,17,15,.92)';
-      g.fillText('야옹', 0, 0);
+      g.fillText(m.text, 0, 0);
       g.strokeStyle = 'rgba(22,17,15,.6)'; g.lineWidth = 1.2;
       g.beginPath(); g.moveTo(-26, 12); g.quadraticCurveTo(-30, 18, -34, 22); g.stroke();
+      g.restore();
+    }
+    g.globalAlpha = 1;
+  }
+  function drawZs(g, now) {
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillStyle = 'rgb(40,32,28)';
+    g.font = 'italic 20px "Instrument Serif", Georgia, serif';
+    for (const z of fx.zs) {
+      const e = (now - z.t0) / 2600, k = 0.8 + e * 0.5;
+      g.globalAlpha = 0.85 * hump(e);
+      g.save();
+      g.translate(z.x + e * 26 + Math.sin(e * 6) * 4, z.y - e * 46);
+      g.scale(k, k);
+      g.fillText('z', 0, 0);
       g.restore();
     }
     g.globalAlpha = 1;
@@ -1907,19 +3469,20 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       g.restore();
     }
   }
-
   function drawRings(g, now) {
+    g.strokeStyle = 'rgb(24,22,22)';
+    g.lineWidth = 1.4;
     for (const r of fx.rings) {
       const e = (now - r.t0) / 500;
-      g.strokeStyle = rgba(INKC, 0.35 * (1 - e));
-      g.lineWidth = 1.4;
+      g.globalAlpha = 0.35 * (1 - e);
       g.beginPath(); g.arc(r.x, r.y, (RM ? 14 : 6 + e * 22) * L.s, 0, TAU); g.stroke();
     }
+    g.globalAlpha = 1;
   }
 
   function drawAvoShadow(g) {
     const { s } = L;
-    if (A.alpha <= 0.01) return;
+    if (A.alpha <= 0.01 || A.under) return;
     const surf = surfaceBelow(A.x, A.y);
     const hgt = Math.max(0, surf - (A.y + avoBottom()));
     const k = clamp(1 - hgt / (260 * s));
@@ -1928,7 +3491,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     g.globalAlpha = A.alpha * k * A.scale;
     g.translate(A.x, surf - 1 * s);
     g.scale(1, 0.22);
-    stamp(g, 0, 0, 30 * s * (0.6 + 0.4 * k), [60, 44, 30], 0.28, 0.3);
+    dab(g, 0, 0, 30 * s * (0.6 + 0.4 * k), AVO_SHADOW, 0.28, 0.3);
     g.restore();
   }
 
@@ -1936,8 +3499,15 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const { s } = L;
     if (A.alpha <= 0.01 || A.scale <= 0.01) return;
     g.save();
-    g.globalAlpha = A.alpha;
+    g.globalAlpha = A.alpha * (1 - 0.5 * A.sink);
     g.translate(A.x, A.y);
+    // squashed flat under him, or sinking into the cushion
+    if (A.mash || A.sink) {
+      const b = avoBottom();
+      g.translate(0, b);
+      g.scale(1 + 0.3 * A.mash, 1 - 0.5 * A.mash - 0.85 * A.sink);
+      g.translate(0, -b);
+    }
     // squash along the last impact normal
     if (A.sq) {
       g.rotate(A.sqA);
@@ -1951,13 +3521,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     g.restore();
     // the sweat drop and the little "!"
     const wk = now - A.worriedAt;
-    if (wk < 1700 && A.alpha > 0.5) {
+    if (wk < 1700 && A.alpha > 0.5 && !A.under) {
       const a = wk < 1300 ? 1 : 1 - (wk - 1300) / 400;
       // places on the avocado (its own frame, so they turn with it and never land on its face)
       const ca = Math.cos(A.ang), sa = Math.sin(A.ang);
-      const at = (lx, ly) => [A.x + (lx * ca - ly * sa) * s, A.y + (lx * sa + ly * ca) * s];
-      const fl = A.x > L.W - 64 * s ? -1 : 1; // keep them inside the picture at the right edge
-      const [dx0, dy0] = at(22 * fl, -44), [ex0, ey0] = at(-20 * fl, -52);
+      const fl = A.x > L.W - 64 * s ? -1 : 1;
+      const dx0 = A.x + (22 * fl * ca + 44 * sa) * s, dy0 = A.y + (22 * fl * sa - 44 * ca) * s;
+      const ex0 = A.x + (-20 * fl * ca + 52 * sa) * s, ey0 = A.y + (-20 * fl * sa - 52 * ca) * s;
       g.save();
       g.globalAlpha = clamp(a);
       const dy = RM ? 0 : Math.min(1, wk / 900) * 7 * s;
@@ -1980,8 +3550,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         g.translate(ex0, ey0);
         g.rotate(-0.15);
         g.scale(pop, pop);
-        g.fillStyle = rgba(SEAL_RGB, 1);
-        g.font = `italic ${30 * s}px "Instrument Serif", Georgia, serif`;
+        g.fillStyle = 'rgb(184,50,42)';
+        g.font = L.bang;
         g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText('!', 0, 0);
         g.restore();
@@ -1990,16 +3560,17 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
 
   function drawAvoFace(g, now) {
-    const face = A.face;
+    const face = A.under ? 'worried' : A.face;
     // its dot eyes glance at the pointer, or at him
-    const lt = now - pointer.t < 2600 ? [pointer.x, pointer.y] : [L.catX + HEAD_C[0] * L.s, L.topY + HEAD_C[1] * L.s];
-    const ddx = lt[0] - A.x, ddy = lt[1] - (A.y - 20 * L.s), dl = Math.hypot(ddx, ddy) || 1;
+    const recent = now - pointer.t < 2600;
+    const lx = recent ? pointer.x : L.catX + HEAD_REST[0] * L.s, ly = recent ? pointer.y : L.topY + HEAD_REST[1] * L.s;
+    const ddx = lx - A.x, ddy = ly - (A.y - 20 * L.s), dl = Math.hypot(ddx, ddy) || 1;
     const ca = Math.cos(-A.ang), sa = Math.sin(-A.ang);
     const gx = ((ddx * ca - ddy * sa) / dl) * 1.3, gy = ((ddx * sa + ddy * ca) / dl) * 1;
     const ink = 'rgba(22,17,15,.95)';
     // blush
-    stamp(g, -13.5, -13, 4.6, [232, 120, 110], face === 'smug' ? 0.32 : 0.45, 0.4);
-    stamp(g, 13.5, -13, 4.6, [232, 120, 110], face === 'smug' ? 0.32 : 0.45, 0.4);
+    dab(g, -13.5, -13, 4.6, BLUSH, face === 'smug' ? 0.32 : 0.45, 0.4);
+    dab(g, 13.5, -13, 4.6, BLUSH, face === 'smug' ? 0.32 : 0.45, 0.4);
     g.fillStyle = ink; g.strokeStyle = ink; g.lineCap = 'round'; g.lineJoin = 'round';
     if (face === 'smug') {
       for (const [ex, ey] of AVO_EYES) {
@@ -2045,7 +3616,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
   }
 
-  // ── loop control ──
+  // loop control
   function frame(now) {
     raf = 0;
     if (!active || destroyed || document.hidden || !ready) return;
@@ -2053,7 +3624,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     last = now;
     const hot = update(dt, now);
     const idle = !RM && !hot;
-    // idle (breathing, blinking, the tail) is gentle: about 30 fps is plenty
+    // idle life (breathing, blinking, the tail) is gentle: about 30 fps is plenty
     if (!idle || now - lastDraw > 30) draw(now);
     if (hot || !RM) raf = requestAnimationFrame(frame);
   }
@@ -2066,7 +3637,16 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (document.hidden) { cancelAnimationFrame(raf); raf = 0; } else kick();
   }, opt);
 
-  // ── text ──
+  // text
+  let sayT = 0;
+  function say(key) {
+    const text = tt(key);
+    clearTimeout(sayT);
+    timers.delete(sayT);
+    sayEl.textContent = '';
+    // cleared first, so the same line twice still gets read out
+    sayT = later(() => { sayEl.textContent = text; }, 60);
+  }
   function renderCount(bump) {
     const key = count === 0 ? 'cat.count.0' : count === 1 ? 'cat.count.1' : 'cat.count.n';
     const str = tt(key);
@@ -2088,16 +3668,27 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
     lastMilestone = m;
   }
+  function renderTally() {
+    tally.hidden = !(pets || treats);
+    tallyPets.textContent = fmt(tt('cat.tally.pets'), { n: pets });
+    tallyTreats.textContent = fmt(tt('cat.tally.treats'), { n: treats });
+  }
+  let lang = document.documentElement.lang;
   function relabel() {
     root.querySelectorAll('[data-ck]').forEach((el) => { el.textContent = tt(el.dataset.ck); });
     capMain.textContent = nm ? fmt(tt('cat.caption.named'), { name: nm }) : tt('cat.caption');
     capHint.textContent = tt(touchy ? 'cat.hint.touch' : 'cat.hint');
     petText.textContent = nm ? fmt(tt('cat.btn.pet.named'), { name: nm }) : tt('cat.btn.pet');
+    btnRow.setAttribute('aria-label', nm ? fmt(tt('cat.btns.named'), { name: nm }) : tt('cat.btns'));
     stage.setAttribute('aria-label', nm ? fmt(tt('cat.label.named'), { name: nm }) : tt('cat.label'));
     renderCount(false);
+    renderTally();
+    // a new language: he tilts his head at the strange new words
+    const lg = document.documentElement.lang;
+    if (lg !== lang) { lang = lg; if (ready && L) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 }); }
   }
 
-  // ── sizing ──
+  // sizing
   let sizeQueued = false;
   const ro = new ResizeObserver(() => {
     if (sizeQueued || !ready) return;
@@ -2112,25 +3703,40 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   const onFonts = () => { if (!destroyed && ready && L && L.sign && !signFont && brushReady()) paintBg(); };
   if (document.fonts) {
     document.fonts.load('20px "Nanum Brush Script"', SIGN_TEXT).then(onFonts, () => {});
-    document.fonts.load('20px "Nanum Pen Script"', '야옹').catch(() => {});
+    document.fonts.load('20px "Nanum Pen Script"', '야옹냥냠?').catch(() => {});
     document.fonts.addEventListener('loadingdone', onFonts, opt);
   }
 
   relabel();
-  C.blinkAt = now0() + 1500;
-  C.twAt = now0() + 2500;
+  const t0 = now0();
+  C.blinkAt = t0 + 1500;
+  C.twAt = t0 + 2500;
+  C.lastUser = t0;
+  C.idleAt = t0 + 6000;
   const idle = window.requestIdleCallback || ((f) => setTimeout(f, 30));
-  // two idle slices: first paint the cat's sprites, then the room (each is a fair bit of brushwork,
-  // so splitting them keeps a scroll from hitching while the scene wakes up)
+  // his sprites a part at a time in idle moments, then the room: each is a fair
+  // bit of brushwork, and splitting it up keeps a scroll from hitching while he wakes up
+  const wakeUp = () => {
+    if (destroyed) return;
+    ready = true;
+    relayout(true);
+  };
   idle(() => {
     if (destroyed) return;
     const w = stage.clientWidth, h = stage.clientHeight;
-    if (w && h) { dpr = dprNow(); L = computeLayout(w, h); buildSprites(); L = null; }
-    idle(() => {
+    if (!w || !h) { idle(wakeUp, { timeout: 1200 }); return; }
+    dpr = dprNow();
+    const s = computeLayout(w, h).s, out = {};
+    const steps = catSteps(s, dpr, !mobile, out);
+    const run = () => {
       if (destroyed) return;
-      ready = true;
-      relayout(true);
-    }, { timeout: 1200 });
+      const t1 = now0();
+      do steps.shift()(); while (steps.length && now0() - t1 < 10);
+      if (steps.length) { idle(run, { timeout: 1200 }); return; }
+      CS = out; csKey = `${s.toFixed(4)}|${dpr}`;
+      idle(wakeUp, { timeout: 1200 });
+    };
+    run();
   }, { timeout: 1200 });
 
   return {
@@ -2139,6 +3745,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       if (!active) {
         cancelAnimationFrame(raf); raf = 0;
         if (A.grab) endGrab(null);
+        dropToy();
         tapCat = null;
       } else kick();
     },
@@ -2150,8 +3757,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       raf = 0;
       ro.disconnect();
       ac.abort();
+      for (const id of timers) clearTimeout(id);
+      timers.clear();
     },
     // for tests and the curious
-    _debug: { A, C, get L() { return L; }, poke: () => poke(null, null), handleIt, pet: () => btnPet.click(), meow: () => meow(now0()) },
+    _debug: {
+      A, C, P, pom, treat, win, fx,
+      get L() { return L; },
+      poke: () => poke(null, null), handleIt, pet: () => btn.pet.click(), meow: () => meow(now0()),
+      boop: () => boop(false), toss: () => tossTreat(), toy: autoDangle, start, zoneAt,
+      bully: (k) => { C.nextBully = k; handleIt(); },
+      windowLife: () => { if (spawnWindow(now0())) start('window', { dur: 1e9 }); },
+      idleFor: (ms) => { C.lastUser = now0() - ms; C.idleAt = 0; kick(); },
+    },
   };
 }
