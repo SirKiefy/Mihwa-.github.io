@@ -1177,7 +1177,8 @@ html[lang="ko"] .love .love-done { font-family: var(--f-ko); font-style: normal;
 .cat .cat-btn--pet svg { fill: var(--seal); }
 .cat .cat-btn--boop svg { fill: #4a4652; }
 .cat .cat-btn--treat svg { fill: #b0763a; }
-.cat .cat-btn--toy svg { fill: #cdbf9f; color: var(--ink-3); }
+.cat .cat-btn--toy svg { fill: #a8977a; color: var(--ink-3); }
+.cat .cat-btn--toy svg circle { stroke: currentColor; stroke-width: .9; }
 /* hover only where there is one: on touch screens a tapped button would otherwise stay inked */
 @media (hover: hover) {
   .cat .cat-btn:hover { background: var(--ink); color: var(--paper-light); border-color: var(--ink); }

@@ -212,6 +212,7 @@ export const STRINGS = {
     "cat.say.wake": "He wakes up and blinks at you.",
     "cat.say.buck": "Not on his back! A bounce of the hips, a lash of the tail, and off it flies.",
     "cat.say.sleep": "He drifts off to sleep, breathing slow and deep.",
+    "cat.say.busy": "He’s busy right now. Try again in a moment.",
   },
 
   fr: {
@@ -424,6 +425,7 @@ export const STRINGS = {
     "cat.say.wake": "Il se réveille et cligne des yeux vers vous.",
     "cat.say.buck": "Pas sur son dos ! Un coup de reins, un coup de queue, et l’avocat s’envole.",
     "cat.say.sleep": "Il s’endort, la respiration lente et profonde.",
+    "cat.say.busy": "Il est occupé pour l’instant. Réessayez dans un moment.",
   },
 
   ko: {
@@ -636,5 +638,6 @@ export const STRINGS = {
     "cat.say.wake": "잠에서 깨어 이쪽을 보며 눈을 깜빡여요.",
     "cat.say.buck": "감히 등 위에! 엉덩이를 들썩이고 꼬리를 휙 휘두르자 아보카도가 날아가요.",
     "cat.say.sleep": "숨소리가 느려지더니 새근새근 잠이 들었어요.",
+    "cat.say.busy": "지금은 바빠요. 조금 있다가 다시 해 보세요.",
   },
 };

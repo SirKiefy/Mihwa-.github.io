@@ -149,6 +149,7 @@ export const CAT_STRINGS = {
     'cat.say.wake': 'He wakes up and blinks at you.',
     'cat.say.buck': 'Not on his back! A bounce of the hips, a lash of the tail, and off it flies.',
     'cat.say.sleep': 'He drifts off to sleep, breathing slow and deep.',
+    'cat.say.busy': 'He’s busy right now. Try again in a moment.',
   },
   fr: {
     'cat.label': 'Son bébé, un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
@@ -195,6 +196,7 @@ export const CAT_STRINGS = {
     'cat.say.wake': 'Il se réveille et cligne des yeux vers vous.',
     'cat.say.buck': 'Pas sur son dos ! Un coup de reins, un coup de queue, et l’avocat s’envole.',
     'cat.say.sleep': 'Il s’endort, la respiration lente et profonde.',
+    'cat.say.busy': 'Il est occupé pour l’instant. Réessayez dans un moment.',
   },
   ko: {
     'cat.label': '미화네 아기: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
@@ -241,6 +243,7 @@ export const CAT_STRINGS = {
     'cat.say.wake': '잠에서 깨어 이쪽을 보며 눈을 깜빡여요.',
     'cat.say.buck': '감히 등 위에! 엉덩이를 들썩이고 꼬리를 휙 휘두르자 아보카도가 날아가요.',
     'cat.say.sleep': '숨소리가 느려지더니 새근새근 잠이 들었어요.',
+    'cat.say.busy': '지금은 바빠요. 조금 있다가 다시 해 보세요.',
   },
 };
 const MILESTONES = [1, 3, 5, 10, 15, 25, 40, 60, 100];
@@ -718,6 +721,8 @@ const PAW_TUCK = [[-15, 1], [-16, -5], [-12, -11], [-3, -13.5], [7, -13], [13.5,
 
 const HS = 1.06;
 const HEAD_REST = [102, -97];
+// the right edge of his face (and whiskers) at rest, turned to look right
+const HEAD_RIGHT = 172;
 const NECK_PIVOT = [78, -58];
 const SHOULDER_N = [94, -34];
 const SHOULDER_F = [74, -30];
@@ -1315,10 +1320,14 @@ function eyeShape(g, xi, yi, xo, yo, c1x, c1y, c2x, c2y, c3x, c3y, c4x, c4y) {
 }
 
 function drawEye(g, SP, P, side) {
-  const ew = EYE_W, eh = EYE_H;
-  const xi = -side * ew, xo = side * ew, yi = 2, yo = -1.8;
-  const up = clamp(1 - P.lidU), lo = clamp(1 - P.lidL);
-  const br = P.brow;
+  const ew = EYE_W, eh = EYE_H, hp = P.happy;
+  // when he's content the outer corner eases down and the upper lid stays
+  // round, so a half-shut eye reads as a smile and not a glare
+  const xi = -side * ew, xo = side * ew, yi = 2, yo = -1.8 + 1.6 * hp;
+  const lo = clamp(1 - P.lidL);
+  let up = clamp(1 - P.lidU);
+  if (up >= 0.07) up = lerp(up, Math.max(up, 0.72 * clamp((up - 0.07) / 0.4)), clamp(hp * 1.5));
+  const br = P.brow - 0.5 * hp;
   g.lineCap = 'round';
   g.strokeStyle = '#0c0d11';
   if (up < 0.07) {
@@ -1330,11 +1339,10 @@ function drawEye(g, SP, P, side) {
     return;
   }
   // a happy eye: the lower lid pushes up into a soft crescent
-  const hp = P.happy;
   const c1x = xi * 0.4, c1y = yi - eh * 1.56 * up * (1 - 0.5 * Math.max(0, br));
   const c2x = xo * 0.45, c2y = yo - eh * 1.36 * up * (1 - 0.4 * Math.max(0, -br));
-  const c3x = xo * 0.5, c3y = Math.max(c2y + 2, yo + eh * (1.08 * lo - 1.55 * hp));
-  const c4x = xi * 0.4, c4y = Math.max(c1y + 2, yi + eh * (0.98 * lo - 1.45 * hp));
+  const c3x = xo * 0.5, c3y = Math.max(c2y + 2.5, yo + eh * (1.08 * lo - 2.3 * hp));
+  const c4x = xi * 0.4, c4y = Math.max(c1y + 2.5, yi + eh * (0.98 * lo - 2.2 * hp));
   // the dark rim round it
   g.save();
   g.scale(1.14, 1.2);
@@ -1358,9 +1366,11 @@ function drawEye(g, SP, P, side) {
   // the upper lid's shadow
   g.strokeStyle = 'rgba(8,16,10,.26)';
   g.lineWidth = 2;
+  g.globalAlpha = 1 - 0.6 * hp;
   for (let k = 1; k <= 3; k++) {
     g.beginPath(); g.moveTo(xi, yi + k * 1.1); g.bezierCurveTo(c1x, c1y + k * 1.6, c2x, c2y + k * 1.6, xo, yo + k * 1.1); g.stroke();
   }
+  g.globalAlpha = 1;
   g.fillStyle = 'rgba(255,255,255,.92)';
   g.beginPath(); g.ellipse(ix + 3, iy - 3.6, 2.2, 1.7, -0.5, 0, TAU); g.fill();
   g.fillStyle = 'rgba(255,255,255,.45)';
@@ -1806,7 +1816,8 @@ function paintAvocado(g) {
 }
 
 
-function paintRoom(g, L, hit, SP) {
+// the room, a part at a time (each yield is a place to pause between slices)
+function* roomGen(g, L, hit, SP) {
   const { W, H, s } = L;
   const R = rng(71);
   // wall, with daylight round the window
@@ -1819,8 +1830,10 @@ function paintRoom(g, L, hit, SP) {
   const wcx = (L.win.x0 + L.win.x1) / 2, wcy = (L.win.y0 + L.win.y1) / 2;
   stamp(g, wcx, wcy, Math.max(L.win.x1 - L.win.x0, L.win.y1 - L.win.y0) * 0.9, [252, 249, 238], 0.5, 0.2);
 
-  paintWindow(g, L, R);
-  if (L.sign) paintSign(g, L, SP);
+  yield;
+  yield* windowGen(g, L, R);
+  yield;
+  if (L.sign) { paintSign(g, L, SP); yield; }
 
   // floor: warm boards, the skirting line, and light from the window
   gr = g.createLinearGradient(0, L.wallBase, 0, H);
@@ -1841,6 +1854,7 @@ function paintRoom(g, L, hit, SP) {
     stamp(g, x, y, (34 + R() * 26) * s, [255, 251, 238], 0.13, 0.15);
   }
   stroke(g, { pts: [[-10, L.wallBase], [W * 0.3, L.wallBase + 1], [W * 0.7, L.wallBase - 0.5], [W + 10, L.wallBase]], width: 2.4, dry: 0.7, tone: 0.45, rgb: [70, 50, 34], seed: 90, bristles: 6 });
+  yield;
 
   // the cat tree: base, posts, lower platform, upper post; the top platform is a sprite
   stamp(g, L.base.x, L.floorY + 2 * s, L.base.rx * 1.05, [70, 54, 40], 0.16, 0.15);
@@ -1848,15 +1862,19 @@ function paintRoom(g, L, hit, SP) {
   g.save(); g.translate(L.base.x, L.base.y); g.scale(s, s);
   paintDisc(g, hit, L.base.rx / s, L.base.ry / s, L.base.th / s, 120);
   g.restore();
+  yield;
   paintPost(g, L.post.x, L.low.y, L.base.y, L.post.w, s, 130);
   paintPost(g, L.post2.x, L.low.y + L.low.th, L.base.y, L.post2.w, s, 140);
+  yield;
   g.save(); g.translate(L.low.x, L.low.y); g.scale(s, s);
   paintDisc(g, hit, L.low.rx / s, L.low.ry / s, L.low.th / s, 150);
   g.restore();
+  yield;
   paintPost(g, L.post.x, L.plat.y + L.plat.th, L.low.y, L.post.w, s, 160);
   // shadow of the top platform on the post
   stamp(g, L.post.x, L.plat.y + L.plat.th + 10 * s, 26 * s, [80, 60, 40], 0.16, 0.2);
   blit2(g, SP.plat, L.plat.x, L.plat.y, s);
+  yield;
 
   // let the room fade into the page at its edges
   g.save();
@@ -1875,7 +1893,10 @@ function paintRoom(g, L, hit, SP) {
   g.fillStyle = gr; g.fillRect(0, 0, W, 30);
   g.restore();
 }
-function paintWindow(g, L, R) {
+function paintRoom(g, L, hit, SP) {
+  for (const x of roomGen(g, L, hit, SP)) void x;
+}
+function* windowGen(g, L, R) {
   const { s } = L;
   const { x0, y0, x1, y1 } = L.win;
   const f = 15 * s;
@@ -1899,6 +1920,7 @@ function paintWindow(g, L, R) {
     const x = gx0 + R() * gw, y = gy0 + gh * R() * 0.5;
     stamp(g, x, y, big * (0.1 + R() * 0.12), SKY, 0.35 + R() * 0.3, 0.15);
   }
+  yield;
   // bokeh
   for (let i = 0; i < 46; i++) {
     const x = gx0 + R() * gw, y = gy0 + R() * gh * 0.85, r = (5 + R() * 12) * s;
@@ -1915,6 +1937,7 @@ function paintWindow(g, L, R) {
     g.fill();
   }
   g.restore();
+  yield;
   // frame: warm light wood
   const frame = new Path2D();
   frame.rect(x0, y0, x1 - x0, y1 - y0);
@@ -1936,6 +1959,7 @@ function paintWindow(g, L, R) {
   }
   stamp(g, x1 - f * 0.5, (y0 + y1) / 2, (y1 - y0) * 0.5, WOOD_D, 0.08, 0.2);
   g.restore();
+  yield;
   // the glass sits a little deeper than the frame
   g.strokeStyle = rgba(WOOD_INK, 0.45);
   g.lineWidth = 2 * s;
@@ -1946,10 +1970,12 @@ function paintWindow(g, L, R) {
   ol([[x0, y1], [x0 - 0.5, (y0 + y1) / 2], [x0, y0]], 2.4, 0.6, 201);
   ol([[x0, y0], [(x0 + x1) / 2, y0 + 0.5], [x1, y0]], 2.4, 0.55, 209);
   ol([[x1, y0], [x1 + 0.5, (y0 + y1) / 2], [x1, y1]], 2.2, 0.5, 202);
+  yield;
   ol([[gx0, gy1], [gx0, (gy0 + gy1) / 2], [gx0, gy0]], 1.4, 0.35, 203);
   ol([[gx0, gy0], [(gx0 + gx1) / 2, gy0], [gx1, gy0]], 1.4, 0.35, 210);
   ol([[midX - mw / 2, gy0], [midX - mw / 2, gy1]], 1.2, 0.35, 204);
   ol([[midX + mw / 2, gy0], [midX + mw / 2, gy1]], 1.2, 0.3, 205);
+  yield;
   // the sill
   const sx0 = x0 - 12 * s, sx1 = x1 + 12 * s, st = 12 * s;
   stamp(g, (sx0 + sx1) / 2, y1 + st + 8 * s, (sx1 - sx0) * 0.4, [90, 66, 44], 0.1, 0.2);
@@ -2300,26 +2326,46 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
 
   // painting
-  function buildSprites() {
+  // with `then`, the props are painted a sprite at a time (the old ones
+  // stretch to fit meanwhile) and then() runs once they're in
+  let propJob = null;
+  function buildSprites(then) {
     const { s } = L;
     const key = `${s.toFixed(4)}|${dpr}`;
     if (!CS) { CS = catSprites(s, dpr); csKey = key; }
     else if (key !== csKey) rebuildCat(key);
     else rebuild = null;
-    if (key === spKey && SP) return false;
-    spKey = key;
-    SP = propSprites(s, dpr);
-    return true;
+    propJob = null;
+    if (key === spKey && SP) { if (then) then(); return; }
+    if (!then) { spKey = key; SP = propSprites(s, dpr); return; }
+    const out = {}, it = propGen(s, dpr, out), job = propJob = {};
+    const run = (dl) => {
+      if (destroyed || job !== propJob) return;
+      const t1 = now0(), b = Math.min(6, budget(dl));
+      let done = false;
+      do done = it.next().done; while (!done && now0() - t1 < b);
+      if (!done) { slice(run); return; }
+      propJob = null;
+      SP = out; spKey = key;
+      then();
+    };
+    slice(run);
+  }
+  function propSprites(s, dpr) {
+    const out = {};
+    for (const x of propGen(s, dpr, out)) void x;
+    return out;
   }
   // the room's props: the top platform, the avocado, the jar, a treat, the pompom, the seal
-  function propSprites(s, dpr) {
-    const SP = {
-      plat: makeSprite(-108, -36, 108, 64, s, dpr, (g) => paintDisc(g, hit, 98, 25, 22, 110)),
-      avo: makeSprite(-36, -60, 36, 32, s, dpr, paintAvocado),
-      jar: makeSprite(-32, -60, 32, 8, s, dpr, paintJar),
-      treat: makeSprite(-9, -5, 7, 5, s, dpr, paintTreat),
-      pom: makeSprite(-20, -20, 20, 22, s, dpr, paintPom),
-    };
+  function* propGen(s, dpr, SP) {
+    SP.plat = makeSprite(-108, -36, 108, 64, s, dpr, (g) => paintDisc(g, hit, 98, 25, 22, 110));
+    yield;
+    SP.avo = makeSprite(-36, -60, 36, 32, s, dpr, paintAvocado);
+    yield;
+    SP.jar = makeSprite(-32, -60, 32, 8, s, dpr, paintJar);
+    SP.treat = makeSprite(-9, -5, 7, 5, s, dpr, paintTreat);
+    SP.pom = makeSprite(-20, -20, 20, 22, s, dpr, paintPom);
+    yield;
     // the front lip of the top platform, drawn over his belly so he sits in the plush
     SP.lip = makeSprite(-108, -36, 108, 64, s, dpr, (g) => {
       g.save();
@@ -2342,13 +2388,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       g.fill(keep);
       g.filter = 'none';
     });
+    yield;
     // the seal: forbidden
     const sz = Math.round(54 * s * dpr);
     const c = document.createElement('canvas');
     c.width = c.height = Math.ceil(sz * 1.2);
     sealStamp(c.getContext('2d'), c.width / 2, c.height / 2, sz / 0.62, '禁', { seed: 9, alpha: 0.94 });
     SP.seal = { c, size: c.width / dpr };
-    return SP;
   }
 
   // after a resize he's repainted a part at a time, a little after the last
@@ -2374,12 +2420,38 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
 
   function paintBg() {
+    roomJob = null;
     const g = bgC.getContext('2d');
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, bgC.width, bgC.height);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     signFont = brushReady();
     paintRoom(g, L, hit, SP);
+  }
+  // the same, a part at a time on a canvas of its own, swapped in when it's done
+  // (the old room stays up meanwhile)
+  let roomJob = null;
+  function paintBgSoon() {
+    const c = document.createElement('canvas');
+    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
+    const g = c.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    signFont = brushReady();
+    const job = roomJob = { c, it: roomGen(g, L, hit, SP) };
+    const run = (dl) => {
+      if (destroyed || job !== roomJob) return;
+      // its parts are big ones, so a small budget: two never pile up into one long task
+      const t1 = now0(), b = Math.min(6, budget(dl));
+      let done = false;
+      do done = job.it.next().done; while (!done && now0() - t1 < b);
+      if (!done) { slice(run); return; }
+      roomJob = null;
+      bgC.width = c.width; bgC.height = c.height;
+      bgC.getContext('2d').drawImage(c, 0, 0);
+      c.width = c.height = 0;
+      draw(now0()); kick();
+    };
+    slice(run);
   }
   // the sign is in Nanum Brush Script: repaint the room once when that font arrives
   // (with the text, since Google serves Korean fonts in unicode-range slices)
@@ -2404,14 +2476,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (settling) {
       clearTimeout(settleT);
       timers.delete(settleT);
+      roomJob = null; propJob = null;
       settleT = later(() => {
         if (!L) return;
-        buildSprites();
-        slice(() => {
-          if (destroyed || !L) return;
-          bgC.width = Math.round(W * dpr); bgC.height = Math.round(H * dpr);
-          paintBg(); draw(now0()); kick();
-        });
+        // the props first, then the room, each in slices of their own
+        buildSprites(() => { if (!destroyed && L) paintBgSoon(); });
       }, 160);
     } else {
       buildSprites();
@@ -2421,9 +2490,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     grabEl.style.marginLeft = grabEl.style.marginTop = `${-Math.round(39 * L.s)}px`;
     toyEl.style.width = toyEl.style.height = `${Math.round(52 * L.s)}px`;
     toyEl.style.marginLeft = toyEl.style.marginTop = `${-Math.round(26 * L.s)}px`;
-    // the avocado keeps its place in the room
-    if (A.carry || A.under) { if (C.act) C.act.hit = true; finishCarry(); }
-    if (!old || A.sleeping) restOnFloorAt(old ? A.x * (w / old.W) : L.home.x);
+    // the avocado keeps its place in the room; if he had it in his paws, that's
+    // over: the action just ends and it goes back to its spot on the floor
+    if (A.carry || A.under) {
+      if (C.act) { C.act.hit = true; endAct(C.act, now0()); }
+      finishCarry();
+    } else if (!old || A.sleeping) restOnFloorAt(old ? A.x * (w / old.W) : L.home.x);
     else { A.x *= w / old.W; A.y = Math.min(A.y * (h / old.H), L.floorY - avoBottom()); }
     if (A.place) { A.place = null; restOnFloorAt(L.home.x); }
     if (!A.fade) A.alpha = 1;
@@ -2503,6 +2575,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         // pushed off the edge, it drops past the sill in front, not onto it
         // (or off the front of the cushion it was pushed from)
         if ((c.sill || (A.ghostTop && c === L.cols[0])) && now < A.ghost) continue;
+        // flat things only hold it up from above, and down on the cushion it's
+        // in front of him, so he can't shove it down through it
+        if (c.flat && A.y > c.ay) continue;
+        if (c.cat && A.y > c.ay && Math.abs(A.x - L.plat.x) < L.plat.rx) continue;
         const qx0 = A.x + ox, qy0 = A.y + oy;
         const dx = c.bx - c.ax, dy = c.by - c.ay, ll = dx * dx + dy * dy;
         const k = ll ? clamp(((qx0 - c.ax) * dx + (qy0 - c.ay) * dy) / ll) : 0;
@@ -2577,11 +2653,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
   // the toy button: an invisible hand takes the pompom for a little dance
   function autoHand(now) {
-    const { s } = L, e = now - pom.auto.t0;
-    const ax = L.catX + 186 * s, ay = L.topY - 92 * s;
+    const { s } = L, e = now - pom.auto.t0, xMax = L.W - 40 * s;
+    const ax = Math.min(L.catX + 186 * s, xMax), ay = L.topY - 92 * s;
     if (e < 700) { const k = easeInOut(e / 700); pom.hx = lerp(pom.auto.x0, ax, k); pom.hy = lerp(pom.auto.y0, ay, k); }
-    else if (e < 2300) { const k = (e - 700) / 1000; pom.hx = ax + Math.sin(k * 5.2) * 46 * s; pom.hy = ay + Math.sin(k * 7.4) * 20 * s - 10 * s; }
-    else if (e < 4200) { pom.hx = L.catX + 172 * s; pom.hy = L.topY - 66 * s + Math.sin(e / 300) * 2 * s; }
+    else if (e < 2300) { const k = (e - 700) / 1000; pom.hx = Math.min(ax + Math.sin(k * 5.2) * 46 * s, xMax); pom.hy = ay + Math.sin(k * 7.4) * 20 * s - 10 * s; }
+    else if (e < 4200) { pom.hx = Math.min(L.catX + 172 * s, xMax); pom.hy = L.topY - 66 * s + Math.sin(e / 300) * 2 * s; }
     else { pom.held = null; pom.auto = null; }
   }
 
@@ -2755,6 +2831,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (now - b[2] > 120) { vx = 0; vy = 0; }
     const sp = Math.hypot(vx, vy), max = 2600 * s;
     if (sp > max) { vx *= max / sp; vy *= max / sp; }
+    // let go low in front of him, over the cushion: it sits on the cushion
+    const bot = A.y + avoBottom();
+    if (sp < 450 * s && Math.abs(A.x - L.plat.x) < L.plat.rx - 12 * s && bot > L.topY - 60 * s && bot < L.topY + (L.plat.ry + L.plat.th) * 1.1) {
+      A.y = L.topY - avoBottom(); A.ang = 0; A.w = 0;
+      if (!RM) { A.vx = A.vy = 0; A.sleeping = true; A.lastMove = now; setFace('worried', 1200); kick(); return; }
+    }
     if (RM) {
       setFace('worried', 1200);
       if (inZone()) { startBully(onPlatform() ? pickBully() : 'swat'); kick(); return; }
@@ -2790,14 +2872,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     kick();
   }
   function autoDangle() {
-    if (!L || pom.pinned) return;
+    if (!L) return;
     const now = now0();
     noteUser(now);
+    // already pinned under his paws, or busy with something that beats a toy
+    const a = C.act, busy = a && PRI[a.kind] >= 3 && a.kind !== 'bat' && a.kind !== 'pounce';
+    if (pom.pinned || busy) say('cat.say.busy');
+    if (pom.pinned) return;
     pom.held = { id: -1 };
     pom.auto = { t0: now, x0: pom.x, y0: pom.y };
     pom.hx = pom.x; pom.hy = pom.y;
     C.toyT = now;
-    say('cat.say.toy');
+    if (!busy) say('cat.say.toy');
     kick();
   }
 
@@ -2861,7 +2947,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const now = now0();
     noteUser(now);
     const a = start('boop');
-    if (!a) return;
+    // busy with something more important: say so, rather than nothing at all
+    if (!a) { if (fromButton) say('cat.say.busy'); return; }
     headMatrix(P); faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
     const n = headToCat(FP.x + P.yaw * 2.5, FP.y + P.pitch * 2);
     fx.rings.push({ x: L.catX + n.x * L.s, y: L.topY + n.y * L.s, t0: now });
@@ -3108,6 +3195,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           if (!a.hit) { A.x = L.catX + axc * s; A.y = L.topY + ayc * s; A.ang = ang; }
         }
         if (a.hit) {
+          if (a.goneT === undefined) { a.goneT = now - 450; a.hx = PAW_N[0]; a.hy = PAW_N[1]; }
           const v = easeInOut(clamp((now - a.goneT) / 450));
           px = lerp(a.hx, PAW_N[0], v); py = lerp(a.hy, PAW_N[1], v); up = 1 - v;
           T.grin = 0.35;
@@ -3166,10 +3254,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           if (e < tE + 500) T.lidU = Math.max(T.lidU, hump((e - tE) / 500));
           T.happy = 0.5;
         }
-        if (!a.hit) { A.sink = RM ? 0 : 0.3 * smooth(tS, tE, e); A.mound = RM ? smooth(tS, tE, e) : smooth(tS + 120, tE, e); }
+        // it sinks into the fluff as the heap grows round it
+        if (!a.hit) { A.sink = 0.75 * smooth(tS, tE, e); A.mound = RM ? smooth(tS, tE, e) : smooth(tS + 120, tE, e); }
         if (!a.hit && e >= tE) {
           a.hit = true;
-          seal(A.x, A.y - 12 * s, now);
+          // stamped on the cushion just under the heap, not on it
+          seal(A.x + 6 * s, A.y + 52 * s, now);
           A.carry = null;
           // the mound stays a moment, then it all fades and the avocado turns up on the floor
           fadeAvo(() => { A.sink = 0; A.mound = 0; restOnFloorAt(L.home.x); }, RM ? 300 : 600, RM ? 400 : 700);
@@ -3270,10 +3360,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           T.jaw = RM ? 0.15 : 0.1 + 0.16 * (0.5 - 0.5 * Math.cos(c * TAU));
           T.chew = RM ? 0 : Math.sin(c * TAU);
           T.roll += RM ? 0 : 0.05 * Math.sin(c * TAU);
-          T.lidU = 0.55; T.happy = 0.3;
+          T.lidU = 0.5; T.happy = 0.55;
           rate.jaw = 30;
         }
-        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; T.lidU = 0.4; }
+        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; T.lidU = 0.4; T.happy = 0.5; }
         if (e >= tK) {
           T.lidU = 1; T.happy = 1; T.grin = 0.5; T.tCurl = 1.2;
           if (!a.m) {
@@ -3304,7 +3394,6 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       case 'pounce': {
         const tW = RM ? 300 : 850, tL = RM ? 400 : 1150, tH = RM ? 1000 : 1600;
         if (e < tW) {
-          // the butt wiggle
           // the crouch: head down, the butt wiggle getting bigger, the tip of the tail twitching
           const w = smooth(0, tW, e);
           if (!RM) { T.rumpY = -7 + Math.sin(e / 30) * (2.4 + 2 * w); T.rumpA = Math.sin(e / 44) * (0.04 + 0.04 * w); T.tFlick = Math.sin(e / 42) * 0.6; T.tAmp = 0.3; }
@@ -3312,8 +3401,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           a.tx = cx(pom.x); a.ty = cy(pom.y);
         } else if (e < tH) {
           const v = RM ? 1 : easeOut((e - tW) / (tL - tW));
-          T.bx = 24 * v; T.by = -10 * v; T.hx += 6 * v;
-          const tx = clamp(a.tx, 120, 235), ty = clamp(a.ty, -130, 8);
+          // the lunge, but only as far as there's room for his face on a narrow screen
+          const room = clamp((L.W - 6 * s - L.catX) / s - HEAD_RIGHT, 0, 30);
+          T.bx = 24 * v * (room / 30); T.by = -10 * v - 4 * v * (1 - room / 30); T.hx += 6 * v * (room / 30);
+          const tx = clamp(a.tx, 120, Math.min(235, (L.W - 40 * s - L.catX) / s)), ty = clamp(a.ty, -130, 8);
           paw('n', tx, ty, 1, 0, 0, 40);
           paw('f', tx - 14, ty + 10, 1, 0, 0, 40);
           rate.bx = rate.by = 25;
@@ -3662,9 +3753,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // ease toward it all
     for (let i = 0; i < KEYS.length; i++) {
       const k = KEYS[i];
-      if (RM) { P[k] = T[k]; continue; }
       const r = k === 'pupil' ? (T.pupil > P.pupil ? 6 : 1.4) : rate[k];
-      P[k] += (T[k] - P[k]) * (1 - Math.exp(-dt * r));
+      const v = RM ? T[k] : P[k] + (T[k] - P[k]) * (1 - Math.exp(-dt * r));
+      // one bad number must never stick
+      P[k] = Number.isFinite(v) ? v : Number.isFinite(T[k]) ? T[k] : REST[k];
     }
     if (!RM) P.tPh += dt * tSpd;
     const sleeping = C.act && C.act.kind === 'sleep';
@@ -3980,13 +4072,20 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const { s } = L;
     if (A.alpha <= 0.01 || A.scale <= 0.01) return;
     g.save();
-    g.globalAlpha = A.alpha * (1 - 0.5 * A.sink);
-    g.translate(A.x, A.y);
-    // squashed flat under him, or sinking into the cushion
-    if (A.mash || A.sink) {
+    // sinking into the cushion: what's gone under its surface isn't drawn,
+    // and when it all fades it goes a little before the heap does
+    g.globalAlpha = A.alpha * (A.sink ? A.alpha * A.alpha : 1) * (1 - 0.4 * A.sink);
+    if (A.sink) {
+      g.beginPath();
+      g.rect(A.x - 80 * s, A.y + avoBottom() - 200 * s, 160 * s, 200 * s + 1.5 * s);
+      g.clip();
+    }
+    g.translate(A.x, A.y + A.sink * 46 * s);
+    // squashed flat under him
+    if (A.mash) {
       const b = avoBottom();
       g.translate(0, b);
-      g.scale(1 + 0.3 * A.mash, 1 - 0.5 * A.mash - 0.85 * A.sink);
+      g.scale(1 + 0.3 * A.mash, 1 - 0.5 * A.mash);
       g.translate(0, -b);
     }
     // squash along the last impact normal
@@ -4041,22 +4140,52 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
   }
 
-  // fluff raked up from the cushion, piling over it from the bottom
+  const moundY = (u, base, hgt, m) => base - hgt * Math.pow(Math.max(0, 1 - u * u), 0.6) + Math.sin(u * 9.3) * 1.4 * m;
+  // fluff raked up from the cushion: a low heap round its base, kept on the
+  // cushion (nothing hangs off the front of it)
   function drawMound(g) {
-    const { s } = L, top = 26 - A.mound * 86;
+    const { s } = L, m = A.mound, al = A.alpha, hgt = 30 * m, base = 25, half = 22 + 14 * m;
     g.save();
-    g.translate(A.x, A.y);
+    g.beginPath();
+    g.rect(L.catX - L.plat.rx, L.topY - 200 * s, L.plat.rx * 2, 200 * s);
+    g.moveTo(L.catX + L.plat.rx, L.topY);
+    g.ellipse(L.catX, L.topY, L.plat.rx, L.plat.ry, 0, 0, TAU);
+    g.clip();
+    g.translate(A.x - 2 * s, A.y);
     g.scale(s, s);
-    for (let i = 0; i < 20; i++) {
-      const y = 26 - (i / 19) * 86;
-      if (y < top) break;
-      const w = lerp(38, 22, (26 - y) / 86), lit = y < top + 14;
-      for (let j = -2; j <= 2; j++) {
-        const x = j * w * 0.36 + Math.sin(i * 2.1 + j * 1.7) * 3;
-        dab(g, x, y + 2, 10 + Math.abs(Math.sin(i * 1.3 + j)) * 5, CREAM_D, 0.5 * A.alpha, 0.5);
-        dab(g, x, y, 9 + Math.abs(Math.cos(i * 0.9 + j)) * 4, lit ? CREAM : CREAM_S, 0.95 * A.alpha, 0.6);
-      }
+    // where it presses into the cushion
+    for (let x = -half; x <= half; x += 8) dab(g, x, base + 3, 11, CREAM_D, 0.3 * al * m, 0.3);
+    // the heap: a soft cream dome, lit along its top, flecked like the cushion
+    g.globalAlpha = al;
+    g.fillStyle = 'rgb(228,219,200)';
+    g.beginPath();
+    g.moveTo(-half - 3, base + 2);
+    for (let i = 0; i <= 16; i++) { const u = i / 8 - 1; g.lineTo(u * half, moundY(u, base, hgt, m)); }
+    g.lineTo(half + 3, base + 2);
+    g.quadraticCurveTo(0, base + 9, -half - 3, base + 2);
+    g.fill();
+    for (let i = 0; i <= 12; i++) {
+      const u = i / 6 - 1, r = 4.5 + Math.abs(Math.sin(i * 1.9)) * 2.5;
+      dab(g, u * half * 0.94, moundY(u, base, hgt, m) + r * 0.55, r, CREAM, 0.9 * al, 0.55);
     }
+    for (let x = -half + 6; x < half - 4; x += 9) dab(g, x, base + 3, 6, CREAM_D, 0.3 * al, 0.4);
+    // soft round ends and a soft foot, not a cut-out shape
+    dab(g, -half, base, 5, CREAM_S, 0.8 * al, 0.5);
+    dab(g, half, base, 5, CREAM_S, 0.8 * al, 0.5);
+    for (let x = -half; x <= half; x += 7) dab(g, x, base + 5.5 - 3 * (x / half) ** 2, 4.5, CREAM_S, 0.55 * al, 0.4);
+    g.globalAlpha = 0.45 * al;
+    g.fillStyle = 'rgb(128,114,96)';
+    for (let i = 0; i < 16; i++) {
+      const u = Math.sin(i * 12.9898) * 0.8, y = lerp(moundY(u, base, hgt, m) + 3, base, Math.abs(Math.sin(i * 4.1)));
+      g.fillRect(u * half, y, 1.1, 0.8);
+    }
+    g.globalAlpha = 0.4 * al;
+    g.strokeStyle = 'rgb(128,114,96)';
+    g.lineWidth = 0.8;
+    g.beginPath();
+    for (let i = 0; i <= 16; i++) { const u = i / 8 - 1; i ? g.lineTo(u * half, moundY(u, base, hgt, m) - 0.5) : g.moveTo(u * half, moundY(u, base, hgt, m) - 0.5); }
+    g.stroke();
+    g.globalAlpha = 1;
     g.restore();
   }
 
@@ -4204,7 +4333,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`).addEventListener('change', () => { watchDpr(); if (ready) relayout(); }, { once: true, signal: ac.signal });
   };
   watchDpr();
-  const onFonts = () => { if (!destroyed && ready && L && L.sign && !signFont && brushReady()) paintBg(); };
+  const onFonts = () => { if (!destroyed && ready && L && L.sign && !signFont && brushReady()) paintBgSoon(); };
   if (document.fonts) {
     document.fonts.load('20px "Nanum Brush Script"', SIGN_TEXT).then(onFonts, () => {});
     document.fonts.load('20px "Nanum Pen Script"', '야옹냥냠?').catch(() => {});
