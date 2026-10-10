@@ -1074,12 +1074,12 @@ html[lang="ko"] .love .love-done { font-family: var(--f-ko); font-style: normal;
 }
 .cat .cat-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .cat .cat-fg { z-index: 1; }
-/* drag handles over the avocado and the pompom, touch-action none so dragging doesn't scroll */
+/* drag handles over the avocado and the pompom, touch-action none so dragging doesn't scroll. avocado on top, like it's drawn */
 .cat .cat-grab {
-  position: absolute; left: 0; top: 0; z-index: 2; width: 78px; height: 78px; margin: -39px 0 0 -39px;
+  position: absolute; left: 0; top: 0; z-index: 3; width: 78px; height: 78px; margin: -39px 0 0 -39px;
   border-radius: 50%; touch-action: none; cursor: grab; will-change: transform;
 }
-.cat .cat-grab--toy { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
+.cat .cat-grab--toy { z-index: 2; width: 52px; height: 52px; margin: -26px 0 0 -26px; }
 .cat .cat-stage.is-grabbing, .cat .cat-stage.is-grabbing .cat-grab { cursor: grabbing; }
 
 .cat .cat-caption {
@@ -1122,7 +1122,8 @@ html[lang="ko"] .love .love-done { font-family: var(--f-ko); font-style: normal;
 .cat .cat-btn--pet svg { fill: var(--seal); }
 .cat .cat-btn--boop svg { fill: #4a4652; }
 .cat .cat-btn--treat svg { fill: #b0763a; }
-.cat .cat-btn--toy svg { fill: #cdbf9f; color: var(--ink-3); }
+.cat .cat-btn--toy svg { fill: #a8977a; color: var(--ink-3); }
+.cat .cat-btn--toy svg circle { stroke: currentColor; stroke-width: .9; }
 /* hover only on real hover devices, otherwise a tapped button stays dark on touch */
 @media (hover: hover) {
   .cat .cat-btn:hover { background: var(--ink); color: var(--paper-light); border-color: var(--ink); }
@@ -1141,13 +1142,18 @@ html[lang="ko"] .cat .cat-caption { font-style: normal; }
 html[lang="ko"] .cat .cat-btn { letter-spacing: 0; font-size: .92rem; }
 html[lang="ko"] .cat .cat-count-n { letter-spacing: 0; }
 
+/* in between: two even rows of three rather than five and an orphan */
+@media (max-width: 1060px) {
+  .cat .cat-btns { display: grid; grid-template-columns: repeat(3, auto); justify-content: center; }
+}
+
 @media (max-width: 640px) {
   .cat .cat-stage { height: clamp(540px, 76vh, 640px); height: clamp(540px, 76svh, 640px); }
   .cat .cat-caption { font-size: .92rem; padding: 0 4px; }
   .cat .cat-bar { margin-top: 14px; gap: 10px; }
   .cat .cat-count { width: 100%; flex-direction: column; align-items: center; gap: 0; }
   /* a tidy 3 by 2 grid: icon on top, a short label underneath */
-  .cat .cat-btns { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+  .cat .cat-btns { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 1fr; gap: 7px; }
   .cat .cat-btn {
     flex-direction: column; gap: 4px; min-height: 60px; padding: 7px 4px 6px; border-radius: 16px;
     font-size: .8rem; letter-spacing: .01em; line-height: 1.12; white-space: normal; text-align: center;

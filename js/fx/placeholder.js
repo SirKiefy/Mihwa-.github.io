@@ -1,5 +1,5 @@
 // fake film photos, shown until real ones are added in her.js
-import { rng } from '../ink/brush.js?v=9ff5ee8a7c';
+import { rng } from '../ink/brush.js?v=13fb58fc16';
 
 const TONES = [
   ['#2c1f1b', '#b9805f', '#f0b27a'],

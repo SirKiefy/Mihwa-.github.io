@@ -1,6 +1,6 @@
 // plum branch for the reasons section. every reason is a bud, a real <button> laid over the canvas
 // .love-canvas = branch (painted once per layout), .love-overlay = buds, flowers, petals. both are full viewport width so the trunk can come in from the edge
-import { rng, noise1, stamp, strokeGen, wash, samplePath, sealStamp, Painter, PROFILE, PLUM } from '../ink/brush.js?v=9ff5ee8a7c';
+import { rng, noise1, stamp, strokeGen, wash, samplePath, sealStamp, Painter, PROFILE, PLUM } from '../ink/brush.js?v=13fb58fc16';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);

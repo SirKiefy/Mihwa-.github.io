@@ -1,10 +1,10 @@
 // seoul and paris on a live globe, staged like the old sun, moon and five peaks screen.
 // globe is lit from where the sun actually is right now. scroll moves the camera between the two cities
-import * as THREE from '../../vendor/three/three.module.min.js?v=9ff5ee8a7c';
-import { makeNoiseTexture, NOISE } from '../scene/glsl.js?v=9ff5ee8a7c';
-import { makeLandTexture } from '../scene/inktex.js?v=9ff5ee8a7c';
-import { CITIES } from '../data/cities.js?v=9ff5ee8a7c';
-import { sunPosition, moonPhase } from './live.js?v=9ff5ee8a7c';
+import * as THREE from '../../vendor/three/three.module.min.js?v=13fb58fc16';
+import { makeNoiseTexture, NOISE } from '../scene/glsl.js?v=13fb58fc16';
+import { makeLandTexture } from '../scene/inktex.js?v=13fb58fc16';
+import { CITIES } from '../data/cities.js?v=13fb58fc16';
+import { sunPosition, moonPhase } from './live.js?v=13fb58fc16';
 
 const DEG = Math.PI / 180;
 const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
