@@ -2220,9 +2220,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   // the avocado
   const A = {
     x: 0, y: 0, vx: 0, vy: 0, ang: 0, w: 0, sq: 0, sqv: 0, sqA: -Math.PI / 2,
-    alpha: 1, scale: 1, grab: null, place: null, fade: null, sleeping: true, restT: 0, grounded: false,
+    alpha: 1, scale: 1, grab: null, place: null, fade: null, sleeping: true, restT: 0, leanT: 0, grounded: false,
     face: 'smug', faceUntil: 0, worriedAt: -1e9, touchedCat: false, lastMove: -1e9, fast: false,
-    carry: null, under: false, mash: 0, sink: 0, mound: 0, ghost: 0, ghostTop: false,
+    carry: null, under: false, mash: 0, sink: 0, mound: 0, away: false,
   };
   // his pose: P is what's drawn, T is where it's heading this frame
   const P = restPose(), T = restPose(), REST = restPose();
@@ -2240,7 +2240,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     happy: 0, petZone: 'back', petUntil: 0, stim: 0, stimMax: 4.4, grumpyUntil: 0,
     disgust: 0, blepAt: 0, blepUntil: 0, alert: 0, meowAt: -1e9, mrrpAt: -1e9, lastSwat: -1e9,
     lastUser: 0, idleAt: 0, zAt: 0, avoSeenAt: 0, toyT: -1e9, toyStill: 0, batAt: -1e9, pounceAt: -1e9, agit: 0, swishUntil: 0,
-    boopSayT: -1e9, faceUntil: 0, batN: 0,
+    boopSayT: -1e9, faceUntil: 0, batN: 0, autoN: 0,
   };
   const LK = { mode: 0, x: 0, y: 0, pupil: 0.3, flat: false };
   const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0 };
@@ -2318,7 +2318,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function restOnFloorAt(x) {
     A.x = clamp(x, 34 * L.s, L.W - 34 * L.s);
     A.y = groundAt(A.x) - avoBottom();
-    A.vx = A.vy = A.w = 0; A.ang = 0; A.sleeping = true;
+    A.vx = A.vy = A.w = 0; A.ang = 0; A.sleeping = true; A.away = false;
   }
   function resetToy() {
     pom.x = L.pom.x; pom.y = L.pom.y + L.pom.len; pom.vx = pom.vy = 0;
@@ -2535,7 +2535,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     A.vx += (jt * tx) / avoMass; A.vy += (jt * ty) / avoMass; A.w += (rt * jt) / I;
     if (-vn > K.impact) { K.impact = -vn; K.impN = Math.atan2(ny, nx); }
   }
-  function wake() { A.sleeping = false; A.restT = 0; }
+  function wake() { A.sleeping = false; A.restT = 0; A.leanT = 0; }
 
   function stepAvocado(h, now) {
     const { s } = L;
@@ -2555,6 +2555,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       return true;
     }
     if (A.place || A.sleeping || RM) return false;
+    if (A.away && A.y > L.topY + 60 * s) A.away = false;
     A.vy += L.G * h;
     A.vx *= 1 - 0.05 * h;
     A.x += A.vx * h; A.y += A.vy * h; A.ang += A.w * h;
@@ -2572,9 +2573,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       contact(-1, 0, cx2 + rad - L.W, 0.5, 0.4);
       contact(0, 1, rad - cy2, 0.4, 0.4);
       for (const c of L.cols) {
-        // pushed off the edge, it drops past the sill in front, not onto it
-        // (or off the front of the cushion it was pushed from)
-        if ((c.sill || (A.ghostTop && c === L.cols[0])) && now < A.ghost) continue;
+        // sent off by him: it falls past him and the cushion, and the sill only
+        // catches it out of his reach (on a phone that's none of it)
+        if (A.away && (c.cat || c === L.cols[0] || (c.sill && sillReach(A.x)))) continue;
         // flat things only hold it up from above, and down on the cushion it's
         // in front of him, so he can't shove it down through it
         if (c.flat && A.y > c.ay) continue;
@@ -2605,9 +2606,14 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       if (spd < 260 * s) A.w += (-wrapA(A.ang) * 34 - A.w * 3.5) * h;
       if (spd < 10 * s && Math.abs(A.w) < 0.12 && Math.abs(wrapA(A.ang)) < 0.03) {
         A.restT += h;
-        if (A.restT > 0.3) { A.sleeping = true; A.vx = A.vy = A.w = 0; A.ang = 0; }
+        if (A.restT > 0.3) { A.sleeping = true; A.vx = A.vy = A.w = 0; A.ang = 0; A.away = false; }
       } else A.restT = 0;
-    } else A.restT = 0;
+      // propped against a post, only creeping upright: it can just stay like that
+      if (spd < 6 * s && Math.abs(A.w) < 0.2) {
+        A.leanT += h;
+        if (A.leanT > 1.5 && !A.sleeping) { A.sleeping = true; A.vx = A.vy = A.w = 0; A.away = false; }
+      } else A.leanT = 0;
+    } else A.restT = A.leanT = 0;
     if (spd > 30 * s) A.lastMove = now;
     if (spd > 900 * s) A.fast = true;
     // never lose it
@@ -2692,6 +2698,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // sitting on his back, even up on the rump: that won't be tolerated either
     return A.grounded && !A.grab && A.y < L.topY - 70 * s && A.x > L.catX - 170 * s && A.x < L.catX + 130 * s;
   }
+  // would it be in his reach, sat on the window sill at x?
+  function sillReach(x) {
+    const { s } = L, c = L.cols[7];
+    return x > L.catX - 170 * s && Math.hypot(x - L.chest.x, c.ay - c.r - avoBottom() - L.chest.y) < 196 * s;
+  }
   // resting on the cushion in front of him, where he can deal with it properly
   function onPlatform() {
     const { s } = L;
@@ -2710,6 +2721,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!a) return;
     C.lastBully = kind;
     C.lastSwat = now0();
+    C.autoN++;
     wake();
     say(`cat.say.${kind}`);
   }
@@ -2719,7 +2731,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     noteUser(now);
     if (A.grab) endGrab(null);
     A.place = { t0: now, landed: false };
-    A.touchedCat = false;
+    A.touchedCat = false; A.away = false;
     kick();
   }
   function seal(x, y, now) {
@@ -2740,13 +2752,20 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       setFace('dizzy', 1600);
       return;
     }
-    wake();
-    A.vx = side * (820 + Math.random() * 300) * s;
-    A.vy = -(520 + Math.random() * 240) * s;
-    A.w = side * (11 + Math.random() * 7);
+    // no room for a big fling (a phone): knocked off the edge low and hard
+    // instead, so it doesn't sail up across his face into the wall
+    if (cramped(side)) sendOff(side * (360 + Math.random() * 120) * s, -(60 + Math.random() * 80) * s, side * (8 + Math.random() * 5));
+    else sendOff(side * (820 + Math.random() * 300) * s, -(520 + Math.random() * 240) * s, side * (11 + Math.random() * 7));
     A.sqv -= 8; A.sqA = Math.PI;
     A.fast = true;
     setFace('squeeze', 900);
+  }
+  const cramped = (side) => (side > 0 ? L.W - A.x : A.x) < 250 * L.s;
+  // sent packing: on its way out it can't land back within his reach
+  function sendOff(vx, vy, w) {
+    wake();
+    A.vx = vx; A.vy = vy; A.w = w;
+    A.away = true;
   }
   function fadeAvo(mid, outMs, delayIn) {
     A.fade = { t0: now0(), outMs, delayIn, mid, midDone: false };
@@ -2797,7 +2816,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function startGrab(e, x, y) {
     const now = now0();
     A.grab = { id: e.pointerId, ox: A.x - x, oy: A.y - y, tx: A.x, ty: A.y, x0: x, y0: y, t0: now, moved: 0, samples: [[x, y, now]] };
-    A.place = null;
+    A.place = null; A.away = false;
     A.scale = 1;
     if (!A.fade) A.alpha = 1;
     wake();
@@ -2984,6 +3003,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const now = now0();
     pointer.x = x; pointer.y = y; pointer.t = now;
     noteUser(now);
+    C.autoN = 0;
     const pad = e.pointerType === 'touch' ? 14 : 6;
     if (e.target === toyEl || onToy(x, y, pad)) { e.preventDefault(); grabToy(e, x, y); return; }
     if (e.target === grabEl || onAvocado(x, y, pad)) { e.preventDefault(); startGrab(e, x, y); return; }
@@ -3039,6 +3059,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   grabEl.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
   toyEl.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
 
+  // a button press is someone doing something (capture: before the button's own handler)
+  btnRow.addEventListener('click', () => { C.autoN = 0; }, { capture: true, signal: ac.signal });
   btn.poke.addEventListener('click', () => { if (!L || A.grab || A.carry) return; noteUser(now0()); poke(null, null); }, opt);
   btn.swat.addEventListener('click', () => handleIt(), opt);
   btn.pet.addEventListener('click', () => petButton(), opt);
@@ -3188,7 +3210,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
                 setFace('squeeze', 900);
                 if (RM) fadeAvo(() => restOnFloorAt(Math.max(L.home.x, L.catX + 230 * s)), 220, 420);
                 // off the front of the cushion, not back onto it
-                else { wake(); A.vx = -70 * s; A.vy = 60 * s; A.w = -4; A.fast = false; A.ghost = now + 450; A.ghostTop = true; }
+                else { sendOff(-70 * s, 60 * s, -4); A.fast = false; }
               }
             }
           }
@@ -3225,9 +3247,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           A.place = null; A.touchedCat = false;
           if (RM) { fadeAvo(() => restOnFloorAt(a.side < 0 ? 60 * s : Math.max(L.home.x, L.catX + 230 * s)), 260, 420); setFace('dizzy', 1600); }
           else {
-            wake();
-            A.vx = a.side * (300 + Math.random() * 160) * s; A.vy = -(760 + Math.random() * 200) * s;
-            A.w = a.side * (10 + Math.random() * 6); A.sqv -= 8; A.sqA = -Math.PI / 2; A.fast = true;
+            sendOff(a.side * (300 + Math.random() * 160) * s, -(760 + Math.random() * 200) * s, a.side * (10 + Math.random() * 6));
+            A.sqv -= 8; A.sqA = -Math.PI / 2; A.fast = true;
             setFace('squeeze', 900);
           }
         }
@@ -3297,7 +3318,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           seal(A.x, A.y - 12 * s, now);
           setFace('squeeze', 900);
           if (RM) fadeAvo(() => restOnFloorAt(Math.max(L.home.x, L.catX + 230 * s)), 200, 420);
-          else { wake(); A.vx = 560 * s; A.vy = -420 * s; A.w = 9; A.fast = true; A.sqv -= 8; A.sqA = Math.PI; }
+          else { if (cramped(1)) sendOff(360 * s, -80 * s, 7); else sendOff(560 * s, -420 * s, 9); A.fast = true; A.sqv -= 8; A.sqA = Math.PI; }
         }
         if (e >= tC) T.by += 3 * hump((e - tC) / 400);
         break;
@@ -3542,9 +3563,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
     // it came near him on its own
     const bullying = C.act && PRI[C.act.kind] === 5;
-    if (!bullying && !A.grab && !A.place && !A.fade && !A.carry && now - C.lastSwat > 500 && inZone()) {
+    if (!bullying && !A.grab && !A.place && !A.fade && !A.carry && !A.away && now - C.lastSwat > 500 && inZone()) {
       const slow = Math.hypot(A.vx, A.vy) < 720 * s;
-      if (onPlatform() && slow && (A.sleeping || A.grounded)) {
+      if (C.autoN > 0) {
+        // he's already dealt with it once and nobody's done a thing since:
+        // it just slinks off out of his way, no bullying on a loop
+        if (slow && (A.sleeping || A.grounded)) { C.avoSeenAt = 0; A.vx = A.vy = A.w = 0; A.sleeping = true; setFace('worried', 900); fadeAvo(() => restOnFloorAt(L.home.x), 260, 420); }
+      } else if (onPlatform() && slow && (A.sleeping || A.grounded)) {
         if (!C.avoSeenAt) C.avoSeenAt = now;
         else if (now - C.avoSeenAt > (RM ? 200 : 420)) { C.avoSeenAt = 0; startBully(pickBully()); }
       } else if (slow || A.touchedCat) startBully(A.y < L.topY - 60 * s && A.x < L.catX + 60 * s ? 'buck' : 'swat');
