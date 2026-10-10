@@ -1129,12 +1129,13 @@ html[lang="ko"] .love .love-done { font-family: var(--f-ko); font-style: normal;
 }
 .cat .cat-stage canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .cat .cat-fg { z-index: 1; }
-/* these sit on the avocado and the pompom so a finger can drag them without scrolling the page */
+/* these sit on the avocado and the pompom so a finger can drag them without scrolling the page
+   (the avocado's on top, as it's drawn) */
 .cat .cat-grab {
-  position: absolute; left: 0; top: 0; z-index: 2; width: 78px; height: 78px; margin: -39px 0 0 -39px;
+  position: absolute; left: 0; top: 0; z-index: 3; width: 78px; height: 78px; margin: -39px 0 0 -39px;
   border-radius: 50%; touch-action: none; cursor: grab; will-change: transform;
 }
-.cat .cat-grab--toy { width: 52px; height: 52px; margin: -26px 0 0 -26px; }
+.cat .cat-grab--toy { z-index: 2; width: 52px; height: 52px; margin: -26px 0 0 -26px; }
 .cat .cat-stage.is-grabbing, .cat .cat-stage.is-grabbing .cat-grab { cursor: grabbing; }
 
 .cat .cat-caption {
