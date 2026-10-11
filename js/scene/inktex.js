@@ -1,7 +1,7 @@
 // textures painted with the ink brush, plus the land map for the globe
-import * as THREE from '../../vendor/three/three.module.min.js?v=69aed27396';
-import { rng, stroke, strokeGen, blossomGen, bud, wash, stamp, PROFILE, INK } from '../ink/brush.js?v=69aed27396';
-import { LAND_PATH, LAND_W, LAND_H } from '../data/land.js?v=69aed27396';
+import * as THREE from '../../vendor/three/three.module.min.js?v=a9747799ed';
+import { rng, stroke, strokeGen, blossomGen, bud, wash, stamp, PROFILE, INK } from '../ink/brush.js?v=a9747799ed';
+import { LAND_PATH, LAND_W, LAND_H } from '../data/land.js?v=a9747799ed';
 
 const run = (gen) => { const it = gen; while (!it.next().done); };
 

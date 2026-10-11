@@ -1,7 +1,7 @@
 // folding screen of the ink portraits. unfolds on scroll, hover a panel and its colour comes back
-import * as THREE from '../../vendor/three/three.module.min.js?v=69aed27396';
-import { makeNoiseTexture } from '../scene/glsl.js?v=69aed27396';
-import { sealStamp } from '../ink/brush.js?v=69aed27396';
+import * as THREE from '../../vendor/three/three.module.min.js?v=a9747799ed';
+import { makeNoiseTexture } from '../scene/glsl.js?v=a9747799ed';
+import { sealStamp } from '../ink/brush.js?v=a9747799ed';
 
 const NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const PW = 1, PH = 2.75;

@@ -118,13 +118,8 @@ export const PATH = [
     },
   },
   {
-    seal: '權', when: { en: 'And', fr: 'Et', ko: '그리고' },
-    title: { en: 'Human rights & NGOs', fr: 'Droits humains & ONG', ko: '인권 · NGO' },
-    text: {
-      en: 'Standing up for people who are easy to overlook, and for equality, LGBTQ+ rights included.',
-      fr: 'Défendre celles et ceux qu’on oublie trop vite, et l’égalité, droits LGBTQ+ compris.',
-      ko: '쉽게 잊히는 사람들 편에 서는 일. 성소수자의 권리를 포함한 모두의 평등을 위해.',
-    },
+    seal: '墨', when: { en: 'And', fr: 'Et', ko: '그리고' },
+    title: { en: 'Asking Kiefy to buy her a tattoo', fr: 'Demander à Kiefy de lui offrir un tatouage', ko: 'Kiefy한테 타투 사 달라고 조르기' },
   },
   {
     seal: '衣', when: { en: 'Always', fr: 'Toujours', ko: '언제나' },
