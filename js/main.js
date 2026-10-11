@@ -6,7 +6,7 @@ import { inkify } from './fx/inkify.js?v=b516bf9492';
 import { extractPalette } from './fx/palette.js?v=b516bf9492';
 import { mountLightbox } from './fx/lightbox.js?v=b516bf9492';
 import { makeGrainDataURL } from './scene/inktex.js?v=b516bf9492';
-import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter } from './audio.js?v=b516bf9492';
+import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter, psst, swish, huff, click, page, thump, dab } from './audio.js?v=b516bf9492';
 import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=b516bf9492';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -529,7 +529,7 @@ async function boot() {
   [scope, wanted, love].forEach((api) => api && onLang.push(() => api.relabel()));
 
   cat = await part('her baby', async () => (await import('./fx/cat.js?v=b516bf9492')).createCat($('#cat'), {
-    t, reduceMotion, mobile, sound: { purr, meow, pluck, mrrp, chew, rattle, chatter }, name: HER.cat?.name || '',
+    t, reduceMotion, mobile, sound: { purr, meow, pluck, mrrp, chew, rattle, chatter, psst, swish, huff, click, page, thump, dab }, name: HER.cat?.name || '',
   }));
   if (cat) onLang.push(() => cat.relabel());
 

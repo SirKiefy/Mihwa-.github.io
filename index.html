@@ -178,6 +178,7 @@
           <canvas class="cat-fg" aria-hidden="true"></canvas>
           <span class="cat-grab" aria-hidden="true"></span>
           <span class="cat-grab cat-grab--toy" aria-hidden="true"></span>
+          <span class="cat-grab cat-grab--dot" aria-hidden="true"></span>
         </div>
         <p class="cat-caption"><span class="cat-caption-main"></span> <span class="cat-caption-hint"></span></p>
         <div class="cat-bar">
@@ -190,7 +191,28 @@
             <button type="button" class="cat-btn cat-btn--treat"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2 10c2.3-3.6 6.2-4.9 9.8-3.6L16.4 3l-1 7 1 7-4.6-3.4C8.2 14.9 4.3 13.6 2 10z"/><circle cx="6.4" cy="9.2" r="1" fill="#f8f4ec"/></svg><span class="cat-btn-text" data-ck="cat.btn.treat"></span></button>
             <button type="button" class="cat-btn cat-btn--toy"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 1.2v7.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="13.4" r="4.4"/><path d="M5 11.2l-1.6-.9M15 11.2l1.6-.9M4.9 15.4l-1.5.8M15.1 15.4l1.5.8M10 18.6v1" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="cat-btn-text" data-ck="cat.btn.toy"></span></button>
           </div>
-          <p class="cat-tally" hidden><span class="cat-tally-pets"></span> <span class="cat-tally-treats"></span></p>
+          <button type="button" class="cat-more" aria-expanded="false" aria-controls="cat-more"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5.2 7.6L10 12.4l4.8-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="cat-more-text" data-ck="cat.more"></span></button>
+          <div class="cat-more-panel" id="cat-more" hidden>
+            <div class="cat-group" role="group" aria-labelledby="cat-g-play"><p class="cat-group-name" id="cat-g-play" data-ck="cat.g.play"></p><div class="cat-group-btns">
+              <button type="button" class="cat-btn cat-btn--laser" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.1"/><path d="M10 1.8v3.4M10 14.8v3.4M1.8 10h3.4M14.8 10h3.4M4.2 4.2l2.3 2.3M13.5 13.5l2.3 2.3M15.8 4.2l-2.3 2.3M4.2 15.8l2.3-2.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="cat-btn-text" data-ck="cat.btn.laser"></span></button>
+            </div></div>
+            <div class="cat-group cat-group--2" role="group" aria-labelledby="cat-g-care"><p class="cat-group-name" id="cat-g-care" data-ck="cat.g.care"></p><div class="cat-group-btns">
+              <button type="button" class="cat-btn cat-btn--brush"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2.6 11.6c0-3 2.6-5 6-5s6 2 6 5z"/><path d="M13.4 7.8l4.4-4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3.6 13.2v3M5.8 13.2v3.4M8 13.2v3.4M10.2 13.2v3.4M12.4 13.2v3.4M14.4 13.2v3" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/></svg><span class="cat-btn-text" data-ck="cat.btn.brush"></span></button>
+              <button type="button" class="cat-btn cat-btn--nip"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M8.6 18.4C9.4 13 10.4 8 12.6 3.4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M9.4 13.6C6 14.6 3 13 2.6 10.4c2.8-.6 5.6.4 6.8 3.2zM10 12.6c3.2.6 6-.8 6.8-3.4-2.8-.8-5.6.2-6.8 3.4zM11 8.4C8.6 8.8 6.4 7.4 6.2 5.4c2.2-.4 4.2.6 4.8 3zM11.6 7.8c2.4.2 4.2-1 4.6-3-2.2-.4-4 .6-4.6 3z"/><circle class="cat-ic-flower" cx="12.8" cy="2.6" r="1.6"/></svg><span class="cat-btn-text" data-ck="cat.btn.nip"></span></button>
+            </div></div>
+            <div class="cat-group cat-group--2" role="group" aria-labelledby="cat-g-chat"><p class="cat-group-name" id="cat-g-chat" data-ck="cat.g.chat"></p><div class="cat-group-btns">
+              <button type="button" class="cat-btn cat-btn--psst"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.4 4.6l3.6 2.2c1.6-.6 3.2-.6 4.6 0l3.6-2.2-.4 5.4c.4 3.6-2.4 5.8-5.4 5.8s-5.8-2.2-5.4-5.8z"/><path d="M16.2 13.4c1 .6 1.6 1.6 1.6 2.8M17.8 11c1.4.9 2 2.5 1.8 4" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="cat-btn-text" data-ck="cat.btn.psst"></span></button>
+              <button type="button" class="cat-btn cat-btn--blink"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2.4 9.4c2.2 3.8 13 3.8 15.2 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 12.4l-1.2 1.8M8.4 13.4l-.5 2.1M11.6 13.4l.5 2.1M15 12.4l1.2 1.8" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg><span class="cat-btn-text" data-ck="cat.btn.blink"></span></button>
+            </div></div>
+            <div class="cat-group" role="group" aria-labelledby="cat-g-dress"><p class="cat-group-name" id="cat-g-dress" data-ck="cat.g.dress"></p><div class="cat-group-btns">
+              <button type="button" class="cat-btn cat-btn--hat"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2.4 12.6c-.4-3.8 3.4-6.6 8-6.6 4.4 0 7.6 2.2 7.2 5.2-.2 1.6-2.6 2.4-7.6 2.4-5.4 0-7.4-.2-7.6-1z"/><path d="M11 6.2c.2-1.2.8-2.2 1.8-2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M3.4 14.6c2.6.8 10.6.8 13.2 0" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span class="cat-btn-text" data-ck="cat.btn.hat"></span></button>
+            </div></div>
+            <div class="cat-group cat-group--2" role="group" aria-labelledby="cat-g-art"><p class="cat-group-name" id="cat-g-art" data-ck="cat.g.art"></p><div class="cat-group-btns">
+              <button type="button" class="cat-btn cat-btn--paint"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><ellipse cx="8.6" cy="12.6" rx="3.6" ry="2.9"/><circle cx="3.9" cy="8.4" r="1.5"/><circle cx="6.9" cy="5.6" r="1.6"/><circle cx="10.4" cy="5.6" r="1.6"/><circle cx="13.3" cy="8.4" r="1.5"/><rect class="cat-ic-seal" x="14.2" y="13.4" width="4.2" height="4.2" rx=".6"/></svg><span class="cat-btn-text" data-ck="cat.btn.paint"></span></button>
+              <button type="button" class="cat-btn cat-btn--book"><svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M1.8 5c3-1.2 5.8-.8 8.2 1 2.4-1.8 5.2-2.2 8.2-1v11.2c-3-1.2-5.8-.8-8.2 1-2.4-1.8-5.2-2.2-8.2-1z"/><path d="M10 6v10.8" fill="none" stroke="#f8f4ec" stroke-width=".9"/></svg><span class="cat-btn-text" data-ck="cat.btn.book"></span></button>
+            </div></div>
+          </div>
+          <p class="cat-tally" hidden><span class="cat-tally-pets"></span> <span class="cat-tally-treats"></span> <span class="cat-tally-art"></span></p>
         </div>
         <p class="cat-say" role="status" aria-live="polite"></p>
       </div>
