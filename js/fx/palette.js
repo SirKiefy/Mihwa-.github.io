@@ -1,5 +1,5 @@
 // main colours across all the photos, k-means in rgb
-import { rng } from '../ink/brush.js?v=17c9d33994';
+import { rng } from '../ink/brush.js?v=69aed27396';
 
 export function extractPalette(photos, k = 6) {
   const px = [];

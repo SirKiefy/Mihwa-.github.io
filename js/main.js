@@ -1,13 +1,13 @@
 // page setup: text, layout bits, then boot() loads the photos and the heavy scenes
-import { LANGS, STRINGS } from './i18n.js?v=17c9d33994';
-import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=17c9d33994';
-import { loadPhotos } from './fx/placeholder.js?v=17c9d33994';
-import { inkify } from './fx/inkify.js?v=17c9d33994';
-import { extractPalette } from './fx/palette.js?v=17c9d33994';
-import { mountLightbox } from './fx/lightbox.js?v=17c9d33994';
-import { makeGrainDataURL } from './scene/inktex.js?v=17c9d33994';
-import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter } from './audio.js?v=17c9d33994';
-import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=17c9d33994';
+import { LANGS, STRINGS } from './i18n.js?v=69aed27396';
+import { HER, PHOTOS, LETTER, THOUGHTS, MEMORIES, PATH, REASONS } from './her.js?v=69aed27396';
+import { loadPhotos } from './fx/placeholder.js?v=69aed27396';
+import { inkify } from './fx/inkify.js?v=69aed27396';
+import { extractPalette } from './fx/palette.js?v=69aed27396';
+import { mountLightbox } from './fx/lightbox.js?v=69aed27396';
+import { makeGrainDataURL } from './scene/inktex.js?v=69aed27396';
+import { setSound, pluck, phrase, shot, ping, glass, purr, meow, mrrp, chew, rattle, chatter } from './audio.js?v=69aed27396';
+import { skyAt, moonPhase, moonIndex, MOON_NAMES, fetchWeather, WEATHER_NAMES } from './fx/live.js?v=69aed27396';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -512,14 +512,14 @@ async function boot() {
   const part = async (name, make) => {
     try { return await make(); } catch (err) { console.warn(`${name} unavailable`, err); return null; }
   };
-  scope = await part('scope', async () => (await import('./fx/scope.js?v=17c9d33994')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
-  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=17c9d33994')).mountWanted($('#wanted'), {
+  scope = await part('scope', async () => (await import('./fx/scope.js?v=69aed27396')).createScope($('#scope'), { t, reduceMotion, mobile, sound }));
+  wanted = await part('wanted poster', async () => (await import('./fx/wanted.js?v=69aed27396')).mountWanted($('#wanted'), {
     photo: photos[HER.wantedPhoto ?? HER.heroPhoto] || heroPh, t, reduceMotion, sound,
   }));
   // no reasons in her.js yet = drop the section and its nav link
   const reasonText = (r) => (r && (r[lang] || r.en || r.fr || r.ko || '')).trim();
   if (REASONS.some((r) => reasonText(r))) {
-    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=17c9d33994')).createBlossoms($('#love-branch'), {
+    love = await part('plum branch', async () => (await import('./fx/blossoms.js?v=69aed27396')).createBlossoms($('#love-branch'), {
       reasons: () => REASONS.map(reasonText).filter(Boolean), t, reduceMotion, mobile, sound,
     }));
   } else {
@@ -528,26 +528,26 @@ async function boot() {
   }
   [scope, wanted, love].forEach((api) => api && onLang.push(() => api.relabel()));
 
-  cat = await part('her baby', async () => (await import('./fx/cat.js?v=17c9d33994')).createCat($('#cat'), {
+  cat = await part('her baby', async () => (await import('./fx/cat.js?v=69aed27396')).createCat($('#cat'), {
     t, reduceMotion, mobile, sound: { purr, meow, pluck, mrrp, chew, rattle, chatter }, name: HER.cat?.name || '',
   }));
   if (cat) onLang.push(() => cat.relabel());
 
   const stormCanvas = $('#letter .storm-canvas');
-  const storm = await part('storm', async () => (await import('./fx/storm.js?v=17c9d33994')).createStorm(stormCanvas, { reduceMotion, mobile }));
+  const storm = await part('storm', async () => (await import('./fx/storm.js?v=69aed27396')).createStorm(stormCanvas, { reduceMotion, mobile }));
   if (!storm) stormCanvas.classList.add('storm-fallback');
 
   layoutAll();
 
   // paper background + every ink mark on the page
   try {
-    const { createInkField } = await import('./fx/inkfield.js?v=17c9d33994');
+    const { createInkField } = await import('./fx/inkfield.js?v=69aed27396');
     field = createInkField($('#ink-field'), { reduceMotion });
   } catch (err) { console.warn('ink field unavailable', err); field = null; }
   if (!field) $('#ink-field').hidden = true;
 
   try {
-    const { createInkHero } = await import('./fx/fluid.js?v=17c9d33994');
+    const { createInkHero } = await import('./fx/fluid.js?v=69aed27396');
     hero = createInkHero($('#ink-gl'), { source: heroPh.inkCanvas, reduceMotion, mobile, color: 1 });
   } catch (err) { console.warn('ink hero unavailable', err); hero = null; }
   if (hero) {
@@ -556,9 +556,14 @@ async function boot() {
       const portrait = innerWidth / innerHeight < 0.9;
       // wide screens: the photo starts just right of the title, so the dark ink never sits under the text
       const x0 = Math.min(0.6, Math.max(0.4, (heroText.getBoundingClientRect().right + 24) / innerWidth));
-      hero.setLayout(portrait
-        ? { rect: [0.02, 0.3, 0.98, 0.99], blob: [0.5, 0.65], blobR: [0.5, 0.4] }
-        : { rect: [x0, 0.03, 0.97, 0.97], blob: [(x0 + 0.97) / 2, 0.5], blobR: [0.56, 0.6] });
+      const rect = portrait ? [0.02, 0.3, 0.98, 0.99] : [x0, 0.03, 0.97, 0.97];
+      // the cut in the paper stays inside the photo, so the paper always covers its edges
+      const asp = innerWidth / innerHeight;
+      hero.setLayout({
+        rect,
+        blob: [(rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2],
+        blobR: [((rect[2] - rect[0]) / 2) * asp * 0.84, ((rect[3] - rect[1]) / 2) * 0.84],
+      });
     };
     heroLayout();
     addEventListener('resize', heroLayout);
@@ -578,7 +583,7 @@ async function boot() {
   }
 
   try {
-    const { createScreen } = await import('./fx/screen.js?v=17c9d33994');
+    const { createScreen } = await import('./fx/screen.js?v=69aed27396');
     screen = createScreen($('#screen-gl'), photos, { reduceMotion, onOpen: (i, e) => open(i, e, 'col') });
   } catch (err) { console.warn('folding screen unavailable', err); screen = null; }
   if (screen) {
@@ -602,7 +607,7 @@ async function boot() {
   }
 
   try {
-    const { createHomes } = await import('./fx/homes.js?v=17c9d33994');
+    const { createHomes } = await import('./fx/homes.js?v=69aed27396');
     homes = createHomes($('#globe-gl'), HOMES, { mobile, reduceMotion });
   } catch (err) { console.warn('globe unavailable', err); homes = null; }
   if (homes) {

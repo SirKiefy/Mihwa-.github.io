@@ -1,6 +1,6 @@
 // hero: ink in water over the photo. stable fluids on the gpu (advection, vorticity,
 // pressure solve), and the photo shows through a blot that the flow pushes around
-import { noiseData } from './noise.js?v=17c9d33994';
+import { noiseData } from './noise.js?v=69aed27396';
 
 const VERT = `#version 300 es
 precision highp float;
@@ -103,7 +103,9 @@ const FRAG = {
       float n1 = texture(uNoise, bq * 0.8 + vec2(uTime * 0.005, -uTime * 0.004)).r;
       float n2 = texture(uNoise, bq * 2.4 - vec2(uTime * 0.004, 0.0)).g;
       float n3 = texture(uNoise, bq * 7.0).b;
-      float r = length(p) + (n1 - 0.5) * 0.5 + (n2 - 0.5) * 0.1 + (n3 - 0.5) * 0.018;
+      // once the blot has spread it settles into a cut in the paper, a little less wobbly
+      float settled = smoothstep(0.8, 1.0, uBloom);
+      float r = length(p) + (n1 - 0.5) * mix(0.5, 0.3, settled) + (n2 - 0.5) * 0.1 + (n3 - 0.5) * 0.018;
       float blob = 1.0 - smoothstep(uBloom - 0.22, uBloom + 0.02, r);
 
       // photo, cover fit into uRect, nudged a little by the ink gradient
@@ -129,6 +131,24 @@ const FRAG = {
       float rim = smoothstep(0.0, 0.1, blob) * (1.0 - smoothstep(0.1, 0.32, blob)) * inRect;
       float gran = texture(uNoise, q * 8.0).b;
       col = mix(col, INK, rim * (0.45 + 0.25 * gran) * 0.75);
+
+      // cut paper: the photo sits under two torn sheets of hanji, each throwing a soft shadow into the hole
+      if (settled > 0.0) {
+        float rt = r + (texture(uNoise, bq * 16.0).g - 0.5) * 0.02;   // torn fibres along the edge
+        float px = 1.5 / (uRes.y * min(uBlobR.x, uBlobR.y));
+        float e1 = uBloom, e2 = uBloom - 0.075 + (n2 - 0.5) * 0.05;
+        float top = smoothstep(e1 - px, e1 + px, rt);
+        float under = smoothstep(e2 - px, e2 + px, rt) * (1.0 - top);
+        float lit = dot(normalize(p + 1e-5), vec2(-0.7071, 0.7071));    // light from the top left
+        float sh1 = (1.0 - smoothstep(0.0, 0.06, e1 - rt)) * (0.55 + 0.45 * lit);
+        float sh2 = (1.0 - smoothstep(0.0, 0.045, e2 - rt)) * (0.55 + 0.45 * lit);
+        vec3 cut = mix(photo, paper * vec3(0.93, 0.905, 0.86), under);
+        cut *= 1.0 - 0.28 * sh1 * (1.0 - top);
+        cut *= 1.0 - 0.22 * sh2 * (1.0 - under - top);
+        float lip = (1.0 - smoothstep(0.0, 3.0 * px, abs(rt - e1))) * top;
+        cut = mix(cut, paper, top) + lip * 0.03;
+        col = mix(col, mix(paper, cut, inRect), settled);
+      }
       // the loose ink from the sim, darker at its edges
       float dens = 1.0 - exp(-ink * 2.2);
       float edgeInk = smoothstep(0.03, 0.3, length(grad)) * smoothstep(0.02, 0.25, ink);
