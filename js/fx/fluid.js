@@ -1,6 +1,6 @@
 // hero: ink in water over the photo. stable fluids on the gpu (advection, vorticity,
 // pressure solve), and the photo shows through a blot that the flow pushes around
-import { noiseData } from './noise.js?v=b516bf9492';
+import { noiseData } from './noise.js?v=17c9d33994';
 
 const VERT = `#version 300 es
 precision highp float;

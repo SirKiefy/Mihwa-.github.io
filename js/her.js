@@ -9,7 +9,7 @@ export const HER = {
   name: { latin: 'Mihwa', ko: '미화', hanja: '美花' },
   instagram: 'mulnaengmyeonn',
   heroPhoto: 0,      // the photo in the ink at the top (index in PHOTOS)
-  wantedPhoto: 4,    // the photo on the wanted poster
+  wantedPhoto: 1,    // the photo on the wanted poster
   // the cat. put his name in once you know it, till then he's just "her baby"
   cat: { name: '' },
 
@@ -32,18 +32,11 @@ export const HER = {
 
 // aspect = width / height, only used for the placeholders
 export const PHOTOS = [
-  { src: '', aspect: 4 / 5, caption: { en: 'the look', fr: 'le regard', ko: '그 눈빛' } },
-  { src: '', aspect: 4 / 5, caption: { en: 'golden hour', fr: 'l’heure dorée', ko: '골든 아워' } },
-  { src: '', aspect: 3 / 4, caption: { en: 'mid-laugh', fr: 'en plein fou rire', ko: '웃음 터진 순간' } },
-  { src: '', aspect: 1, caption: { en: 'the outfit', fr: 'la tenue', ko: '오늘의 착장' } },
-  { src: '', aspect: 4 / 5, caption: { en: 'the pose', fr: 'la pose', ko: '그 포즈' } },
-  { src: '', aspect: 3 / 4, caption: { en: 'Seoul mood', fr: 'humeur Séoul', ko: '서울 무드' } },
-  { src: '', aspect: 4 / 5, caption: { en: 'Paris mood', fr: 'humeur Paris', ko: '파리 무드' } },
-  { src: '', aspect: 4 / 5, caption: { en: 'main character', fr: 'personnage principal', ko: '주인공' } },
-  { src: '', aspect: 1, caption: { en: 'soft focus', fr: 'flou doux', ko: '소프트 포커스' } },
-  { src: '', aspect: 3 / 4, caption: { en: 'caught off guard', fr: 'prise au dépourvu', ko: '방심한 순간' } },
-  { src: '', aspect: 4 / 5, caption: { en: 'iconic', fr: 'iconique', ko: '레전드' } },
-  { src: '', aspect: 4 / 5, caption: { en: 'last frame', fr: 'dernière image', ko: '마지막 컷' } },
+  { src: '', aspect: 584 / 843, caption: { en: 'deep in thought', fr: 'perdue dans ses pensées', ko: '생각에 잠긴' } },
+  { src: '', aspect: 602 / 833, caption: { en: 'the look', fr: 'le regard', ko: '그 눈빛' } },
+  { src: '', aspect: 393 / 749, caption: { en: 'Hongdae, after dark', fr: 'Hongdae, à la nuit tombée', ko: '밤의 홍대' } },
+  { src: '', aspect: 578 / 398, caption: { en: 'omg, you like anime too?', fr: 'omg, toi aussi tu aimes les animés\u00a0?', ko: '헐, 너도 애니 좋아해?' } },
+  { src: '', aspect: 480 / 302, caption: { en: 'hmph!', fr: 'hmpf\u00a0!', ko: '흥!' } },
 ];
 
 // examples, replace with things she actually says
@@ -67,7 +60,7 @@ export const MEMORIES = [
     },
   },
   {
-    example: true, photo: 4, when: { en: '', fr: '', ko: '' },
+    example: true, photo: 3, when: { en: '', fr: '', ko: '' },
     title: { en: 'Attempt number thirty-seven', fr: 'Essai numéro trente-sept', ko: '서른일곱 번째 컷' },
     text: {
       en: 'Thirty-six takes, one perfect pose, zero regrets.',
@@ -76,7 +69,7 @@ export const MEMORIES = [
     },
   },
   {
-    example: true, photo: 8, when: { en: '', fr: '', ko: '' },
+    example: true, photo: 2, when: { en: '', fr: '', ko: '' },
     title: { en: 'Mul-naengmyeon season', fr: 'La saison du mul-naengmyeon', ko: '물냉면의 계절' },
     text: {
       en: 'A hot afternoon, two bowls of cold noodles, and a very serious debate about bibim.',
@@ -85,7 +78,7 @@ export const MEMORIES = [
     },
   },
   {
-    example: true, photo: 7, when: { en: '', fr: '', ko: '' },
+    example: true, photo: 0, when: { en: '', fr: '', ko: '' },
     title: { en: 'The future, out loud', fr: 'L’avenir, à voix haute', ko: '소리 내어 말한 미래' },
     text: {
       en: 'The first time she described the future she wants: the diplomacy, the rights, the outfits. It all sounded completely possible.',

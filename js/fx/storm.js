@@ -1,6 +1,6 @@
 // the storm behind the letter: sky, cliffs, sea, rocks, grass and rain, all in one fragment shader.
 // drawn at reduced res and only the visible strip is redrawn each frame. falls back to the css wash if the shader dies later
-import { noiseData } from './noise.js?v=b516bf9492';
+import { noiseData } from './noise.js?v=17c9d33994';
 
 // shared with the shader, and used to time the still frame
 const WK = 6;         // swells per unit of depth

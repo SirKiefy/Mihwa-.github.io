@@ -1,6 +1,6 @@
 // shared glsl bits, plus one baked noise texture every wash samples. much cheaper than per-pixel noise on phones
-import * as THREE from '../../vendor/three/three.module.min.js?v=b516bf9492';
-import { noiseData } from '../fx/noise.js?v=b516bf9492';
+import * as THREE from '../../vendor/three/three.module.min.js?v=17c9d33994';
+import { noiseData } from '../fx/noise.js?v=17c9d33994';
 
 export function makeNoiseTexture(size = 256) {
   const { data } = noiseData(size);
