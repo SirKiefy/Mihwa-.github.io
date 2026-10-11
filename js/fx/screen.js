@@ -1,7 +1,7 @@
 // folding screen of the ink portraits. unfolds on scroll, hover a panel and its colour comes back
-import * as THREE from '../../vendor/three/three.module.min.js?v=a9747799ed';
-import { makeNoiseTexture } from '../scene/glsl.js?v=a9747799ed';
-import { sealStamp } from '../ink/brush.js?v=a9747799ed';
+import * as THREE from '../../vendor/three/three.module.min.js?v=a165dbb92e';
+import { makeNoiseTexture } from '../scene/glsl.js?v=a165dbb92e';
+import { sealStamp } from '../ink/brush.js?v=a165dbb92e';
 
 const NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
 const PW = 1, PH = 2.75;
@@ -16,17 +16,22 @@ function captionCanvas(text, i, lang) {
   g.fillStyle = 'rgba(28,22,20,0.92)';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  if (lang === 'ko') g.font = '96px "Nanum Brush Script", "Gowun Batang", cursive';
-  else g.font = 'italic 64px "Instrument Serif", "Cormorant Garamond", serif';
-  const words = text.split(' ');
-  const lines = [];
-  let line = '';
-  for (const w of words) {
-    const test = line ? `${line} ${w}` : w;
-    if (g.measureText(test).width > 400 && line) { lines.push(line); line = w; } else line = test;
+  // two lines at most: step the size down until it fits
+  const family = lang === 'ko' ? '"Nanum Brush Script", "Gowun Batang", cursive' : '"Instrument Serif", "Cormorant Garamond", serif';
+  const sizes = lang === 'ko' ? [96, 84, 74, 66] : [64, 57, 51, 46];
+  let lines = [], size = sizes[0];
+  for (size of sizes) {
+    g.font = `${lang === 'ko' ? '' : 'italic '}${size}px ${family}`;
+    lines = [];
+    let line = '';
+    for (const w of text.split(' ')) {
+      const test = line ? `${line} ${w}` : w;
+      if (g.measureText(test).width > 400 && line) { lines.push(line); line = w; } else line = test;
+    }
+    lines.push(line);
+    if (lines.length <= 2) break;
   }
-  lines.push(line);
-  const lh = lang === 'ko' ? 92 : 66;
+  const lh = size * (lang === 'ko' ? 0.96 : 1.03);
   lines.slice(0, 2).forEach((l, k) => g.fillText(l, 256, 110 + (k - (Math.min(2, lines.length) - 1) / 2) * lh));
   sealStamp(g, 256, 240, 62, NUM[i % NUM.length], { seed: 11 + i * 7, rot: ((i % 3) - 1) * 0.05 });
   return c;

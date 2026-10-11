@@ -1,6 +1,6 @@
 // photo -> ink painting. lines from a difference of gaussians, tone from a few
 // washes with wobbly edges, then a little bleed into the paper
-import { noiseData } from './noise.js?v=a9747799ed';
+import { noiseData } from './noise.js?v=a165dbb92e';
 
 const PAPER = [241, 235, 224];
 const INK = [24, 19, 17];

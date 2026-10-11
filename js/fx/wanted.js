@@ -1,6 +1,6 @@
 // the wanted poster (woodblock print, top-left corner torn off) and the dog tags on a plum branch.
 // the poster swings when you brush past it and takes bullet holes when clicked
-import { rng, noise1, stamp, wash, stroke, dotGen, blossomGen, bud, PROFILE, INK } from '../ink/brush.js?v=a9747799ed';
+import { rng, noise1, stamp, wash, stroke, dotGen, blossomGen, bud, PROFILE, INK } from '../ink/brush.js?v=a165dbb92e';
 
 const TAU = Math.PI * 2;
 const D2R = Math.PI / 180;

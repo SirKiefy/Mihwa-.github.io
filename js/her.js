@@ -37,6 +37,8 @@ export const PHOTOS = [
   { src: '', aspect: 393 / 749, caption: { en: 'Hongdae, after dark', fr: 'Hongdae, à la nuit tombée', ko: '밤의 홍대' } },
   { src: '', aspect: 578 / 398, caption: { en: 'omg, you like anime too?', fr: 'omg, toi aussi tu aimes les animés\u00a0?', ko: '헐, 너도 애니 좋아해?' } },
   { src: '', aspect: 480 / 302, caption: { en: 'hmph!', fr: 'hmpf\u00a0!', ko: '흥!' } },
+  { src: '', aspect: 1050 / 1400, caption: { en: 'the trench coat, among the plushies', fr: 'le trench, au milieu des peluches', ko: '인형들 사이, 트렌치코트' } },
+  { src: '', aspect: 1400 / 1050, caption: { en: 'above the city lights', fr: 'au-dessus des lumières de la ville', ko: '도시의 불빛 위에서' } },
 ];
 
 // examples, replace with things she actually says
