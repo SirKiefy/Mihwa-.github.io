@@ -8,7 +8,7 @@
 //
 // createCat(root, { t, reduceMotion, mobile, sound, name }) gives back
 // { setActive, relabel, destroy }, or null if there's no 2D canvas.
-import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=13fb58fc16';
+import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=496533fdf8';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -721,8 +721,6 @@ const HAUNCH = [[-42, 12], [-80, 15], [-118, 12], [-138, 0], [-147, -26], [-144,
 // his chest, under the head
 const CHEST = [[60, -86], [88, -95], [114, -89], [130, -71], [139, -46], [137, -20], [129, 0], [115, 12], [94, 15], [74, 11], [60, -4], [54, -30], [53, -60]];
 const NECK = ellipsePts(27, 36, 18, 0.08, 4);
-// the ruff: long fur falling from under his chin (its own little frame, top at y -28)
-const RUFF = [[-44, -14], [-30, -24], [0, -28], [30, -24], [46, -12], [44, 6], [30, 20], [10, 27], [-10, 26], [-30, 18], [-44, 4]];
 // a round, full-cheeked head
 const SKULL = [[0, -45], [17, -43], [31, -37], [41, -27], [47, -13], [51, 1], [55, 11], [58, 19], [53, 27], [43, 35], [28, 41], [13, 45], [0, 46.5], [-13, 45], [-28, 41], [-43, 35], [-53, 27], [-58, 19], [-55, 11], [-51, 1], [-47, -13], [-41, -27], [-31, -37], [-17, -43]];
 // his left ear (screen left); the other one is its mirror
@@ -843,20 +841,6 @@ function paintNeck(g) {
   });
 }
 
-function paintRuff(g) {
-  const flow = (x, y) => Math.atan2(y + 40, x * 0.9);
-  fur(g, {
-    box: [-56, -34, 58, 40], outline: RUFF, seed: 57, round: 14, tone: 1.02,
-    bumps: [[4, 4, 20, 4]],
-    ao: (x, y) => 0.92 + 0.08 * smooth(-10, 10, y),
-    // only a band of it shows: over the seam under his jaw, fading down into his chest
-    alphaAt: (x, y) => smooth(-30, -12, y) * smooth(24, 4, y),
-    keep: (x, y) => y > -14 && y < 18,
-    flow, len: [5, 10], density: 0.6, clump: 0.03, under: 0.6,
-    fringe: (x, y, nx, ny) => (ny > 0.1 && y < 14 ? 1 : 0), fringeLen: [3, 7], fringeN: 3, lean: 1.2,
-  });
-}
-
 function paintSkull(g, q) {
   return furJobs(g, {
     box: [-66, -54, 66, 56], outline: SKULL, seed: 31, round: 32, q,
@@ -866,11 +850,10 @@ function paintSkull(g, q) {
     lum: (x, y) => 1 + 0.1 * smooth(14, 40, y) * (1 - 0.4 * smooth(30, 50, Math.abs(x))),
     flow: (x, y) => Math.atan2(y - 16, x) + (y < 0 ? 0.1 * Math.sign(x) : 0) + (Math.abs(x) > 34 && y > 0 ? 0.25 * Math.sign(x) : 0),
     len: [3, 6], density: 0.6, clump: 0.025,
-    // short and fine over the face, longer on the cheeks and under the chin
-    lenAt: (x, y) => (Math.abs(x) > 40 && y > 0 ? 1.4 : y > 30 ? 1.3 : 1) * (1 - 0.3 * smooth(34, 18, Math.abs(x)) * smooth(-30, -16, y) * smooth(34, 22, y)),
-    // plush jowls: longer tufts on the lower cheeks
-    fringe: (x, y) => (Math.abs(x) > 40 && y > 4 && y < 34 ? 1 + 1.3 * smooth(4, 16, y) * smooth(34, 22, y) : y > 32 ? 1.3 : 0.7),
-    fringeLen: [1.3, 3.2], fringeN: 2, lean: 1,
+    // short and fine over the face, a little fuller on the cheeks
+    lenAt: (x, y) => (Math.abs(x) > 40 && y > 0 ? 1.15 : 1) * (1 - 0.3 * smooth(34, 18, Math.abs(x)) * smooth(-30, -16, y) * smooth(34, 22, y)),
+    fringe: (x, y) => (Math.abs(x) > 40 && y > 4 && y < 34 ? 1 : 0.7),
+    fringeLen: [1.2, 2.6], fringeN: 2, lean: 1,
   });
 }
 
@@ -1166,8 +1149,6 @@ function* catGen(u, dpr, out) {
   yield* big('chest', [46, -104, 148, 24], u, (g) => paintChest(g, q));
   yield* big('skull', [-66, -54, 66, 56], hu, (g) => paintSkull(g, q));
   out.neck = makeSprite(-34, -44, 34, 44, u, dpr, paintNeck);
-  yield;
-  out.ruff = makeSprite(-56, -34, 58, 40, u, dpr, paintRuff);
   yield;
   out.muzzle = makeSprite(-26, -32, 26, 26, hu, dpr, paintMuzzle);
   yield;
@@ -1524,8 +1505,6 @@ function whiskers(g, P, side, M) {
 }
 
 const MM = new Float64Array(6);
-// where the ruff hangs from: just under his chin, in cat units
-const RUFF_AT = { x: 0, y: 0 };
 function drawHead(g, SP, P) {
   headMatrix(P);
   g.save();
@@ -1579,25 +1558,9 @@ function drawHead(g, SP, P) {
   g.restore();
   whiskers(g, P, -far, MM);
   g.restore();
-  // just under the chin, for the ruff
-  const ry = 36 + P.jaw * 18;
-  headToCat(MM[4] + MM[2] * ry + shift, MM[5] + MM[3] * ry);
-  RUFF_AT.x = PT.x; RUFF_AT.y = PT.y;
   P.yaw = yaw0;
 }
 
-// the long fur under his chin, over the line where his head meets his chest
-function drawRuff(g, SP, P) {
-  const a = 1 - smooth(14, 40, P.hy);
-  if (a <= 0.02) return;
-  g.save();
-  g.globalAlpha = a;
-  g.translate(RUFF_AT.x, RUFF_AT.y);
-  g.rotate(P.roll * 0.6);
-  blit(g, SP.ruff);
-  g.restore();
-  g.globalAlpha = 1;
-}
 
 // the whole cat, back to front; hk.under runs just after the platform's lip
 // (things he sits on or scratches at), hk.front just before his head
@@ -1651,7 +1614,6 @@ function drawCat(g, SP, P, hk) {
   if (hk && hk.front) hk.front();
   if (P.nUp <= 0.15) blit(g, SP.tuckN, PAW_N[0] + P.bx, PAW_N[1] + P.by - P.lift);
   drawHead(g, SP, P);
-  drawRuff(g, SP, P);
   if (P.nUp > 0.15) nearLeg(g, SP, P);
 }
 function nearLeg(g, SP, P) {
