@@ -1094,22 +1094,6 @@ function paintEarBack(g, side) {
     after: (g) => earInk(g, side, 61),
   });
 }
-// a copy of an ear with its base faded, for when it comes round in front of his head
-function fadedBase(sp) {
-  const c = document.createElement('canvas');
-  c.width = sp.c.width; c.height = sp.c.height;
-  const g = c.getContext('2d');
-  g.drawImage(sp.c, 0, 0);
-  const k = c.height / sp.h;
-  const gr = g.createLinearGradient(0, (10 - sp.y0) * k, 0, (-9 - sp.y0) * k);
-  gr.addColorStop(0, 'rgba(0,0,0,1)');
-  gr.addColorStop(1, 'rgba(0,0,0,0)');
-  g.globalCompositeOperation = 'destination-out';
-  g.fillStyle = gr;
-  g.fillRect(0, 0, c.width, c.height);
-  return { c, x0: sp.x0, y0: sp.y0, w: sp.w, h: sp.h };
-}
-
 // the face is a few soft patches laid over the skull where they turn with him:
 // the muzzle round the nose, and a socket and brow round each eye
 const ell = (x, y, cx, cy, rx, ry) => { const dx = (x - cx) / rx, dy = (y - cy) / ry; return Math.sqrt(dx * dx + dy * dy); };
@@ -1330,8 +1314,6 @@ function* catGen(u, dpr, out) {
   yield;
   out.earFL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1));
   out.earFR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1));
-  out.earFLf = fadedBase(out.earFL);
-  out.earFRf = fadedBase(out.earFR);
   yield;
   out.earBL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1));
   out.earBR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1));
@@ -1539,8 +1521,8 @@ function drawEye(g, SP, P, side) {
   // round; the lower lid only lifts a little, so it never turns into a squint
   const xi = -side * ew, xo = side * ew, yi = 2, yo = -1.8 + 1.6 * hp;
   const lo = clamp(1 - P.lidL);
-  // joy closes them right up
-  let up = clamp(1 - Math.max(P.lidU, smooth(0, 0.7, jy)));
+  // joy closes them right up, and early, so the way there never reads as a squint
+  let up = clamp(1 - Math.max(P.lidU, smooth(0, 0.4, jy)));
   if (up >= 0.07) up = lerp(up, Math.max(up, 0.72 * clamp((up - 0.07) / 0.4)), clamp(hp * 1.5));
   const br = P.brow * (1 - jy) - 0.5 * hp;
   g.lineCap = 'round';
@@ -1548,7 +1530,7 @@ function drawEye(g, SP, P, side) {
   if (up < 0.07) {
     // closed: a soft happy ^ (both corners level, so the two eyes match),
     // or a sleepy curve
-    const k = clamp(Math.max(hp, jy)), nw = 1 - 0.14 * k;
+    const k = clamp(Math.max(hp, jy * 1.6)), nw = 1 - 0.14 * k;
     const y0 = lerp(yi, 1.6, k), y1 = lerp(yo, 1.6, k), cy = lerp(eh * 0.5, -eh * 0.9, k);
     g.lineWidth = lerp(2.1, 2.7, k);
     g.beginPath(); g.moveTo(xi * nw, y0 + 0.5); g.quadraticCurveTo(0, cy + 0.5, xo * nw, y1 + 0.5); g.stroke();
@@ -1750,17 +1732,6 @@ function drawHead(g, SP, P, extra) {
     g.restore();
   }
   blit(g, SP.skull, ox, oy);
-  // only if he ducks his head right down does an ear come round in front of it,
-  // and then it fades in rather than jumping forward
-  for (let side = -1; side <= 1; side += 2) {
-    const fa = smooth(0, 0.3, earMatrix(side, P)), ah = smooth(-23, -19, FP.y) * fa;
-    if (ah < 0.01) continue;
-    g.save();
-    g.transform(EM[0], EM[1], EM[2], EM[3], EM[4], EM[5]);
-    g.globalAlpha = ah;
-    blit(g, side < 0 ? SP.earFLf : SP.earFRf);
-    g.restore();
-  }
   // the muzzle frame, used for whisker roots too
   faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
   MM[0] = FP.ex; MM[1] = FP.ey; MM[2] = FP.sx; MM[3] = FP.sy; MM[4] = FP.x + ox; MM[5] = FP.y + oy;
@@ -2818,12 +2789,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     stare: null, puffAt: -1e9, ink: 0,
   };
   const LK = { mode: 0, x: 0, y: 0, pupil: 0.3, flat: false };
-  const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0 };
+  const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0, cap: 0 };
   const treat = { on: false, state: '', t0: 0, x: 0, y: 0, x0: 0, y0: 0, a: 0 };
   const win = { kind: '', t0: 0, x: 0, y: 0, px: 0, py: 0, fx: 0, fy: 0, flip: 1, dur: 0, perched: false };
   const fx = { purrs: [], words: [], seals: [], rings: [], strokes: [], zs: [], scratches: [], calls: [] };
   // the laser dot (stage px); with a mouse it follows the pointer, else it dances on its own
-  const laser = { on: false, x: 0, y: 0, until: 0, auto: null, user: false, drag: null, lastMove: -1e9, t0: 0, caught: -1e9, said: false };
+  const laser = { on: false, x: 0, y: 0, until: 0, auto: null, user: false, drag: null, pend: null, lastMove: -1e9, t0: 0, caught: -1e9, said: false };
   // the brush, and the fluff it pulls out: tufts in the air, and a little pile on the cushion
   const brush = { on: false, until: 0, x: 0, y: 0, a: 0, lastX: null, lastT: -1e9, dist: 0, against: 0, sayT: -1e9 };
   const tufts = [], pile = { n: 0 };
@@ -2928,7 +2899,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
   function resetToy() {
     pom.x = L.pom.x; pom.y = L.pom.y + L.pom.len; pom.vx = pom.vy = 0;
-    pom.held = null; pom.pinned = null;
+    pom.held = null; pom.pinned = null; pom.cap = 0;
   }
 
   // painting
@@ -3107,7 +3078,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     dotEl.style.marginLeft = dotEl.style.marginTop = `${-Math.round(32 * L.s)}px`;
     // the newer things: anything in mid-air just gets where it was going
     if (old) { laser.x = clamp(laser.x * (w / old.W), 6, w - 6); laser.y = clamp(laser.y * (h / old.H), 6, h - 6); }
-    laser.drag = null;
+    laser.drag = laser.pend = null;
     pile.n = Math.min(60, pile.n + tufts.length); tufts.length = 0;
     if (books.fly) { if (books.fly.back && !books.stack.includes(books.fly.i)) books.stack.push(books.fly.i); books.fly = null; }
     if (books.fallen) { const fb = books.fallen; if (!fb.landed) { fb.x = fb.x1; fb.rot = fb.r1; fb.landed = true; } fb.y = bookFloor(fb.x); }
@@ -3277,6 +3248,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       pom.x = L.catX + (pom.pinned.x + P.bx) * s;
       pom.y = L.topY + (pom.pinned.y + P.by - P.lift) * s;
       pom.vx = pom.vy = 0;
+      pom.cap = Math.hypot(pom.x - o.x, pom.y - o.y);
       return true;
     }
     if (pom.auto) autoHand(now);
@@ -3305,7 +3277,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         if (sp > vmax) { pom.vx *= vmax / sp; pom.vy *= vmax / sp; }
         pom.x += pom.vx * h; pom.y += pom.vy * h;
       }
-      toyLimits(now);
+      toyLimits(now, h);
     }
     // a breath of air keeps it swaying a little
     if (!pom.held && !RM) pom.vx += Math.sin(now / 1300) * 6 * s * dt;
@@ -3313,10 +3285,15 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     return pom.held || pom.speed > 30 * s;
   }
   // where the pompom is allowed to be: on its cord, above the middle platform, off his tail
-  function toyLimits(now) {
+  function toyLimits(now, h) {
     const { s } = L, o = L.pom, r = o.r;
     let dx = pom.x - o.x, dy = pom.y - o.y, d = Math.hypot(dx, dy);
-    const mx = o.len * (pom.held ? 2.5 : 1.7);
+    // a hand can pull it out further than it hangs; let go, the cord takes it back
+    // in over a moment instead of snapping it straight onto the short circle
+    const base = o.len * 1.7;
+    if (pom.held) pom.cap = Math.min(d, o.len * 2.5);
+    else if (pom.cap > base) pom.cap = Math.max(base, Math.min(pom.cap - o.len * 2.4 * h, d));
+    const mx = pom.held ? o.len * 2.5 : Math.max(base, pom.cap);
     if (d > mx) {
       dx /= d; dy /= d;
       pom.x = o.x + dx * mx; pom.y = o.y + dy * mx;
@@ -3764,6 +3741,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (Math.hypot(x - laser.x, y - laser.y) > 1.5 * L.s) laser.lastMove = now;
     laser.x = x; laser.y = y;
   }
+  function steerDot(id, x, y, now) {
+    laser.drag = id; laser.user = true; laser.auto = null;
+    laserAt(x, y, now);
+    laser.until = Math.max(laser.until, Math.min(laser.t0 + 30000, now + 6000));
+    C.lastUser = now;
+    kick();
+  }
   // a little dance for the dot when nobody's steering it (cat units: where, how long
   // to get there, how long to stay); the last stop holds until he pounces on it
   const DOT_PATH = [[-170, 250, 0, 500], [30, 196, 520, 260], [150, -2, 480, 1300], [236, -112, 300, 360], [-70, -176, 650, 650], [140, -6, 600, 2600]];
@@ -3773,7 +3757,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (laser.on) { laserOff(now); return; }
     if (busyWith(4)) { say('cat.say.busy'); return; }
     brushOff();
-    laser.on = true; laser.t0 = now; laser.until = now + 16000; laser.user = false; laser.drag = null; laser.said = false;
+    laser.on = true; laser.t0 = now; laser.until = now + 16000; laser.user = false; laser.drag = laser.pend = null; laser.said = false;
     const p = DOT_PATH[0];
     laserAt(L.catX + p[0] * L.s, L.topY + p[1] * L.s, now);
     // from the keyboard (or a tap) it dances straight away; with a mouse it waits a moment to be picked up
@@ -3788,7 +3772,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
   function laserOff(now, quiet) {
     if (!laser.on) return;
-    laser.on = false; laser.auto = null; laser.drag = null;
+    laser.on = false; laser.auto = null; laser.drag = laser.pend = null;
     C.stare = { x: laser.x, y: laser.y, until: now + 1800 };
     stage.classList.remove('is-laser');
     btn.laser.setAttribute('aria-pressed', 'false');
@@ -3874,7 +3858,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function spawnTuft(x, y, now) {
     if (RM) { pile.n = Math.min(60, pile.n + 1); return; }
     if (tufts.length > 26) return;
-    tufts.push({ x: cx(x), y: cy(y), vx: (Math.random() - 0.5) * 30, vy: -(26 + Math.random() * 30), t0: now, seed: Math.random() * 100, rot: Math.random() * TAU });
+    tufts.push({ x: cx(x), y: cy(y), vx: (Math.random() - 0.5) * 24, vy: -(18 + Math.random() * 20), t0: now, seed: Math.random() * 100, rot: Math.random() * TAU });
   }
   function stepTufts(dt, now) {
     if (!tufts.length) return false;
@@ -3882,8 +3866,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       const f = tufts[i], e = now - f.t0;
       if (e < 1100) {
         // drifting up and away, slowing, on little eddies
-        f.x += (f.vx + Math.sin(e / 260 + f.seed) * 22) * dt; f.y += f.vy * dt;
-        f.vx *= 1 - 1.2 * dt; f.vy *= 1 - 1.4 * dt; f.rot += dt * 1.4;
+        f.x += (f.vx + Math.sin(e / 320 + f.seed) * 16) * dt; f.y += f.vy * dt;
+        f.vx *= 1 - 1.2 * dt; f.vy *= 1 - 1.4 * dt; f.rot += dt * 0.9;
       } else {
         // then settling down onto the pile
         const k = 1 - Math.exp(-dt * 3.2);
@@ -4168,13 +4152,14 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (onAvocado(x, y, 0)) { e.preventDefault(); startGrab(e, x, y); return; }
     if (e.target === toyEl || onToy(x, y, pad)) { e.preventDefault(); grabToy(e, x, y); return; }
     if (e.target === grabEl || onAvocado(x, y, pad)) { e.preventDefault(); startGrab(e, x, y); return; }
-    // with the laser on, a finger (or a press) puts the dot right there and drags it about
+    // with the laser on, a press puts the dot right there and drags it about. A
+    // finger does that on the dot itself; anywhere else it waits to see if it's a
+    // tap or a sideways drag, so the page can still be scrolled
     if (laser.on) {
+      if (e.pointerType !== 'mouse' && e.target !== dotEl) { laser.pend = { id: e.pointerId, x, y, t0: now }; return; }
       e.preventDefault();
-      laser.drag = e.pointerId; laser.user = true; laser.auto = null;
-      laserAt(x, y, now);
+      steerDot(e.pointerId, x, y, now);
       try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
-      kick();
       return;
     }
     if (onJar(x, y)) { tossTreat(); return; }
@@ -4194,6 +4179,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const now = now0();
     if (A.grab && e.pointerId === A.grab.id) { moveGrab(x, y); return; }
     if (pom.held && pom.held.id === e.pointerId) { pom.hx = x + pom.held.ox; pom.hy = y + pom.held.oy; pointer.x = x; pointer.y = y; pointer.t = now; kick(); return; }
+    const pd = laser.pend;
+    if (laser.on && pd && pd.id === e.pointerId) {
+      const dx = Math.abs(x - pd.x), dy = Math.abs(y - pd.y);
+      if (dx > 8 && dx > dy * 1.2) { laser.pend = null; steerDot(e.pointerId, x, y, now); }
+      else if (dy > 10) laser.pend = null;
+      return;
+    }
     // steering the dot: a mouse just moves it, a finger drags it
     if (laser.on && (laser.drag === e.pointerId || (e.pointerType === 'mouse' && laser.drag === null))) {
       laser.user = true; laser.auto = null;
@@ -4247,6 +4239,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (A.grab && e.pointerId === A.grab.id) endGrab(e.type === 'pointerup' ? e : null);
     if (pom.held && pom.held.id === e.pointerId) dropToy();
     if (laser.drag === e.pointerId) laser.drag = null;
+    // a quick tap away from the dot puts it there
+    const pd = laser.pend;
+    if (pd && pd.id === e.pointerId) {
+      laser.pend = null;
+      if (laser.on && e.type === 'pointerup' && now0() - pd.t0 < 450) { const [x, y] = local(e); if (Math.hypot(x - pd.x, y - pd.y) < 12) steerDot(null, x, y, now0()); }
+    }
     if (tapCat && tapCat.id === e.pointerId) {
       const now = now0();
       if (e.type === 'pointerup' && tapCat.moved < 10 && now - tapCat.t0 < 450) {
@@ -4263,6 +4261,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   stage.addEventListener('pointercancel', up, opt);
   stage.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { pointer.t = -1e9; brush.lastT = -1e9; } }, opt);
   for (const el of [grabEl, toyEl, dotEl]) el.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
+  // Escape puts the laser away
+  root.addEventListener('keydown', (e) => { if (e.key === 'Escape' && laser.on && L) { laserOff(now0()); e.preventDefault(); } }, opt);
 
   // a button press is someone doing something (capture: before the button's own handler)
   root.querySelector('.cat-bar').addEventListener('click', (e) => {
@@ -5369,7 +5369,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // ease toward it all
     for (let i = 0; i < KEYS.length; i++) {
       const k = KEYS[i];
-      const r = k === 'pupil' ? (T.pupil > P.pupil ? 6 : 1.4) : rate[k];
+      const r = k === 'pupil' ? (T.pupil > P.pupil ? 6 : 1.4) : k === 'joy' && T.joy > P.joy ? Math.max(rate.joy, 15) : rate[k];
       const v = RM ? T[k] : P[k] + (T[k] - P[k]) * (1 - Math.exp(-dt * r));
       // one bad number must never stick
       P[k] = Number.isFinite(v) ? v : Number.isFinite(T[k]) ? T[k] : REST[k];
@@ -5461,8 +5461,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     g.restore();
     drawAvoShadow(g);
     drawJar(g, now);
-    // the string always goes behind him (held up in front of his face, it would
-    // cut across it), the pompom in front unless it's under his paws
+    // the string goes behind him (held up in front of his face, it would cut
+    // across it), the pompom in front unless it's under his paws
     drawString(g);
     if (pom.pinned) drawPom(g);
     g.save();
@@ -5474,7 +5474,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     drawZs(g, now);
     drawWords(g, now);
     g.restore();
-    if (!pom.pinned) drawPom(g);
+    if (!pom.pinned) { drawString(g, true); drawPom(g); }
     drawRings(g, now);
     if (!A.under) drawAvocado(g, now);
     // the paw lands on top of the avocado
@@ -5531,12 +5531,30 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x - sa * w, y + ca * w, x0 + ca * L2, y0 + sa * L2); g.stroke();
     }
   }
+  // one in the air: a soft puff of his undercoat, pale blue-grey like the sheen
+  // on his coat, a few short curls round the edge and nothing dark in the middle
+  function puff(g, x, y, r, seed, a) {
+    dab(g, x, y, r * 1.5, [120, 128, 150], 0.25 * a, 0.08);
+    dab(g, x + r * 0.15, y - r * 0.1, r * 0.95, [150, 160, 185], 0.2 * a, 0.12);
+    g.lineCap = 'round';
+    g.lineWidth = 0.45;
+    for (let i = 0; i < 7; i++) {
+      const an = i * 2.39996 + seed, ro = r * (0.35 + ((i * 5 + seed) % 4) * 0.12);
+      const x0 = x + Math.cos(an) * ro, y0 = y + Math.sin(an) * ro;
+      const ta = an + 1.1 + (i % 3) * 0.5, l = r * (0.45 + ((i * 3 + seed) % 3) * 0.15), cu = (i % 2 ? 1 : -1) * l * 0.7;
+      const ex = x0 + Math.cos(ta) * l, ey = y0 + Math.sin(ta) * l;
+      g.strokeStyle = i % 3 ? rgba([158, 168, 192], 0.6 * a) : rgba([104, 112, 134], 0.45 * a);
+      g.beginPath(); g.moveTo(x0, y0);
+      g.quadraticCurveTo((x0 + ex) / 2 - Math.sin(ta) * cu, (y0 + ey) / 2 + Math.cos(ta) * cu, ex, ey);
+      g.stroke();
+    }
+  }
   function drawTufts(g, now) {
     for (const f of tufts) {
-      const e = now - f.t0, a = clamp(clamp(e / 150) * (e > 3800 ? 1 - (e - 3800) / 400 : 1));
+      const e = now - f.t0, a = clamp(clamp(e / 200) * (e > 3800 ? 1 - (e - 3800) / 400 : 1));
       g.save();
       g.translate(f.x, f.y); g.rotate(f.rot);
-      wisp(g, 0, 0, 5.5, f.seed, a);
+      puff(g, 0, 0, 7.5, f.seed, a);
       g.restore();
     }
   }
@@ -5817,8 +5835,16 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     blit2(g, SP.treat, 0, 0, L.s * 1.45);
     g.restore();
   }
-  function drawString(g) {
+  // front: held up low in front of his chest, the end of it shows over him too
+  // (fading off towards where it goes behind), so the pompom isn't just floating
+  function drawString(g, front) {
     const { s } = L, o = L.pom;
+    let fk = 0;
+    if (front) {
+      const uy = cy(pom.y);
+      fk = pom.pinned ? 0 : smooth(-72, -54, uy) * smooth(0, 14, cy(o.y) - uy);
+      if (fk < 0.01) return;
+    }
     // tied on at the side of the pompom that faces the anchor
     let dx = o.x - pom.x, dy = o.y - pom.y;
     const d = Math.hypot(dx, dy) || 1;
@@ -5826,13 +5852,19 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const ex = pom.x + dx * 10 * s, ey = pom.y + dy * 10 * s;
     // taut it's straight, slack it droops (more the slacker it is), and it trails a swing a little
     const sag = Math.sqrt(Math.max(0, o.len * o.len - d * d)) * 0.42;
-    g.strokeStyle = 'rgba(176,160,132,.95)';
+    if (front) {
+      const gr = g.createLinearGradient(ex, ey, lerp(ex, o.x, 0.6), lerp(ey, o.y, 0.6));
+      gr.addColorStop(0, `rgba(176,160,132,${(0.95 * fk).toFixed(3)})`);
+      gr.addColorStop(1, 'rgba(176,160,132,0)');
+      g.strokeStyle = gr;
+    } else g.strokeStyle = 'rgba(176,160,132,.95)';
     g.lineWidth = 1.1 * s;
     g.lineCap = 'round';
     g.beginPath();
     g.moveTo(o.x, o.y);
     g.quadraticCurveTo((o.x + ex) / 2 - clamp(pom.vx * 0.01, -8 * s, 8 * s), (o.y + ey) / 2 + sag, ex, ey);
     g.stroke();
+    if (front) return;
     g.fillStyle = 'rgba(120,104,82,.8)';
     g.beginPath(); g.arc(o.x, o.y, 1.6 * s, 0, TAU); g.fill();
   }
@@ -6262,9 +6294,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     stage.setAttribute('aria-label', nm ? fmt(tt('cat.label.named'), { name: nm }) : tt('cat.label'));
     renderCount(false);
     renderTally();
-    // a new language: he tilts his head at the strange new words
-    const lg = document.documentElement.lang;
-    if (lg !== lang) { lang = lg; if (ready && L) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 }); }
+    // a new language: he tilts his head at the strange new words (unless he's
+    // asleep or settled on something, then he lets it go)
+    const lg = document.documentElement.lang, cur = C.act;
+    if (lg !== lang) { lang = lg; if (ready && L && !(cur && (cur.kind === 'sleep' || STICKY.has(cur.kind)))) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 }); }
   }
 
   // sizing
@@ -6331,7 +6364,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         if (A.grab) endGrab(null);
         dropToy();
         tapCat = null;
-        laser.drag = null;
+        laser.drag = laser.pend = null;
       } else kick();
     },
     relabel,
