@@ -171,6 +171,7 @@ export const CAT_STRINGS = {
     'cat.book.2': 'the Kim Hong-do album',
     'cat.book.3': 'The Art of War',
     'cat.book.4': 'On War',
+    'cat.book.5': 'The Lion’s Snack',
     'cat.say.laser.on': 'A red dot! His pupils go huge and his eyes lock on.',
     'cat.say.laser.pounce': 'He pounces, then peeks under his paw. Nothing there. Suspicious.',
     'cat.say.laser.off': 'The laser clicks off. He keeps staring at the spot where it was.',
@@ -195,6 +196,7 @@ export const CAT_STRINGS = {
     'cat.say.book.2': 'You open the Kim Hong-do album. Now there’s a cat in it too.',
     'cat.say.book.3': 'You open The Art of War. He takes the high ground: the open pages.',
     'cat.say.book.4': 'You open On War. He has found the centre of gravity, and he is lying on it.',
+    'cat.say.book.5': 'You open The Lion’s Snack, one of her favourite novels. He reads along very seriously, a paw keeping it open.',
     'cat.say.nudge': 'He nudges {book} off the sill, slowly, looking right at you.',
   },
   fr: {
@@ -264,6 +266,7 @@ export const CAT_STRINGS = {
     'cat.book.2': 'l’album de Kim Hong-do',
     'cat.book.3': '« L’Art de la guerre »',
     'cat.book.4': '« De la guerre »',
+    'cat.book.5': '« The Lion’s Snack »',
     'cat.say.laser.on': 'Un point rouge ! Ses pupilles deviennent immenses, ses yeux ne le lâchent plus.',
     'cat.say.laser.pounce': 'Il bondit, puis jette un œil sous sa patte. Rien. C’est louche.',
     'cat.say.laser.off': 'Le laser s’éteint. Il fixe encore l’endroit où était le point.',
@@ -288,6 +291,7 @@ export const CAT_STRINGS = {
     'cat.say.book.2': 'Vous ouvrez l’album de Kim Hong-do. Maintenant, il y a un chat dedans aussi.',
     'cat.say.book.3': 'Vous ouvrez « L’Art de la guerre ». Il prend les hauteurs : les pages ouvertes.',
     'cat.say.book.4': 'Vous ouvrez « De la guerre ». Il a trouvé le centre de gravité, et il est couché dessus.',
+    'cat.say.book.5': 'Vous ouvrez « The Lion’s Snack », l’un de ses romans préférés. Il le lit avec le plus grand sérieux, une patte posée dessus pour le garder ouvert.',
     'cat.say.nudge': 'Il pousse {book} hors du rebord de la fenêtre, lentement, en vous regardant droit dans les yeux.',
   },
   ko: {
@@ -357,6 +361,7 @@ export const CAT_STRINGS = {
     'cat.book.2': '김홍도 화첩',
     'cat.book.3': '『손자병법』',
     'cat.book.4': '『전쟁론』',
+    'cat.book.5': '『The Lion’s Snack』',
     'cat.say.laser.on': '빨간 점이다! 동공이 커다래지고 눈이 점에 딱 고정돼요.',
     'cat.say.laser.pounce': '와락 덮치고는 앞발을 살짝 들어 확인해요. 아무것도 없네요. 수상해요.',
     'cat.say.laser.off': '레이저가 꺼졌어요. 그래도 점이 있던 자리를 한참 쳐다봐요.',
@@ -381,6 +386,7 @@ export const CAT_STRINGS = {
     'cat.say.book.2': '김홍도 화첩을 펼치니, 이제 그림 속에 고양이도 한 마리 있어요.',
     'cat.say.book.3': '『손자병법』을 펼치니 높은 곳부터 차지해요. 바로 펼친 책 위요.',
     'cat.say.book.4': '『전쟁론』을 펼치니 무게중심을 찾았대요. 바로 그 위에 누워 있어요.',
+    'cat.say.book.5': '그녀가 아끼는 소설 『The Lion’s Snack』을 펼치니, 앞발로 책을 꾹 눌러 펼쳐 둔 채 아주 진지하게 읽어 내려가요.',
     'cat.say.nudge': '창턱 위 {book}에 앞발을 대고 천천히 밀어 떨어뜨려요. 이쪽을 빤히 보면서요.',
   },
 };
@@ -1405,17 +1411,18 @@ const TAIL_N = 15, TAIL_SEG = 10.2, TAIL_M = 45, TAIL_DS = (TAIL_N * TAIL_SEG) /
 const tailX = new Float32Array(TAIL_M + 1), tailY = new Float32Array(TAIL_M + 1), tailA = new Float32Array(TAIL_M);
 // how thick it is along its length (with the fur), for things that bump into it
 const tailR = (u) => lerp(13, 9.5, u);
-function tailChain(P) {
+// (calm: without the quick twitches and bumps, just where it's swaying)
+function tailChain(P, calm) {
   let x = TAIL_ROOT[0] + P.bx * 0.4, y = TAIL_ROOT[1] + P.rumpY * 0.5;
   tailX[0] = x; tailY[0] = y;
   // pushed aside by something: everything past the spot it was pushed at swings over
-  const bend = P.tBend || 0, bu = P.tBendU || 0.5;
+  const bend = calm ? 0 : P.tBend || 0, bu = P.tBendU || 0.5, flick = calm ? 0 : P.tFlick;
   for (let i = 0; i < TAIL_M; i++) {
     const u = (i + 0.75) / TAIL_M;
     let a = Math.PI / 2 + 0.55 * (1 - smooth(0, 0.3, u)) + P.tLift * (1 - u) * 0.9;
     a += P.tAmp * Math.sin(P.tPh - u * 2.6) * smooth(0.08, 1, u);
     a -= P.tCurl * smooth(0.55, 1, u) * 1.55;
-    a += P.tFlick * smooth(0.5, 1, u);
+    a += flick * smooth(0.5, 1, u);
     if (bend) a += bend * smooth(bu - 0.35, bu, u);
     tailA[i] = a;
     x += Math.cos(a) * TAIL_DS; y += Math.sin(a) * TAIL_DS;
@@ -1477,20 +1484,49 @@ function drawPuff(g, k) {
   }
 }
 
+// The ears point out from a spot low in his head (EAR_O). The skull is a flat
+// sprite that doesn't turn, so instead of following the sphere (which ran an
+// ear down behind the dome when he looked down and across) each root slides
+// along the skull's own outline and sits the same little way inside it
+const EAR_O = 0.7 * FACE_R, EAR_SINK = 7.5;
+// how far the outline is from EAR_O, by angle, over the top half
+const SKULL_RN = 64;
+const SKULL_RIM = (() => {
+  const pts = closedSpline(SKULL, 0.5), out = new Float32Array(SKULL_RN + 1);
+  for (let i = 0; i <= SKULL_RN; i++) {
+    const a = -Math.PI * (i / SKULL_RN), dx = Math.cos(a), dy = Math.sin(a);
+    let best = 0;
+    for (let j = 0; j < pts.length; j++) {
+      const [x0, y0] = pts[j], [x1, y1] = pts[(j + 1) % pts.length];
+      const ex = x1 - x0, ey = y1 - y0, den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-9) continue;
+      const qx = x0, qy = y0 - EAR_O;
+      const t = (qx * ey - qy * ex) / den, u = (qx * dy - qy * dx) / den;
+      if (t > 0 && u >= 0 && u <= 1 && t > best) best = t;
+    }
+    out[i] = best;
+  }
+  return out;
+})();
+function skullRim(a) {
+  const f = clamp(-a / Math.PI) * SKULL_RN, i = Math.min(SKULL_RN - 1, Math.floor(f));
+  return lerp(SKULL_RIM[i], SKULL_RIM[i + 1], f - i);
+}
+
 // the near ear or the far one; returns how much it faces us (below 0, we see its back)
 const EM = new Float64Array(6);
 function earMatrix(side, P) {
   // the ears ride high on the skull, so they only follow some of the nod
-  // (and never come down in front of his forehead)
   faceProj(side * 1.0, 0.7, FACE_R, P.yaw, P.pitch * 0.35);
   const fl = side < 0 ? P.earFL : P.earFR, sw = side < 0 ? P.earSL : P.earSR, tw = side < 0 ? P.earTL : P.earTR;
-  const ang = Math.atan2(FP.ny - 0.7, FP.nx) + side * (fl * 1.05 + sw * 0.22) + tw;
+  const a0 = Math.atan2(FP.y - EAR_O, FP.x), r = skullRim(a0) - EAR_SINK;
+  const ang = a0 + side * (fl * 1.05 + sw * 0.22) + tw;
   const ul = 0.9 - fl * 0.28;
   const ux = Math.cos(ang) * ul, uy = Math.sin(ang) * ul;
   const facing = Math.cos(P.yaw * 0.9 + side * (0.35 + sw * 1.5 + fl * 0.5)) * Math.cos(P.pitch * 0.6);
   const wl = Math.max(0.5, 0.35 + 0.65 * Math.abs(facing)) / ul;
   EM[0] = -uy * wl; EM[1] = ux * wl; EM[2] = -ux; EM[3] = -uy;
-  EM[4] = FP.x + P.yaw * 2.5; EM[5] = FP.y + P.pitch * 2;
+  EM[4] = Math.cos(a0) * r + P.yaw * 2.5; EM[5] = EAR_O + Math.sin(a0) * r + P.pitch * 2;
   return facing;
 }
 
@@ -2614,7 +2650,11 @@ const BOOKS = [
   { title: '단원 화첩', col: [226, 212, 178], band: [184, 50, 42], w: 48, h: 5.2, ink: true },
   { title: '孫子兵法', col: [44, 74, 58], band: [208, 176, 104], w: 38, h: 6.4 },
   { title: 'Vom Kriege', col: [86, 58, 44], band: [212, 180, 112], w: 44, h: 7.6 },
+  // her favourite, on top: a fat hardback in lion gold, with a ribbon and a seal
+  { title: 'The Lion’s Snack', col: [204, 150, 64], band: [64, 38, 22], w: 72, h: 12, fav: true },
 ];
+const FAV_BOOK = BOOKS.findIndex((b) => b.fav);
+const FAV_FONT = '700 20px "Gowun Batang"';
 function drawBookSpine(g, b, w, h) {
   // the top cover, seen a little from above, then the spine
   g.fillStyle = rgba(mix(b.col, [255, 250, 240], 0.18), 1);
@@ -2627,12 +2667,69 @@ function drawBookSpine(g, b, w, h) {
   g.strokeStyle = rgba(b.band, 0.85); g.lineWidth = 0.55;
   for (const x of [-w / 2 + 4, w / 2 - 4]) { g.beginPath(); g.moveTo(x, -h + 0.6); g.lineTo(x, -0.6); g.stroke(); }
   g.fillStyle = rgba(b.ink ? [60, 44, 34] : b.band, 0.95);
-  g.font = `${(h * 0.62).toFixed(2)}px "Gowun Batang", "Noto Serif KR", Georgia, serif`;
   g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(b.title, -1, -h / 2 + 0.3, w - 11);
+  if (b.fav) {
+    // big dark letters, so the title reads even this small, and the seal at one end
+    g.font = `700 ${(h * 0.6).toFixed(2)}px "Gowun Batang", "Noto Serif KR", Georgia, serif`;
+    g.fillText(b.title, 3.2, -h / 2 + 0.5, w - 17);
+    const q = h - 4.4;
+    g.fillStyle = rgba(SEAL_RGB, 0.95); g.fillRect(-w / 2 + 3.4, -h + 2.2, q, q);
+    g.strokeStyle = 'rgba(250,236,220,.8)'; g.lineWidth = 0.45; g.strokeRect(-w / 2 + 4.3, -h + 3.1, q - 1.8, q - 1.8);
+    g.beginPath(); g.moveTo(-w / 2 + 5.6, -h + 2.2 + q / 2); g.lineTo(-w / 2 + 1.8 + q, -h + 2.2 + q / 2); g.moveTo(-w / 2 + 3.4 + q / 2, -h + 4.4); g.lineTo(-w / 2 + 3.4 + q / 2, -h + q); g.stroke();
+  } else {
+    g.font = `${(h * 0.62).toFixed(2)}px "Gowun Batang", "Noto Serif KR", Georgia, serif`;
+    g.fillText(b.title, -1, -h / 2 + 0.3, w - 11);
+  }
   if (b.ink) { g.fillStyle = rgba(SEAL_RGB, 0.9); g.fillRect(w / 2 - 7.8, -h + 1.2, 2.4, 2.4); }
   g.strokeStyle = 'rgba(40,28,22,.55)'; g.lineWidth = 0.5;
   g.beginPath(); g.roundRect ? g.roundRect(-w / 2, -h, w, h, 1.2) : g.rect(-w / 2, -h, w, h); g.stroke();
+  if (b.fav) ribbon(g, w / 2 - 0.3, -h * 0.55, h * 0.55 + 6);
+}
+// a red ribbon bookmark slipping out of the end of the book and hanging down
+function ribbon(g, x, y, len) {
+  const mx = x + 4.6, my = y + 0.6, ex = x + 3.4, ey = y + len;
+  g.fillStyle = 'rgb(178,40,40)';
+  g.beginPath();
+  g.moveTo(x, y - 1.2);
+  g.quadraticCurveTo(mx + 1.3, my - 1.3, ex + 1.3, ey);
+  g.lineTo(ex, ey - 1.7); g.lineTo(ex - 1.3, ey);
+  g.quadraticCurveTo(mx - 1.3, my + 1.3, x, y + 1.2);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(90,16,20,.45)'; g.lineWidth = 0.35; g.stroke();
+}
+// her favourite's title page (on the left, where his paw won't be over it): the
+// title big and dark, a red rule, the first lines
+function favTitle(g, b, lines) {
+  const words = b.title.split(' '), last = words.pop();
+  g.save();
+  g.fillStyle = 'rgb(38,26,18)';
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.font = '700 9.5px "Gowun Batang", "Noto Serif KR", Georgia, serif';
+  // stood a little taller than the page, so it still reads from where we are
+  g.translate(-22, -13); g.scale(1, 1.18);
+  g.fillText(words.join(' '), 0, 0, 39);
+  g.fillText(last, 0, 10.5, 39);
+  g.restore();
+  g.strokeStyle = rgba(SEAL_RGB, 0.85); g.lineWidth = 0.9;
+  g.beginPath(); g.moveTo(-29, 6.5); g.lineTo(-15, 6.5); g.stroke();
+  lines(-37, -7, 12, 26, 3.2);
+}
+// a lion's head in a few brushstrokes, for the page across from the title
+function inkLion(g, x, y) {
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * TAU, r1 = 12.5 + (k % 3) * 1.3;
+    stroke(g, { pts: [[x + Math.cos(a) * 6.5, y + Math.sin(a) * 6.5], [x + Math.cos(a + 0.2) * r1, y + Math.sin(a + 0.2) * r1]], width: 2.8, dry: 0.55, tone: 0.75, bleed: 0.05, rgb: INK_RGB, seed: 410 + k, bristles: 5 });
+  }
+  stamp(g, x, y + 0.6, 8.6, [214, 168, 86], 0.95, 0.7);
+  g.strokeStyle = rgba(INK_RGB, 0.85); g.lineCap = 'round'; g.lineWidth = 0.9;
+  g.beginPath();
+  // ears, eyes, nose and a pleased little mouth
+  g.arc(x - 5.4, y - 6.4, 1.8, Math.PI * 0.9, Math.PI * 1.9); g.moveTo(x + 7.2, y - 6.4); g.arc(x + 5.4, y - 6.4, 1.8, Math.PI * 1.1, Math.PI * 2.1);
+  g.moveTo(x - 3.6, y - 1); g.lineTo(x - 1.8, y - 1.2); g.moveTo(x + 1.8, y - 1.2); g.lineTo(x + 3.6, y - 1);
+  g.moveTo(x - 1.1, y + 2); g.lineTo(x + 1.1, y + 2); g.lineTo(x, y + 3.2); g.closePath();
+  g.moveTo(x, y + 3.2); g.quadraticCurveTo(x - 1, y + 5, x - 2.6, y + 4.4); g.moveTo(x, y + 3.2); g.quadraticCurveTo(x + 1, y + 5, x + 2.6, y + 4.4);
+  g.stroke();
+  g.fillStyle = rgba(SEAL_RGB, 0.88); g.fillRect(x + 12, y + 19, 4, 4);
 }
 // a book open on the cushion, in its own flat units (90 x 60), k from shut (0) to open (1)
 function drawOpenBook(g, b, k, i, R) {
@@ -2656,7 +2753,8 @@ function drawOpenBook(g, b, k, i, R) {
     for (let y = y0; y < y1; y += step) { const e = x1 - (R() < 0.18 ? (x1 - x0) * R() * 0.6 : 0); g.beginPath(); g.moveTo(x0, y); g.lineTo(e, y); g.stroke(); }
   };
   const right = () => {
-    if (i === 3) { g.strokeStyle = 'rgba(70,60,52,.6)'; g.lineWidth = 0.9; for (let x = 38; x > 6; x -= 4.2) for (let y = -24; y < 22; y += 3.2) if (R() < 0.85) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 1.8); g.stroke(); } }
+    if (b.fav) inkLion(g, 22, -3);
+    else if (i === 3) { g.strokeStyle = 'rgba(70,60,52,.6)'; g.lineWidth = 0.9; for (let x = 38; x > 6; x -= 4.2) for (let y = -24; y < 22; y += 3.2) if (R() < 0.85) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 1.8); g.stroke(); } }
     else if (i === 2) {
       // a little ink landscape: two peaks, a pine, a seal
       stroke(g, { pts: [[8, 14], [16, -2], [22, 6], [30, -12], [40, 12]], width: 2.4, dry: 0.5, tone: 0.75, rgb: INK_RGB, seed: 200 + i, bristles: 6 });
@@ -2676,11 +2774,14 @@ function drawOpenBook(g, b, k, i, R) {
   if (k > 0.5) {
     if (i === 3) { g.strokeStyle = 'rgba(70,60,52,.6)'; g.lineWidth = 0.9; for (let x = -6; x > -40; x -= 4.2) for (let y = -24; y < 22; y += 3.2) if (R() < 0.85) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 1.8); g.stroke(); } }
     else if (i === 1) { g.fillStyle = 'rgba(146,32,38,.85)'; g.font = '9px Georgia, serif'; g.fillText('L', -38, -19); lines(-31, -5, -24, -14, 3.2); lines(-39, -5, -12, 25, 3.2); }
+    else if (b.fav) favTitle(g, b, lines);
     else lines(-39, -5, -24, 25, 3.2);
     // the gutter
     const gr = g.createLinearGradient(-6, 0, 6, 0);
     gr.addColorStop(0, 'rgba(120,100,70,0)'); gr.addColorStop(0.5, 'rgba(120,100,70,.35)'); gr.addColorStop(1, 'rgba(120,100,70,0)');
     g.fillStyle = gr; g.fillRect(-6, -29, 12, 58);
+    // her place, kept with the ribbon down the middle
+    if (b.fav) ribbon(g, 0.6, -29, 64);
   }
   // the cover swinging over, while it opens
   if (k < 1) {
@@ -2784,7 +2885,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     lastUser: 0, idleAt: 0, zAt: 0, avoSeenAt: 0, toyT: -1e9, toyStill: 0, batAt: -1e9, pounceAt: -1e9, agit: 0, swishUntil: 0,
     boopSayT: -1e9, faceUntil: 0, batN: 0, autoN: 0,
     // his tail when something bumps it: how far it's bent, how fast, where, and the flick back
-    tb: 0, tbv: 0, tbu: 0.6, tailTouch: -1e9, flickAt: -1e9, flickDir: 0, flickHit: true,
+    tb: 0, tbv: 0, tbu: 0.6, tailTouch: -1e9, flickAt: -1e9, flickDir: 0, flickHit: true, flickHeld: false,
     // still staring where the laser was, fur standing up, ink on his paw
     stare: null, puffAt: -1e9, ink: 0,
   };
@@ -2804,7 +2905,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   // paintings: the one on the go, the one on the wall, how many so far
   const art = { n: 0, cur: null, wall: null, fly: null };
   // her books: which are on the stack (bottom first), the one open in front of him, one on the floor
-  const books = { stack: [0, 1, 2, 3, 4], open: -1, k: 0, fly: null, fallen: null, next: 0, cache: new Map() };
+  const books = { stack: [0, 1, 2, 3, 4, 5], open: -1, k: 0, fly: null, fallen: null, next: 0, cache: new Map() };
   const chat = { psst: [], you: null };
   const pointer = { x: 0, y: 0, t: -1e9 };
   const pet = { dist: 0, lastX: null, dir: 0, flips: 0, t: 0, spawnT: 0, sayT: -1e9, sayZone: '', zone: '' };
@@ -3252,16 +3353,20 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       return true;
     }
     if (pom.auto) autoHand(now);
-    if (pom.held && !RM) {
-      const kx = (pom.hx - pom.x) * 26, ky = (pom.hy - pom.y) * 26;
+    // where a hand can hold it, against the tail as it sways (its twitches and
+    // bumps would only shake the pompom about), then the tail as it really is
+    tailChain(P, true);
+    const ht = pom.held ? heldTarget() : null;
+    tailChain(P);
+    if (ht && !RM) {
+      const kx = (ht.x - pom.x) * 26, ky = (ht.y - pom.y) * 26;
       pom.vx = lerp(pom.vx, kx, 0.45); pom.vy = lerp(pom.vy, ky, 0.45);
     }
-    tailChain(P);
     // it's light and fluffy: the air never lets it go fast, so it never swings far
     const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n, vmax = 220 * s;
     for (let i = 0; i < n; i++) {
-      if (pom.held) {
-        if (RM) { pom.x = pom.hx; pom.y = pom.hy; pom.vx = pom.vy = 0; } else { pom.x += pom.vx * h; pom.y += pom.vy * h; }
+      if (ht) {
+        if (RM) { pom.x = ht.x; pom.y = ht.y; pom.vx = pom.vy = 0; } else { pom.x += pom.vx * h; pom.y += pom.vy * h; }
       } else if (RM) {
         pom.x = o.x; pom.y = o.y + o.len; pom.vx = pom.vy = 0;
       } else {
@@ -3283,6 +3388,33 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!pom.held && !RM) pom.vx += Math.sin(now / 1300) * 6 * s * dt;
     pom.speed = Math.hypot(pom.vx, pom.vy);
     return pom.held || pom.speed > 30 * s;
+  }
+  // where a hand holding it can actually take it: the pointer brought in to what
+  // the cord, the platform under it and the room allow. Pulled toward a spot it
+  // can't reach, it would slide past the closest one and back, every frame
+  const HELD = { x: 0, y: 0 };
+  function heldTarget() {
+    const { s } = L, o = L.pom, r = o.r, mx = o.len * 2.5, floor = L.low.y + 6 * s - r;
+    let x = pom.hx, y = pom.hy;
+    const reach = () => {
+      const dx = x - o.x, dy = y - o.y, d = Math.hypot(dx, dy);
+      if (d > mx) { x = o.x + (dx / d) * mx; y = o.y + (dy / d) * mx; }
+    };
+    reach();
+    // below the platform: along it instead, as far as the cord goes
+    if (y > floor) { const c = Math.sqrt(Math.max(0, mx * mx - (floor - o.y) ** 2)); x = clamp(pom.hx, o.x - c, o.x + c); y = floor; }
+    x = clamp(x, r, L.W - r); y = clamp(y, r, floor);
+    reach();
+    // and on this side of his tail, just clear of it rather than pushing into it
+    // (pushed, it would give, flick back and shove the pompom about)
+    for (let k = 0; k < 2; k++) {
+      const c = tailClear((x - L.catX) / s, (y - L.topY) / s, 4);
+      if (!c.hit) break;
+      x = L.catX + c.x * s; y = Math.min(L.topY + c.y * s, floor);
+      reach();
+    }
+    HELD.x = Number.isFinite(x) ? x : pom.x; HELD.y = Number.isFinite(y) ? y : pom.y;
+    return HELD;
   }
   // where the pompom is allowed to be: on its cord, above the middle platform, off his tail
   function toyLimits(now, h) {
@@ -3311,8 +3443,38 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   // the cord to the near side
   function tailContact(now) {
     const { s } = L;
-    let px = (pom.x - L.catX) / s, py = (pom.y - L.topY) / s;
-    const rp = L.pom.r / s - 1, ox = (L.pom.x - L.catX) / s, oy = (L.pom.y - L.topY) / s;
+    const c = tailClear((pom.x - L.catX) / s, (pom.y - L.topY) / s);
+    if (!c.hit) return;
+    const { bx, by, bi, bu, best } = c;
+    // held in a hand, it gives only if it's well into the tail (dragged fast across
+    // it, or the cord's over it); a little brush of the tail just bends the tail
+    const k = !pom.held || c.cross ? 1 : clamp((best - 3) / best);
+    if (k > 0) {
+      pom.x += (L.catX + c.x * s - pom.x) * k; pom.y += (L.topY + c.y * s - pom.y) * k;
+      const vn = pom.vx * bx + pom.vy * by;
+      if (vn < 0) { pom.vx -= bx * vn * 1.3; pom.vy -= by * vn * 1.3; }
+    }
+    // the tail gives way: more the further down it was pushed (and only gently
+    // round one that's held, which stays where it is)
+    const a = tailA[bi], side = bx * Math.sin(a) - by * Math.cos(a);
+    C.tbv += side * Math.min(best, 6) * 7 * (0.4 + bu);
+    if (pom.held) C.tbv = clamp(C.tbv, -4, 4);
+    C.tbu = lerp(C.tbu, bu, 0.3);
+    C.tailTouch = now;
+    // and then flicks back at it, as tails do (only the once while it's held there:
+    // it can't knock it away, so it would just keep at it)
+    if (!RM && now - C.flickAt > 900 && !(pom.held && C.flickHeld)) {
+      C.flickAt = now + 140; C.flickDir = -Math.sign(side) || 1; C.flickHit = false;
+      C.flickHeld = !!pom.held;
+    }
+  }
+  // the pompom at (px, py), cat units, moved back to this side of the tail along its
+  // cord and then out of it (pad: how much room to leave); hit says whether it had
+  // to move, and which way it was pushed
+  const TC = { x: 0, y: 0, hit: false, cross: false, bx: 0, by: 0, bi: 0, bu: 0, best: 0 };
+  function tailClear(px, py, pad = 0) {
+    const { s } = L;
+    const rp = L.pom.r / s - 1 + pad, ox = (L.pom.x - L.catX) / s, oy = (L.pom.y - L.topY) / s;
     const cdx = px - ox, cdy = py - oy;
     let tMin = 1, ci = -1;
     for (let i = 0; i < TAIL_M; i++) {
@@ -3345,17 +3507,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       px += ox2 * pen; py += oy2 * pen;
       if (pen >= best) { best = pen; bx = ox2; by = oy2; bi = oi; bu = ou; }
     }
-    if (bi < 0) return;
-    pom.x = L.catX + px * s; pom.y = L.topY + py * s;
-    const vn = pom.vx * bx + pom.vy * by;
-    if (vn < 0) { pom.vx -= bx * vn * 1.3; pom.vy -= by * vn * 1.3; }
-    // the tail gives way: more the further down it was pushed
-    const a = tailA[bi], side = bx * Math.sin(a) - by * Math.cos(a);
-    C.tbv += side * Math.min(best, 6) * 7 * (0.4 + bu);
-    C.tbu = lerp(C.tbu, bu, 0.3);
-    C.tailTouch = now;
-    // and then flicks back at it, as tails do
-    if (!RM && now - C.flickAt > 900) { C.flickAt = now + 140; C.flickDir = -Math.sign(side) || 1; C.flickHit = false; }
+    TC.x = px; TC.y = py; TC.hit = bi >= 0; TC.cross = ci >= 0;
+    TC.bx = bx; TC.by = by; TC.bi = bi; TC.bu = bu; TC.best = best;
+    return TC;
   }
   // the tail springing back after a bump, and its flick knocking the pompom away
   function stepTail(dt, now) {
@@ -3614,6 +3768,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     pom.auto = null;
     pom.held = { id: e.pointerId, ox: pom.x - x, oy: pom.y - y };
     pom.hx = pom.x; pom.hy = pom.y;
+    C.flickHeld = false;
     stage.classList.add('is-grabbing');
     try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
     C.toyT = now0();
@@ -3635,6 +3790,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (pom.pinned) return;
     pom.held = { id: -1 };
     pom.auto = { t0: now, x0: pom.x, y0: pom.y };
+    C.flickHeld = false;
     pom.hx = pom.x; pom.hy = pom.y;
     C.toyT = now;
     if (!busy) say('cat.say.toy');
@@ -3734,6 +3890,16 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   const busyWith = (p = 3) => C.act && PRI[C.act.kind] >= p;
   // putting the laser or the brush away for something else
   function toolsAway(now) { laserOff(now, true); brushOff(); }
+  // busy with something that isn't just chasing the dot
+  const tied = () => busyWith(3) && C.act.kind !== 'laser';
+  // a button that needs him: the laser and the brush are only games, so they give
+  // way (even mid-pounce); if he's really tied up they stay out and he says so
+  function takeOver(now) {
+    if (tied()) { say('cat.say.busy'); return false; }
+    toolsAway(now);
+    if (C.act && C.act.kind === 'laser') endAct(C.act, now);
+    return true;
+  }
 
   // the laser pointer
   function laserAt(x, y, now) {
@@ -3818,9 +3984,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function brushGo() {
     if (!L) return;
     const now = now0();
-    laserOff(now, true);
-    if (busyWith(3)) { say('cat.say.busy'); return; }
+    if (tied()) { say('cat.say.busy'); return; }
     if (now < C.grumpyUntil) { say('cat.say.grumpy'); return; }
+    takeOver(now);
     brush.on = true; brush.until = now + 10000;
     stage.classList.add('is-brush');
     const a = start('brush');
@@ -3938,8 +4104,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!L) return;
     const now = now0();
     if (now - nip.at < NIP_WAIT) { say('cat.say.nip.wait'); return; }
-    toolsAway(now);
-    if (busyWith(3)) { say('cat.say.busy'); return; }
+    if (!takeOver(now)) return;
     nip.at = now;
     nip.sprig = { t0: now, x0: cx(L.jar.x), y0: cy(L.jar.y - 58 * L.s), fade: 0, crushed: 0 };
     start('nip');
@@ -3960,8 +4125,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   function paintGo() {
     if (!L) return;
     const now = now0();
-    toolsAway(now);
-    if (art.cur || busyWith(3)) { say('cat.say.busy'); return; }
+    if (art.cur) { say('cat.say.busy'); return; }
+    if (!takeOver(now)) return;
     const seed = (Math.random() * 1e9) | 0, R = rng(seed);
     // each one different: how many prints, where, which way up, how much ink, any smudges
     const n = 3 + Math.floor(R() * 4), st = [];
@@ -4017,7 +4182,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
 
   // books: tap one (or the button) and it comes over and falls open in front of him
-  const BOOK_SAY = ['cat.say.book.0', 'cat.say.book.1', 'cat.say.book.2', 'cat.say.book.3', 'cat.say.book.4'];
+  const BOOK_SAY = BOOKS.map((b, i) => `cat.say.book.${i}`);
+  // the button: her favourite first, then the rest in turn
+  const BOOK_ORDER = [FAV_BOOK, ...BOOKS.keys()].filter((v, j, a) => a.indexOf(v) === j);
   const BOOK_AT = [54, 13];
   // where a book in the stack sits (cat units, its spine's bottom middle)
   function stackPos(j) {
@@ -4035,12 +4202,17 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (books.open >= 0 && C.act && (C.act.kind === 'book' || C.act.kind === 'bookrest')) endAct(C.act, now);
     if (books.open >= 0) bookBack(now);
     if (books.fly && books.fly.back) { if (!books.stack.includes(books.fly.i)) books.stack.push(books.fly.i); books.fly = null; }
-    toolsAway(now);
-    if (busyWith(3)) { say('cat.say.busy'); return; }
+    if (!takeOver(now)) return;
     if (i === undefined) {
       // the button goes through them in turn (off the floor first, if one's there)
       if (books.fallen) i = books.fallen.i;
-      else { const list = books.stack; i = list[(books.next++) % list.length]; }
+      else {
+        for (let n = 0; n < BOOK_ORDER.length && i === undefined; n++) {
+          const c = BOOK_ORDER[(books.next++) % BOOK_ORDER.length];
+          if (books.stack.includes(c)) i = c;
+        }
+        if (i === undefined) return;
+      }
     }
     let from;
     if (books.fallen && books.fallen.i === i) { from = { x: books.fallen.x, y: books.fallen.y, rot: books.fallen.rot }; books.fallen = null; }
@@ -4148,6 +4320,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     noteUser(now, true);
     C.autoN = 0;
     const pad = e.pointerType === 'touch' ? 14 : 6;
+    // the dot is drawn over everything, so pressing right on it takes the dot
+    if (laser.on && (e.target === dotEl || Math.hypot(x - laser.x, y - laser.y) < 12 * L.s)) {
+      e.preventDefault();
+      steerDot(e.pointerId, x, y, now);
+      try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
+      return;
+    }
     // the avocado is drawn over the pompom, so right on it, it wins
     if (onAvocado(x, y, 0)) { e.preventDefault(); startGrab(e, x, y); return; }
     if (e.target === toyEl || onToy(x, y, pad)) { e.preventDefault(); grabToy(e, x, y); return; }
@@ -4400,7 +4579,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         else if (a.tx !== undefined) { LK.mode = 1; LK.x = L.catX + a.tx * s; LK.y = L.topY + a.ty * s; LK.pupil = 1; }
         break;
       }
-      case 'brush': case 'blinkback': case 'psst': case 'shake': case 'bookrest': LK.mode = 2; break;
+      case 'brush': case 'blinkback': case 'psst': case 'shake': LK.mode = 2; break;
       case 'huff': case 'unimpressed': LK.mode = 2; LK.flat = true; break;
       // pointedly looking anywhere but at you
       case 'ignore': LK.mode = 1; LK.x = L.catX + 400 * s; LK.y = L.topY - 190 * s; LK.pupil = 0.3; LK.flat = true; break;
@@ -4411,9 +4590,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       case 'paint':
         if (a.look) { LK.mode = 1; LK.x = L.catX + a.look.x * s; LK.y = L.topY + a.look.y * s; LK.pupil = 0.6; } else LK.mode = 2;
         break;
-      case 'book':
-        if (e < (RM ? 400 : 1300)) { LK.mode = 1; LK.x = L.catX + BOOK_AT[0] * s; LK.y = L.topY + BOOK_AT[1] * s; LK.pupil = 0.55; } else LK.mode = 2;
+      case 'book': case 'bookrest': {
+        const at = openAt(a.i), fav = BOOKS[a.i].fav;
+        if (fav || (a.kind === 'book' && e < (RM ? 400 : 1300))) { LK.mode = 1; LK.x = L.catX + at[0] * s; LK.y = L.topY + at[1] * s; LK.pupil = 0.55; }
+        else LK.mode = 2;
         break;
+      }
       case 'nudge':
         if (e < (RM ? 600 : 1300) && books.stack.length) { const p = stackPos(books.stack.length - 1); LK.mode = 1; LK.x = L.catX + p.x * s; LK.y = L.topY + p.y * s; }
         else LK.mode = 2;
@@ -4427,6 +4609,19 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     T.hx -= 22 * k; T.hy += 44 * k; T.pitch = lerp(T.pitch, 0.3, k); T.roll += 0.16 * k; T.yaw = lerp(T.yaw, 0.12, k);
     contentFace(k); T.tCurl += 0.3 * k; T.tAmp = 0.06;
     rate.hx = rate.hy = rate.pitch = 4;
+  }
+  // her favourite he reads instead: head bent over it, eyes going along the
+  // lines, and a paw on it to keep it open
+  function bookRead(k, now) {
+    T.hx -= 6 * k; T.hy += 12 * k; T.pitch = Math.max(T.pitch, 0.4 * k);
+    T.lidU = Math.max(T.lidU, 0.2 * k); T.whisk = lerp(T.whisk, 0.25, k); T.grin = lerp(T.grin, 0.25, k);
+    T.gy = lerp(T.gy, 0.7, k);
+    if (!RM) T.gx += Math.sin(now / 650) * 0.35 * k;
+    T.tCurl += 0.3 * k; T.tAmp = 0.06;
+    rate.hx = rate.hy = rate.pitch = 4;
+    // (on the edge of the cover, well clear of the title)
+    const M = FAV_MAP, u = 49, v = 20;
+    if (k > 0.05) paw('n', FAV_AT[0] + M[0] * u + M[2] * v, FAV_AT[1] + M[1] * u + M[3] * v, k, 0, -0.3, RM ? 1e3 : 10);
   }
 
   function actPose(a, e, now) {
@@ -4990,14 +5185,15 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           if (e > tO && !RM) T.noseTw = Math.sin(e / 36) * 0.5;
           if (e > tO && !a.pg) { a.pg = true; play('page', { gain: 0.14 }); }
         } else {
-          bookFlop(RM ? 1 : smooth(tL, tF, e));
+          const kk = RM ? 1 : smooth(tL, tF, e);
+          if (BOOKS[a.i].fav) bookRead(kk, now); else bookFlop(kk);
           if (!a.said && e > tL + 200) { a.said = true; say(BOOK_SAY[a.i]); }
         }
         if (e >= a.dur) a.done = true;
         break;
       }
       case 'bookrest': {
-        bookFlop(1);
+        if (BOOKS[a.i].fav) bookRead(1, now); else bookFlop(1);
         if (!a.purr && e > 400) { a.purr = true; play('purr', { gain: 0.18, seconds: 2.2 }); }
         break;
       }
@@ -5345,7 +5541,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!RM) {
       const intent = a && PRI[a.kind] >= 3 && a.kind !== 'eat';
       if (intent) { C.blink = null; C.blinkAt = Math.max(C.blinkAt, now + 600); }
-      if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: Math.random() < 0.4 };
+      // the slow, blissful kind only when he's at ease, never mid-hunt or on watch
+      const keen = al || pom.speed > 60 * s || laser.on || T.puff > 0 || cross > 0.1 || dg > 0.2 || LK.pupil > 0.6 || (C.stare && now < C.stare.until);
+      if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: !keen && Math.random() < 0.4 };
+      // one already under way turns into a quick one
+      if (C.blink && C.blink.slow && keen) { C.blink.slow = false; C.blink.t0 = now - Math.min(80, now - C.blink.t0); }
       if (C.blink) {
         const d = C.blink.slow ? [300, 420, 380] : [80, 50, 110];
         const be = now - C.blink.t0;
@@ -5434,10 +5634,11 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       drawScratches(fg, nowDraw);
       drawPile(fg);
       drawSheet(fg, nowDraw);
-      drawBookOpen(fg);
+      drawBookOpen(fg, false);
       if (nip.sprig) drawSprig(fg, nowDraw, true);
     },
     front: () => {
+      drawBookOpen(fg, true);
       if (A.under) { toStage(fg); drawAvocado(fg, nowDraw); fg.restore(); }
       if (treat.on && treat.state === 'rest') { toStage(fg); drawTreat(fg); fg.restore(); }
     },
@@ -5673,10 +5874,14 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       g.restore();
     }
   }
-  // the open book lying in front of him (cat units), drawn from a picture of its pages
-  const BOOK_MAP = [0.74, -0.02, -0.07, 0.28];
+  // the open book lying in front of him (cat units), drawn from a picture of its pages.
+  // Her favourite is propped up open in front of his paws instead, big enough to read
+  const BOOK_MAP = [0.74, -0.02, -0.07, 0.28], FAV_MAP = [1.05, -0.03, -0.1, 0.8], FAV_AT = [36, -5];
+  const openMap = (i) => (BOOKS[i].fav ? FAV_MAP : BOOK_MAP);
+  const openAt = (i) => (BOOKS[i].fav ? FAV_AT : BOOK_AT);
+  const favFontOk = () => { try { return !document.fonts || document.fonts.check(FAV_FONT, BOOKS[FAV_BOOK].title); } catch { return true; } };
   function bookPages(i) {
-    const key = `${i}|${L.s.toFixed(3)}|${dpr}`;
+    const key = `${i}|${L.s.toFixed(3)}|${dpr}|${BOOKS[i].fav && favFontOk()}`;
     let c = books.cache.get(key);
     if (c) return c;
     if (books.cache.size > 10) books.cache.clear();
@@ -5689,12 +5894,14 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     books.cache.set(key, c);
     return c;
   }
-  function drawBookOpen(g) {
+  function drawBookOpen(g, front) {
     const i = books.open;
-    if (i < 0 || books.fly) return;
+    if (i < 0 || books.fly || !!BOOKS[i].fav !== front) return;
+    const M = openMap(i), at = openAt(i);
     g.save();
-    g.transform(BOOK_MAP[0], BOOK_MAP[1], BOOK_MAP[2], BOOK_MAP[3], BOOK_AT[0], BOOK_AT[1]);
-    dab(g, 2, 6, 60, SHADOW, 0.16, 0.3);
+    g.transform(M[0], M[1], M[2], M[3], at[0], at[1]);
+    if (front) dab(g, 0, 34, 52, SHADOW, 0.12, 0.3);
+    else dab(g, 2, 6, 60, SHADOW, 0.16, 0.3);
     if (books.k >= 1) g.drawImage(bookPages(i), -48, -33, 96, 66);
     else drawOpenBook(g, BOOKS[i], books.k, i, rng(300 + i));
     g.restore();
@@ -5706,7 +5913,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const b = BOOKS[f.i], e = RM ? 1 : clamp((now - f.t0) / (f.back ? 650 : 620));
     const k = easeInOut(e);
     let x0, y0, r0, x1, y1;
-    const to = { x: BOOK_AT[0], y: BOOK_AT[1] + 4 };
+    const at = openAt(f.i), to = { x: at[0], y: at[1] + 4 };
     if (!f.back) { x0 = f.from.x; y0 = f.from.y; r0 = f.from.rot; x1 = to.x; y1 = to.y; }
     else {
       // back onto the top of the pile
@@ -5725,7 +5932,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
     if (flat > 0) {
       g.globalAlpha = flat;
-      g.transform(BOOK_MAP[0], BOOK_MAP[1], BOOK_MAP[2], BOOK_MAP[3], 0, 0);
+      const M = openMap(f.i);
+      g.transform(M[0], M[1], M[2], M[3], 0, 0);
       drawOpenBook(g, b, 0, f.i, rng(300 + f.i));
     }
     g.restore();
@@ -6316,6 +6524,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   if (document.fonts) {
     document.fonts.load('20px "Nanum Brush Script"', SIGN_TEXT).then(onFonts, () => {});
     document.fonts.load('20px "Nanum Pen Script"', '야옹냥냠?').catch(() => {});
+    // her favourite's title is in bold Gowun Batang: one more frame once that's here
+    document.fonts.load(FAV_FONT, BOOKS[FAV_BOOK].title).then(() => { if (!destroyed) kick(); }, () => {});
     document.fonts.addEventListener('loadingdone', onFonts, opt);
   }
 

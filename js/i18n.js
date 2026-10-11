@@ -234,6 +234,7 @@ export const STRINGS = {
     "cat.book.2": "the Kim Hong-do album",
     "cat.book.3": "The Art of War",
     "cat.book.4": "On War",
+    "cat.book.5": "The Lion’s Snack",
     "cat.say.laser.on": "A red dot! His pupils go huge and his eyes lock on.",
     "cat.say.laser.pounce": "He pounces, then peeks under his paw. Nothing there. Suspicious.",
     "cat.say.laser.off": "The laser clicks off. He keeps staring at the spot where it was.",
@@ -258,6 +259,7 @@ export const STRINGS = {
     "cat.say.book.2": "You open the Kim Hong-do album. Now there’s a cat in it too.",
     "cat.say.book.3": "You open The Art of War. He takes the high ground: the open pages.",
     "cat.say.book.4": "You open On War. He has found the centre of gravity, and he is lying on it.",
+    "cat.say.book.5": "You open The Lion’s Snack, one of her favourite novels. He reads along very seriously, a paw keeping it open.",
     "cat.say.nudge": "He nudges {book} off the sill, slowly, looking right at you.",
   },
 
@@ -493,6 +495,7 @@ export const STRINGS = {
     "cat.book.2": "l’album de Kim Hong-do",
     "cat.book.3": "« L’Art de la guerre »",
     "cat.book.4": "« De la guerre »",
+    "cat.book.5": "« The Lion’s Snack »",
     "cat.say.laser.on": "Un point rouge ! Ses pupilles deviennent immenses, ses yeux ne le lâchent plus.",
     "cat.say.laser.pounce": "Il bondit, puis jette un œil sous sa patte. Rien. C’est louche.",
     "cat.say.laser.off": "Le laser s’éteint. Il fixe encore l’endroit où était le point.",
@@ -517,6 +520,7 @@ export const STRINGS = {
     "cat.say.book.2": "Vous ouvrez l’album de Kim Hong-do. Maintenant, il y a un chat dedans aussi.",
     "cat.say.book.3": "Vous ouvrez « L’Art de la guerre ». Il prend les hauteurs : les pages ouvertes.",
     "cat.say.book.4": "Vous ouvrez « De la guerre ». Il a trouvé le centre de gravité, et il est couché dessus.",
+    "cat.say.book.5": "Vous ouvrez « The Lion’s Snack », l’un de ses romans préférés. Il le lit avec le plus grand sérieux, une patte posée dessus pour le garder ouvert.",
     "cat.say.nudge": "Il pousse {book} hors du rebord de la fenêtre, lentement, en vous regardant droit dans les yeux.",
   },
 
@@ -752,6 +756,7 @@ export const STRINGS = {
     "cat.book.2": "김홍도 화첩",
     "cat.book.3": "『손자병법』",
     "cat.book.4": "『전쟁론』",
+    "cat.book.5": "『The Lion’s Snack』",
     "cat.say.laser.on": "빨간 점이다! 동공이 커다래지고 눈이 점에 딱 고정돼요.",
     "cat.say.laser.pounce": "와락 덮치고는 앞발을 살짝 들어 확인해요. 아무것도 없네요. 수상해요.",
     "cat.say.laser.off": "레이저가 꺼졌어요. 그래도 점이 있던 자리를 한참 쳐다봐요.",
@@ -776,6 +781,7 @@ export const STRINGS = {
     "cat.say.book.2": "김홍도 화첩을 펼치니, 이제 그림 속에 고양이도 한 마리 있어요.",
     "cat.say.book.3": "『손자병법』을 펼치니 높은 곳부터 차지해요. 바로 펼친 책 위요.",
     "cat.say.book.4": "『전쟁론』을 펼치니 무게중심을 찾았대요. 바로 그 위에 누워 있어요.",
+    "cat.say.book.5": "그녀가 아끼는 소설 『The Lion’s Snack』을 펼치니, 앞발로 책을 꾹 눌러 펼쳐 둔 채 아주 진지하게 읽어 내려가요.",
     "cat.say.nudge": "창턱 위 {book}에 앞발을 대고 천천히 밀어 떨어뜨려요. 이쪽을 빤히 보면서요.",
   },
 };
