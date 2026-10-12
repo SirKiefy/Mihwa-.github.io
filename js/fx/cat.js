@@ -8,7 +8,7 @@
 //
 // createCat(root, { t, reduceMotion, mobile, sound, name }) gives back
 // { setActive, relabel, destroy }, or null if there's no 2D canvas.
-import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=a165dbb92e';
+import { rng, noise1, stamp, stroke, sealStamp } from '../ink/brush.js?v=67efe0b23a';
 
 const TAU = Math.PI * 2;
 const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
@@ -105,12 +105,12 @@ function coat(v, out) {
 // text (English is the fallback if the page doesn't have a key)
 export const CAT_STRINGS = {
   en: {
-    'cat.label': 'Her baby, a slate-grey cat with green eyes, loafing on his cat tree by the window, a pompom dangling below him. On the floor: a jar of treats, and an avocado looking far too pleased with itself.',
-    'cat.label.named': '{name}, her baby: a slate-grey cat with green eyes, loafing on his cat tree by the window, a pompom dangling below him. On the floor: a jar of treats, and an avocado looking far too pleased with itself.',
+    'cat.label': 'Her baby, a slate-grey cat with green eyes, loafing on his cat tree by the window, a pompom dangling below him and a short stack of books nearby. On the floor: a jar of treats, and an avocado looking far too pleased with itself.',
+    'cat.label.named': '{name}, her baby: a slate-grey cat with green eyes, loafing on his cat tree by the window, a pompom dangling below him and a short stack of books nearby. On the floor: a jar of treats, and an avocado looking far too pleased with itself.',
     'cat.caption': 'Her baby keeps watch by the window, and this house is strictly avocado-free.',
     'cat.caption.named': '{name}, her baby, keeps watch by the window, and this house is strictly avocado-free.',
-    'cat.hint': 'Fling the avocado or toss it up to him: he knows what to do. Stroke his back, scratch his chin, boop his nose, dangle the pompom, or tap the jar for a treat.',
-    'cat.hint.touch': 'Fling the avocado with your finger or toss it up to him: he knows what to do. Stroke his back, scratch his chin, boop his nose, pull the pompom, or tap the jar for a treat.',
+    'cat.hint': 'Fling the avocado or toss it up to him: he knows what to do. Stroke his back, scratch his chin, tap the jar for a treat or a book to open it, and look under More for a laser, a brush, hats and some ink.',
+    'cat.hint.touch': 'Fling the avocado with your finger or toss it up to him: he knows what to do. Stroke his back, scratch his chin, tap the jar for a treat or a book to open it, and look under More for a laser, a brush, hats and some ink.',
     'cat.btns': 'Play with her baby',
     'cat.btns.named': 'Play with {name}',
     'cat.btn.poke': 'Poke the avocado',
@@ -134,7 +134,7 @@ export const CAT_STRINGS = {
     'cat.m.100': 'One hundred. He accepts payment in treats.',
     'cat.tally.pets': 'Pets: {n}',
     'cat.tally.treats': 'Treats: {n}',
-    'cat.say.back': 'You stroke his back. He purrs, eyes half shut.',
+    'cat.say.back': 'You stroke his back. He purrs, eyes squeezed shut into two happy little arcs.',
     'cat.say.chin': 'You scratch under his chin. He leans in and purrs louder.',
     'cat.say.head': 'You pat his head. His ears go flat for a second.',
     'cat.say.over': 'Too much petting! A gentle warning swat, no claws. Give him a moment.',
@@ -150,14 +150,62 @@ export const CAT_STRINGS = {
     'cat.say.buck': 'Not on his back! A bounce of the hips, a lash of the tail, and off it flies.',
     'cat.say.sleep': 'He drifts off to sleep, breathing slow and deep.',
     'cat.say.busy': 'He’s busy right now. Try again in a moment.',
+    'cat.more': 'More things to do',
+    'cat.g.play': 'Play',
+    'cat.g.care': 'Care',
+    'cat.g.chat': 'Chat',
+    'cat.g.dress': 'Dress up',
+    'cat.g.art': 'Art',
+    'cat.btn.laser': 'Laser pointer',
+    'cat.btn.brush': 'Brush him',
+    'cat.btn.nip': 'Catnip',
+    'cat.btn.psst': 'Psst psst',
+    'cat.btn.blink': 'Slow blink',
+    'cat.btn.hat': 'Try on a hat',
+    'cat.btn.paint': 'Paw painting',
+    'cat.btn.book': 'Open a book',
+    'cat.tally.art': 'Masterpieces: {n}',
+    'cat.psst.word': 'psst psst',
+    'cat.book.0': 'Toji',
+    'cat.book.1': 'The Red and the Black',
+    'cat.book.2': 'the Kim Hong-do album',
+    'cat.book.3': 'The Art of War',
+    'cat.book.4': 'On War',
+    'cat.book.5': 'The Lion’s Snack',
+    'cat.say.laser.on': 'A red dot! His pupils go huge and his eyes lock on.',
+    'cat.say.laser.pounce': 'He pounces, then peeks under his paw. Nothing there. Suspicious.',
+    'cat.say.laser.off': 'The laser clicks off. He keeps staring at the spot where it was.',
+    'cat.say.brush': 'You brush him, head to tail. Little tufts of fur float off and he purrs.',
+    'cat.say.brush.wrong': 'Tail to head? His fur puffs right up and he gives you a look.',
+    'cat.say.psst': 'Psst psst. His ears swivel forward and he turns to you: mrrp?',
+    'cat.say.ignore': 'Psst psst, again? He looks pointedly out of the window, ears sideways.',
+    'cat.say.blink': 'You slow-blink at him. He slow-blinks right back, which in cat means he trusts you.',
+    'cat.say.hat.none': 'Hat off. He looks relieved, and a little smug.',
+    'cat.say.hat.beret': 'A little French beret. He looks mildly unimpressed.',
+    'cat.say.hat.gat': 'A tiny gat, black horsehair and amber beads. He tolerates it.',
+    'cat.say.hat.crown': 'A crown of plum blossoms. He wears it like he was born to.',
+    'cat.say.hat.shake': 'He shakes his head and the hat goes flying.',
+    'cat.say.nip': 'Catnip! A sniff, a nibble, then he rubs his cheek all over the cushion, very silly.',
+    'cat.say.nip.nap': 'All that excitement: he flops down into a catnip nap.',
+    'cat.say.nip.wait': 'He’s had plenty of catnip for now. Maybe a bit later.',
+    'cat.say.paint': 'Ink on one paw, a sheet of hanji: he stamps a masterpiece and signs it with a little red seal.',
+    'cat.say.paint.done': 'Masterpiece finished. There will never be another quite like it.',
+    'cat.say.paint.wall': 'Masterpiece finished. It goes up on the wall.',
+    'cat.say.book.0': 'You open Toji. He settles across the pages like he’s been reading it for years.',
+    'cat.say.book.1': 'You open The Red and the Black. He lies down right in the middle of a chapter.',
+    'cat.say.book.2': 'You open the Kim Hong-do album. Now there’s a cat in it too.',
+    'cat.say.book.3': 'You open The Art of War. He takes the high ground: the open pages.',
+    'cat.say.book.4': 'You open On War. He has found the centre of gravity, and he is lying on it.',
+    'cat.say.book.5': 'You open The Lion’s Snack, one of her favourite novels. He reads along very seriously, a paw keeping it open.',
+    'cat.say.nudge': 'He nudges {book} off the sill, slowly, looking right at you.',
   },
   fr: {
-    'cat.label': 'Son bébé, un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
-    'cat.label.named': '{name}, son bébé : un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
+    'cat.label': 'Son bébé, un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous et une petite pile de livres à côté. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
+    'cat.label.named': '{name}, son bébé : un chat gris ardoise aux yeux verts, pattes repliées sous lui sur son arbre à chat près de la fenêtre, un pompon suspendu en dessous et une petite pile de livres à côté. Par terre : un bocal de friandises, et un avocat, l’air bien trop content de lui.',
     'cat.caption': 'Son bébé monte la garde près de la fenêtre, et ici, les avocats sont strictement interdits.',
     'cat.caption.named': '{name}, son bébé, monte la garde près de la fenêtre, et ici, les avocats sont strictement interdits.',
-    'cat.hint': 'Lancez l’avocat ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos, grattez-lui le menton, faites boop sur son nez, agitez le pompon ou tapotez le bocal pour une friandise.',
-    'cat.hint.touch': 'Lancez l’avocat du doigt ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos, grattez-lui le menton, faites boop sur son nez, tirez sur le pompon ou touchez le bocal pour une friandise.',
+    'cat.hint': 'Lancez l’avocat ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos, grattez-lui le menton, tapotez le bocal pour une friandise ou un livre pour l’ouvrir, et ouvrez « D’autres jeux » pour un laser, une brosse, des chapeaux et de l’encre.',
+    'cat.hint.touch': 'Lancez l’avocat du doigt ou envoyez-le-lui là-haut : il sait quoi faire. Caressez-lui le dos, grattez-lui le menton, touchez le bocal pour une friandise ou un livre pour l’ouvrir, et ouvrez « D’autres jeux » pour un laser, une brosse, des chapeaux et de l’encre.',
     'cat.btns': 'Jouer avec son bébé',
     'cat.btns.named': 'Jouer avec {name}',
     'cat.btn.poke': 'Piquer l’avocat',
@@ -181,7 +229,7 @@ export const CAT_STRINGS = {
     'cat.m.100': 'Cent. Il accepte d’être payé en friandises.',
     'cat.tally.pets': 'Caresses : {n}',
     'cat.tally.treats': 'Friandises : {n}',
-    'cat.say.back': 'Vous lui caressez le dos. Il ronronne, les yeux mi-clos.',
+    'cat.say.back': 'Vous lui caressez le dos. Il ronronne, les yeux plissés en deux petits arcs heureux.',
     'cat.say.chin': 'Vous lui grattez le menton. Il se penche vers vous et ronronne plus fort.',
     'cat.say.head': 'Vous lui tapotez la tête. Ses oreilles s’aplatissent un instant.',
     'cat.say.over': 'Trop de caresses ! Un petit coup de patte d’avertissement, sans les griffes. Laissez-le souffler un moment.',
@@ -197,14 +245,62 @@ export const CAT_STRINGS = {
     'cat.say.buck': 'Pas sur son dos ! Un coup de reins, un coup de queue, et l’avocat s’envole.',
     'cat.say.sleep': 'Il s’endort, la respiration lente et profonde.',
     'cat.say.busy': 'Il est occupé pour l’instant. Réessayez dans un moment.',
+    'cat.more': 'D’autres jeux',
+    'cat.g.play': 'Jouer',
+    'cat.g.care': 'Soins',
+    'cat.g.chat': 'Parler',
+    'cat.g.dress': 'Se déguiser',
+    'cat.g.art': 'Art',
+    'cat.btn.laser': 'Pointeur laser',
+    'cat.btn.brush': 'Le brosser',
+    'cat.btn.nip': 'Herbe à chat',
+    'cat.btn.psst': 'Psst psst',
+    'cat.btn.blink': 'Cligner lentement',
+    'cat.btn.hat': 'Essayer un chapeau',
+    'cat.btn.paint': 'Peinture à la patte',
+    'cat.btn.book': 'Ouvrir un livre',
+    'cat.tally.art': 'Chefs-d’œuvre : {n}',
+    'cat.psst.word': 'psst psst',
+    'cat.book.0': '« Toji »',
+    'cat.book.1': '« Le Rouge et le Noir »',
+    'cat.book.2': 'l’album de Kim Hong-do',
+    'cat.book.3': '« L’Art de la guerre »',
+    'cat.book.4': '« De la guerre »',
+    'cat.book.5': '« The Lion’s Snack »',
+    'cat.say.laser.on': 'Un point rouge ! Ses pupilles deviennent immenses, ses yeux ne le lâchent plus.',
+    'cat.say.laser.pounce': 'Il bondit, puis jette un œil sous sa patte. Rien. C’est louche.',
+    'cat.say.laser.off': 'Le laser s’éteint. Il fixe encore l’endroit où était le point.',
+    'cat.say.brush': 'Vous le brossez de la tête à la queue. De petites touffes de poils s’envolent et il ronronne.',
+    'cat.say.brush.wrong': 'De la queue vers la tête ? Ses poils se hérissent et il vous lance un regard.',
+    'cat.say.psst': 'Psst psst. Ses oreilles pivotent vers l’avant et il se tourne vers vous : « mrrp ? »',
+    'cat.say.ignore': 'Psst psst, encore ? Il regarde ostensiblement par la fenêtre, les oreilles sur les côtés.',
+    'cat.say.blink': 'Vous clignez lentement des yeux vers lui. Il vous répond de même : en langage chat, ça veut dire qu’il vous fait confiance.',
+    'cat.say.hat.none': 'Plus de chapeau. Il a l’air soulagé, et un peu fier de lui.',
+    'cat.say.hat.beret': 'Un petit béret. Il n’a pas l’air très impressionné.',
+    'cat.say.hat.gat': 'Un minuscule gat, en crin noir avec des perles d’ambre. Il le tolère.',
+    'cat.say.hat.crown': 'Une couronne de fleurs de prunier. Il la porte comme s’il était né avec.',
+    'cat.say.hat.shake': 'Il secoue la tête et le chapeau s’envole.',
+    'cat.say.nip': 'De l’herbe à chat ! Il renifle, grignote, puis se frotte la joue partout sur le coussin, complètement fou.',
+    'cat.say.nip.nap': 'Trop d’émotions : il s’affale dans une sieste à l’herbe à chat.',
+    'cat.say.nip.wait': 'Il a eu assez d’herbe à chat pour l’instant. Un peu plus tard, peut-être.',
+    'cat.say.paint': 'De l’encre sur une patte, une feuille de hanji : il tamponne un chef-d’œuvre et le signe d’un petit sceau rouge.',
+    'cat.say.paint.done': 'Chef-d’œuvre terminé. Il n’y en aura jamais d’autre tout à fait pareil.',
+    'cat.say.paint.wall': 'Chef-d’œuvre terminé. Il est accroché au mur.',
+    'cat.say.book.0': 'Vous ouvrez « Toji ». Il s’installe sur les pages comme s’il le lisait depuis des années.',
+    'cat.say.book.1': 'Vous ouvrez « Le Rouge et le Noir ». Il se couche en plein milieu d’un chapitre.',
+    'cat.say.book.2': 'Vous ouvrez l’album de Kim Hong-do. Maintenant, il y a un chat dedans aussi.',
+    'cat.say.book.3': 'Vous ouvrez « L’Art de la guerre ». Il prend les hauteurs : les pages ouvertes.',
+    'cat.say.book.4': 'Vous ouvrez « De la guerre ». Il a trouvé le centre de gravité, et il est couché dessus.',
+    'cat.say.book.5': 'Vous ouvrez « The Lion’s Snack », l’un de ses romans préférés. Il le lit avec le plus grand sérieux, une patte posée dessus pour le garder ouvert.',
+    'cat.say.nudge': 'Il pousse {book} hors du rebord de la fenêtre, lentement, en vous regardant droit dans les yeux.',
   },
   ko: {
-    'cat.label': '미화네 아기: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
-    'cat.label.named': '미화네 아기 {name}: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
+    'cat.label': '미화네 아기: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있고, 옆에는 책 몇 권이 쌓여 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
+    'cat.label.named': '미화네 아기 {name}: 초록 눈의 짙은 회색 고양이가 창가 캣타워 위에서 식빵을 굽고 있고, 그 아래엔 폼폼 장난감이 대롱대롱 매달려 있고, 옆에는 책 몇 권이 쌓여 있어요. 바닥에는 간식 통 하나와, 괜히 잘난 척하는 아보카도 하나가 있어요.',
     'cat.caption': '창가를 지키는 미화네 아기. 이 집은 아보카도 출입 금지예요.',
     'cat.caption.named': '창가를 지키는 미화네 아기, {name}. 이 집은 아보카도 출입 금지예요.',
-    'cat.hint': '아보카도를 휙 던지거나 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 등을 쓰다듬고, 턱을 긁어 주고, 코를 콕 눌러 보고, 폼폼을 흔들거나 간식 통을 눌러 간식을 줘 보세요.',
-    'cat.hint.touch': '아보카도를 손가락으로 휙 던지거나 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 등을 쓰다듬고, 턱을 긁어 주고, 코를 톡 건드려 보고, 폼폼을 당기거나 간식 통을 눌러 간식을 줘 보세요.',
+    'cat.hint': '아보카도를 휙 던지거나 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 등을 쓰다듬고, 턱을 긁어 주고, 간식 통이나 책을 눌러 보고, ‘더 놀기’에서 레이저, 빗, 모자, 먹물도 찾아보세요.',
+    'cat.hint.touch': '아보카도를 손가락으로 휙 던지거나 아기 쪽으로 올려 보내 보세요. 알아서 처리해 줄 거예요. 등을 쓰다듬고, 턱을 긁어 주고, 간식 통이나 책을 톡 눌러 보고, ‘더 놀기’에서 레이저, 빗, 모자, 먹물도 찾아보세요.',
     'cat.btns': '아기랑 놀기',
     'cat.btns.named': '{name}하고 놀기',
     'cat.btn.poke': '아보카도 콕 찌르기',
@@ -228,7 +324,7 @@ export const CAT_STRINGS = {
     'cat.m.100': '백 번! 수고비는 간식으로 받는대요.',
     'cat.tally.pets': '쓰다듬기: {n}번',
     'cat.tally.treats': '간식: {n}개',
-    'cat.say.back': '등을 쓰다듬어 주니 눈을 반쯤 감고 골골거려요.',
+    'cat.say.back': '등을 쓰다듬어 주니 눈을 행복하게 꼭 감고 골골거려요.',
     'cat.say.chin': '턱 밑을 긁어 주니 몸을 기대 오며 더 크게 골골거려요.',
     'cat.say.head': '머리를 토닥이니 귀가 잠깐 납작해져요.',
     'cat.say.over': '너무 많이 쓰다듬었어요! 발톱 없이 살짝 경고 냥펀치. 잠깐 쉬게 해 주세요.',
@@ -244,6 +340,54 @@ export const CAT_STRINGS = {
     'cat.say.buck': '감히 등 위에! 엉덩이를 들썩이고 꼬리를 휙 휘두르자 아보카도가 날아가요.',
     'cat.say.sleep': '숨소리가 느려지더니 새근새근 잠이 들었어요.',
     'cat.say.busy': '지금은 바빠요. 조금 있다가 다시 해 보세요.',
+    'cat.more': '더 놀기',
+    'cat.g.play': '놀이',
+    'cat.g.care': '돌봄',
+    'cat.g.chat': '대화',
+    'cat.g.dress': '꾸미기',
+    'cat.g.art': '예술',
+    'cat.btn.laser': '레이저 포인터',
+    'cat.btn.brush': '빗질해 주기',
+    'cat.btn.nip': '캣닢 주기',
+    'cat.btn.psst': '살짝 불러 보기',
+    'cat.btn.blink': '천천히 눈 깜빡이기',
+    'cat.btn.hat': '모자 씌우기',
+    'cat.btn.paint': '발도장 그림',
+    'cat.btn.book': '책 펼치기',
+    'cat.tally.art': '걸작: {n}점',
+    'cat.psst.word': '나비야~',
+    'cat.book.0': '『토지』',
+    'cat.book.1': '『적과 흑』',
+    'cat.book.2': '김홍도 화첩',
+    'cat.book.3': '『손자병법』',
+    'cat.book.4': '『전쟁론』',
+    'cat.book.5': '『The Lion’s Snack』',
+    'cat.say.laser.on': '빨간 점이다! 동공이 커다래지고 눈이 점에 딱 고정돼요.',
+    'cat.say.laser.pounce': '와락 덮치고는 앞발을 살짝 들어 확인해요. 아무것도 없네요. 수상해요.',
+    'cat.say.laser.off': '레이저가 꺼졌어요. 그래도 점이 있던 자리를 한참 쳐다봐요.',
+    'cat.say.brush': '머리에서 꼬리 쪽으로 빗질해 주니 털 뭉치가 둥실 날아가고 골골거려요.',
+    'cat.say.brush.wrong': '꼬리에서 머리 쪽으로요? 털이 부스스 곤두서고, 어이없다는 듯 이쪽을 봐요.',
+    'cat.say.psst': '나비야~ 하고 부르니 귀가 앞으로 쫑긋, 고개를 돌리고 “냥?” 해요.',
+    'cat.say.ignore': '또 불러요? 귀를 옆으로 눕히고 대놓고 창밖만 봐요.',
+    'cat.say.blink': '천천히 눈을 깜빡여 주니 아기도 천천히 깜빡여 줘요. 고양이 말로 “믿어요”라는 뜻이래요.',
+    'cat.say.hat.none': '모자를 벗겼어요. 후련하고 조금 의기양양한 표정이에요.',
+    'cat.say.hat.beret': '작은 프랑스 베레모. 별로 감동한 눈치는 아니에요.',
+    'cat.say.hat.gat': '검은 말총에 호박 구슬 끈까지 단 작은 갓. 그럭저럭 참아 주네요.',
+    'cat.say.hat.crown': '매화 화관. 원래부터 쓰고 태어난 것처럼 잘 어울려요.',
+    'cat.say.hat.shake': '고개를 털털 흔들자 모자가 날아가요.',
+    'cat.say.nip': '캣닢이다! 킁킁, 냠냠 하더니 쿠션에 볼을 마구 비벼요. 완전 신났어요.',
+    'cat.say.nip.nap': '너무 신났는지 그대로 털썩, 캣닢 낮잠에 빠졌어요.',
+    'cat.say.nip.wait': '캣닢은 이만하면 충분해요. 조금 있다가 다시 줘요.',
+    'cat.say.paint': '한쪽 앞발에 먹물을 묻혀 한지에 발도장을 꾹꾹 찍고, 작은 빨간 낙관으로 서명해요.',
+    'cat.say.paint.done': '걸작 완성! 세상에 단 하나뿐인 작품이에요.',
+    'cat.say.paint.wall': '걸작 완성! 벽에 걸어 줬어요.',
+    'cat.say.book.0': '『토지』를 펼치니 오래전부터 읽던 책인 양 그 위에 자리를 잡아요.',
+    'cat.say.book.1': '『적과 흑』을 펼치니 딱 읽던 부분 위에 드러누워요.',
+    'cat.say.book.2': '김홍도 화첩을 펼치니, 이제 그림 속에 고양이도 한 마리 있어요.',
+    'cat.say.book.3': '『손자병법』을 펼치니 높은 곳부터 차지해요. 바로 펼친 책 위요.',
+    'cat.say.book.4': '『전쟁론』을 펼치니 무게중심을 찾았대요. 바로 그 위에 누워 있어요.',
+    'cat.say.book.5': '그녀가 아끼는 소설 『The Lion’s Snack』을 펼치니, 앞발로 책을 꾹 눌러 펼쳐 둔 채 아주 진지하게 읽어 내려가요.',
+    'cat.say.nudge': '창턱 위 {book}에 앞발을 대고 천천히 밀어 떨어뜨려요. 이쪽을 빤히 보면서요.',
   },
 };
 const MILESTONES = [1, 3, 5, 10, 15, 25, 40, 60, 100];
@@ -255,6 +399,15 @@ const ICON_PET = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
 const ICON_BOOP = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path fill-rule="evenodd" d="M2.8 2.6l4.5 3.3c1.8-.6 3.6-.6 5.4 0l4.5-3.3-.2 7.1c.5 4.6-3 7.3-7 7.3s-7.5-2.7-7-7.3zM8.6 11.2h2.8L10 12.9z"/></svg>';
 const ICON_TREAT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2 10c2.3-3.6 6.2-4.9 9.8-3.6L16.4 3l-1 7 1 7-4.6-3.4C8.2 14.9 4.3 13.6 2 10z"/><circle cx="6.4" cy="9.2" r="1" fill="#f8f4ec"/></svg>';
 const ICON_TOY = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M10 1.2v7.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="13.4" r="4.4"/><path d="M5 11.2l-1.6-.9M15 11.2l1.6-.9M4.9 15.4l-1.5.8M15.1 15.4l1.5.8M10 18.6v1" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+const ICON_MORE = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M5.2 7.6L10 12.4l4.8-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_LASER = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="3.1"/><path d="M10 1.8v3.4M10 14.8v3.4M1.8 10h3.4M14.8 10h3.4M4.2 4.2l2.3 2.3M13.5 13.5l2.3 2.3M15.8 4.2l-2.3 2.3M4.2 15.8l2.3-2.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
+const ICON_BRUSH = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2.6 11.6c0-3 2.6-5 6-5s6 2 6 5z"/><path d="M13.4 7.8l4.4-4.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M3.6 13.2v3M5.8 13.2v3.4M8 13.2v3.4M10.2 13.2v3.4M12.4 13.2v3.4M14.4 13.2v3" fill="none" stroke="currentColor" stroke-width=".9" stroke-linecap="round"/></svg>';
+const ICON_NIP = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M8.6 18.4C9.4 13 10.4 8 12.6 3.4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><path d="M9.4 13.6C6 14.6 3 13 2.6 10.4c2.8-.6 5.6.4 6.8 3.2zM10 12.6c3.2.6 6-.8 6.8-3.4-2.8-.8-5.6.2-6.8 3.4zM11 8.4C8.6 8.8 6.4 7.4 6.2 5.4c2.2-.4 4.2.6 4.8 3zM11.6 7.8c2.4.2 4.2-1 4.6-3-2.2-.4-4 .6-4.6 3z"/><circle class="cat-ic-flower" cx="12.8" cy="2.6" r="1.6"/></svg>';
+const ICON_PSST = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3.4 4.6l3.6 2.2c1.6-.6 3.2-.6 4.6 0l3.6-2.2-.4 5.4c.4 3.6-2.4 5.8-5.4 5.8s-5.8-2.2-5.4-5.8z"/><path d="M16.2 13.4c1 .6 1.6 1.6 1.6 2.8M17.8 11c1.4.9 2 2.5 1.8 4" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+const ICON_BLINK = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2.4 9.4c2.2 3.8 13 3.8 15.2 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 12.4l-1.2 1.8M8.4 13.4l-.5 2.1M11.6 13.4l.5 2.1M15 12.4l1.2 1.8" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+const ICON_HAT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M2.4 12.6c-.4-3.8 3.4-6.6 8-6.6 4.4 0 7.6 2.2 7.2 5.2-.2 1.6-2.6 2.4-7.6 2.4-5.4 0-7.4-.2-7.6-1z"/><path d="M11 6.2c.2-1.2.8-2.2 1.8-2.8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M3.4 14.6c2.6.8 10.6.8 13.2 0" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+const ICON_PAINT = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><ellipse cx="8.6" cy="12.6" rx="3.6" ry="2.9"/><circle cx="3.9" cy="8.4" r="1.5"/><circle cx="6.9" cy="5.6" r="1.6"/><circle cx="10.4" cy="5.6" r="1.6"/><circle cx="13.3" cy="8.4" r="1.5"/><rect class="cat-ic-seal" x="14.2" y="13.4" width="4.2" height="4.2" rx=".6"/></svg>';
+const ICON_BOOK = '<svg viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M1.8 5c3-1.2 5.8-.8 8.2 1 2.4-1.8 5.2-2.2 8.2-1v11.2c-3-1.2-5.8-.8-8.2 1-2.4-1.8-5.2-2.2-8.2-1z"/><path d="M10 6v10.8" fill="none" stroke="#f8f4ec" stroke-width=".9"/></svg>';
 
 /** The inside of the fragment (the outer element is `<div class="cat" id="cat">`). */
 export const CAT_INNER = `
@@ -263,6 +416,7 @@ export const CAT_INNER = `
     <canvas class="cat-fg" aria-hidden="true"></canvas>
     <span class="cat-grab" aria-hidden="true"></span>
     <span class="cat-grab cat-grab--toy" aria-hidden="true"></span>
+    <span class="cat-grab cat-grab--dot" aria-hidden="true"></span>
   </div>
   <p class="cat-caption"><span class="cat-caption-main"></span> <span class="cat-caption-hint"></span></p>
   <div class="cat-bar">
@@ -275,7 +429,28 @@ export const CAT_INNER = `
       <button type="button" class="cat-btn cat-btn--treat">${ICON_TREAT}<span class="cat-btn-text" data-ck="cat.btn.treat"></span></button>
       <button type="button" class="cat-btn cat-btn--toy">${ICON_TOY}<span class="cat-btn-text" data-ck="cat.btn.toy"></span></button>
     </div>
-    <p class="cat-tally" hidden><span class="cat-tally-pets"></span> <span class="cat-tally-treats"></span></p>
+    <button type="button" class="cat-more" aria-expanded="false" aria-controls="cat-more">${ICON_MORE}<span class="cat-more-text" data-ck="cat.more"></span></button>
+    <div class="cat-more-panel" id="cat-more" hidden>
+      <div class="cat-group" role="group" aria-labelledby="cat-g-play"><p class="cat-group-name" id="cat-g-play" data-ck="cat.g.play"></p><div class="cat-group-btns">
+        <button type="button" class="cat-btn cat-btn--laser" aria-pressed="false">${ICON_LASER}<span class="cat-btn-text" data-ck="cat.btn.laser"></span></button>
+      </div></div>
+      <div class="cat-group cat-group--2" role="group" aria-labelledby="cat-g-care"><p class="cat-group-name" id="cat-g-care" data-ck="cat.g.care"></p><div class="cat-group-btns">
+        <button type="button" class="cat-btn cat-btn--brush">${ICON_BRUSH}<span class="cat-btn-text" data-ck="cat.btn.brush"></span></button>
+        <button type="button" class="cat-btn cat-btn--nip">${ICON_NIP}<span class="cat-btn-text" data-ck="cat.btn.nip"></span></button>
+      </div></div>
+      <div class="cat-group cat-group--2" role="group" aria-labelledby="cat-g-chat"><p class="cat-group-name" id="cat-g-chat" data-ck="cat.g.chat"></p><div class="cat-group-btns">
+        <button type="button" class="cat-btn cat-btn--psst">${ICON_PSST}<span class="cat-btn-text" data-ck="cat.btn.psst"></span></button>
+        <button type="button" class="cat-btn cat-btn--blink">${ICON_BLINK}<span class="cat-btn-text" data-ck="cat.btn.blink"></span></button>
+      </div></div>
+      <div class="cat-group" role="group" aria-labelledby="cat-g-dress"><p class="cat-group-name" id="cat-g-dress" data-ck="cat.g.dress"></p><div class="cat-group-btns">
+        <button type="button" class="cat-btn cat-btn--hat">${ICON_HAT}<span class="cat-btn-text" data-ck="cat.btn.hat"></span></button>
+      </div></div>
+      <div class="cat-group cat-group--2" role="group" aria-labelledby="cat-g-art"><p class="cat-group-name" id="cat-g-art" data-ck="cat.g.art"></p><div class="cat-group-btns">
+        <button type="button" class="cat-btn cat-btn--paint">${ICON_PAINT}<span class="cat-btn-text" data-ck="cat.btn.paint"></span></button>
+        <button type="button" class="cat-btn cat-btn--book">${ICON_BOOK}<span class="cat-btn-text" data-ck="cat.btn.book"></span></button>
+      </div></div>
+    </div>
+    <p class="cat-tally" hidden><span class="cat-tally-pets"></span> <span class="cat-tally-treats"></span> <span class="cat-tally-art"></span></p>
   </div>
   <p class="cat-say" role="status" aria-live="polite"></p>
 `;
@@ -925,22 +1100,6 @@ function paintEarBack(g, side) {
     after: (g) => earInk(g, side, 61),
   });
 }
-// a copy of an ear with its base faded, for when it comes round in front of his head
-function fadedBase(sp) {
-  const c = document.createElement('canvas');
-  c.width = sp.c.width; c.height = sp.c.height;
-  const g = c.getContext('2d');
-  g.drawImage(sp.c, 0, 0);
-  const k = c.height / sp.h;
-  const gr = g.createLinearGradient(0, (10 - sp.y0) * k, 0, (-9 - sp.y0) * k);
-  gr.addColorStop(0, 'rgba(0,0,0,1)');
-  gr.addColorStop(1, 'rgba(0,0,0,0)');
-  g.globalCompositeOperation = 'destination-out';
-  g.fillStyle = gr;
-  g.fillRect(0, 0, c.width, c.height);
-  return { c, x0: sp.x0, y0: sp.y0, w: sp.w, h: sp.h };
-}
-
 // the face is a few soft patches laid over the skull where they turn with him:
 // the muzzle round the nose, and a socket and brow round each eye
 const ell = (x, y, cx, cy, rx, ry) => { const dx = (x - cx) / rx, dy = (y - cy) / ry; return Math.sqrt(dx * dx + dy * dy); };
@@ -1161,8 +1320,6 @@ function* catGen(u, dpr, out) {
   yield;
   out.earFL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, -1));
   out.earFR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarFront(g, 1));
-  out.earFLf = fadedBase(out.earFL);
-  out.earFRf = fadedBase(out.earFR);
   yield;
   out.earBL = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, -1));
   out.earBR = makeSprite(-26, -48, 26, 10, hu, dpr, (g) => paintEarBack(g, 1));
@@ -1188,11 +1345,11 @@ function restPose(o = {}) {
     bx: 0, by: 0, lift: 0, breath: 0, rumpY: 0, rumpA: 0,
     hx: 0, hy: 0, yaw: 0.22, pitch: 0.05, roll: 0,
     earFL: 0, earFR: 0, earSL: 0, earSR: 0, earTL: 0, earTR: 0,
-    lidU: 0.04, lidL: 0.04, happy: 0, brow: 0, pupil: 0.3, gx: 0, gy: 0,
+    lidU: 0.04, lidL: 0.04, happy: 0, joy: 0, brow: 0, pupil: 0.3, gx: 0, gy: 0,
     jaw: 0, tongue: 0, lick: 0, fangs: 0, grin: 0, noseTw: 0, whisk: 0, chew: 0, wrinkle: 0,
     nUp: 0, nX: PAW_N[0], nY: PAW_N[1], nBeans: 0, nRot: 0,
     fUp: 0, fX: PAW_F[0], fY: PAW_F[1], fBeans: 0, fRot: 0,
-    tPh: 0, tAmp: 0.12, tCurl: 0.5, tLift: 0, tFlick: 0,
+    tPh: 0, tAmp: 0.12, tCurl: 0.5, tLift: 0, tFlick: 0, puff: 0,
   });
 }
 
@@ -1234,40 +1391,62 @@ function catToHead(x, y) {
   return PT;
 }
 // a face point straight to cat units (for paws reaching his mouth, treats, etc.)
-function facePoint(P, lon, lat, r) { headMatrix(P); faceProj(lon, lat, r, P.yaw, P.pitch); return headToCat(FP.x + P.yaw * 2.5, FP.y + P.pitch * 2); }
+// (with the same limits on the turn and the nod that drawHead uses)
+function facePoint(P, lon, lat, r) {
+  headMatrix(P);
+  const yw = clamp(P.yaw, -FACE_YAW, FACE_YAW), pc = clamp(P.pitch, FACE_UP, FACE_DOWN);
+  faceProj(lon, lat, r, yw, pc);
+  return headToCat(FP.x + yw * 2.5 + (P.yaw - yw) * 9, FP.y + pc * 2 + (P.pitch - pc) * 12);
+}
+// a point in head units to cat units, shifted the way drawHead shifts the face
+function headPoint(P, x, y) {
+  headMatrix(P);
+  const yw = clamp(P.yaw, -FACE_YAW, FACE_YAW), pc = clamp(P.pitch, FACE_UP, FACE_DOWN);
+  return headToCat(x + (P.yaw - yw) * 9, y + (P.pitch - pc) * 12);
+}
 
-const TAIL_N = 15, TAIL_SEG = 10.2;
-const tailX = new Float32Array(TAIL_N + 1), tailY = new Float32Array(TAIL_N + 1);
-function tailChain(P) {
+// the tail bends along its length as one smooth curve, sampled finely so the
+// slices of the sprite never open up into notches on the outside of a bend
+const TAIL_N = 15, TAIL_SEG = 10.2, TAIL_M = 45, TAIL_DS = (TAIL_N * TAIL_SEG) / TAIL_M;
+const tailX = new Float32Array(TAIL_M + 1), tailY = new Float32Array(TAIL_M + 1), tailA = new Float32Array(TAIL_M);
+// how thick it is along its length (with the fur), for things that bump into it
+const tailR = (u) => lerp(13, 9.5, u);
+// (calm: without the quick twitches and bumps, just where it's swaying)
+function tailChain(P, calm) {
   let x = TAIL_ROOT[0] + P.bx * 0.4, y = TAIL_ROOT[1] + P.rumpY * 0.5;
   tailX[0] = x; tailY[0] = y;
-  for (let i = 0; i < TAIL_N; i++) {
-    const u = (i + 1) / TAIL_N;
+  // pushed aside by something: everything past the spot it was pushed at swings over
+  const bend = calm ? 0 : P.tBend || 0, bu = P.tBendU || 0.5, flick = calm ? 0 : P.tFlick;
+  for (let i = 0; i < TAIL_M; i++) {
+    const u = (i + 0.75) / TAIL_M;
     let a = Math.PI / 2 + 0.55 * (1 - smooth(0, 0.3, u)) + P.tLift * (1 - u) * 0.9;
     a += P.tAmp * Math.sin(P.tPh - u * 2.6) * smooth(0.08, 1, u);
     a -= P.tCurl * smooth(0.55, 1, u) * 1.55;
-    a += P.tFlick * smooth(0.5, 1, u);
-    x += Math.cos(a) * TAIL_SEG; y += Math.sin(a) * TAIL_SEG;
+    a += flick * smooth(0.5, 1, u);
+    if (bend) a += bend * smooth(bu - 0.35, bu, u);
+    tailA[i] = a;
+    x += Math.cos(a) * TAIL_DS; y += Math.sin(a) * TAIL_DS;
     tailX[i + 1] = x; tailY[i + 1] = y;
   }
 }
 
-// slices of the straight tail sprite, one per link, tip first so the base sits on top
+// thin slices of the straight tail sprite along the curve, tip first so the base sits on top
 function drawTail(g, SP, P) {
   tailChain(P);
-  const sp = SP.tail, k = sp.c.width / sp.w, ov = 2.2;
-  for (let i = TAIL_N - 1; i >= 0; i--) {
-    const a = Math.atan2(tailY[i + 1] - tailY[i], tailX[i + 1] - tailX[i]);
-    const xa = i === 0 ? sp.x0 : i * TAIL_SEG - ov, xb = i === TAIL_N - 1 ? sp.x0 + sp.w : (i + 1) * TAIL_SEG + ov;
+  const sp = SP.tail, k = sp.c.width / sp.w, ov = 1.1, puff = P.puff || 0;
+  for (let i = TAIL_M - 1; i >= 0; i--) {
+    const xa = i === 0 ? sp.x0 : i * TAIL_DS - ov, xb = i === TAIL_M - 1 ? sp.x0 + sp.w : (i + 1) * TAIL_DS + ov;
     g.save();
     g.translate(tailX[i], tailY[i]);
-    g.rotate(a);
-    g.drawImage(sp.c, (xa - sp.x0) * k, 0, (xb - xa) * k, sp.c.height, xa - i * TAIL_SEG, sp.y0, xb - xa, sp.h);
+    g.rotate(tailA[i]);
+    // all fluffed up, bottle-brush style
+    if (puff > 0.01) g.scale(1, 1 + 0.5 * puff * smooth(0, 0.3, (i + 0.5) / TAIL_M));
+    g.drawImage(sp.c, (xa - sp.x0) * k, 0, (xb - xa) * k, sp.c.height, xa - i * TAIL_DS, sp.y0, xb - xa, sp.h);
     g.restore();
   }
 }
 
-function drawLeg(g, SP, ax, ay, px, py, up, beans, rot) {
+function drawLeg(g, SP, ax, ay, px, py, up, beans, rot, ink = 0) {
   const dx = px - ax, dy = py - ay, d = Math.hypot(dx, dy) || 1, a = Math.atan2(dy, dx);
   g.save();
   g.translate(ax, ay); g.rotate(a);
@@ -1277,26 +1456,78 @@ function drawLeg(g, SP, ax, ay, px, py, up, beans, rot) {
   g.restore();
   g.save();
   g.translate(px, py); g.rotate(a + rot);
-  g.globalAlpha = clamp((up - 0.08) * 6);
+  const al = clamp((up - 0.08) * 6);
+  g.globalAlpha = al;
   blit(g, beans > 0.5 ? SP.pawB : SP.pawT);
+  // still wet from the ink dish
+  if (ink > 0.02) for (const [x, y, r] of [[12.6, -6.6, 3], [15.4, -2, 3.2], [15.4, 2.6, 3.2], [12.6, 7, 3], [5, 0, 6.2]]) dab(g, x, y, r, INK_RGB, 0.8 * ink * al, 0.55);
   g.restore();
   g.globalAlpha = 1;
 }
+// his fur standing up along his back (cat units, along the top of the loaf)
+const PUFF_PTS = (() => {
+  const R = rng(213), out = [];
+  for (let x = -138; x <= 70; x += 2.4) {
+    const y = BACK_Y(x), dy = BACK_Y(x + 3) - BACK_Y(x - 3), l = Math.hypot(6, dy) || 1;
+    out.push([x, y, dy / l, -6 / l, R(), R()]);
+  }
+  return out;
+})();
+function drawPuff(g, k) {
+  g.lineCap = 'round';
+  for (const [x, y, nx, ny, r1, r2] of PUFF_PTS) {
+    const len = (3 + 7 * r1) * k, a = Math.atan2(ny, nx) + (r2 - 0.5) * 0.9;
+    const x0 = x - nx * 2, y0 = y + 2 - ny * 2;
+    g.strokeStyle = r2 < 0.3 ? rgba(SHEEN, 0.4 * k) : rgba([26, 28, 34], 0.9 * k);
+    g.lineWidth = 0.8 + r1 * 0.9;
+    g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x0 + Math.cos(a) * len * 0.5 + (r1 - 0.5) * 2, y0 + Math.sin(a) * len * 0.5, x0 + Math.cos(a) * len, y0 + Math.sin(a) * len); g.stroke();
+  }
+}
 
-// the near ear or the far one; returns false if we see its back
+// The ears point out from a spot low in his head (EAR_O). The skull is a flat
+// sprite that doesn't turn, so instead of following the sphere (which ran an
+// ear down behind the dome when he looked down and across) each root slides
+// along the skull's own outline and sits the same little way inside it
+const EAR_O = 0.7 * FACE_R, EAR_SINK = 7.5;
+// how far the outline is from EAR_O, by angle, over the top half
+const SKULL_RN = 64;
+const SKULL_RIM = (() => {
+  const pts = closedSpline(SKULL, 0.5), out = new Float32Array(SKULL_RN + 1);
+  for (let i = 0; i <= SKULL_RN; i++) {
+    const a = -Math.PI * (i / SKULL_RN), dx = Math.cos(a), dy = Math.sin(a);
+    let best = 0;
+    for (let j = 0; j < pts.length; j++) {
+      const [x0, y0] = pts[j], [x1, y1] = pts[(j + 1) % pts.length];
+      const ex = x1 - x0, ey = y1 - y0, den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-9) continue;
+      const qx = x0, qy = y0 - EAR_O;
+      const t = (qx * ey - qy * ex) / den, u = (qx * dy - qy * dx) / den;
+      if (t > 0 && u >= 0 && u <= 1 && t > best) best = t;
+    }
+    out[i] = best;
+  }
+  return out;
+})();
+function skullRim(a) {
+  const f = clamp(-a / Math.PI) * SKULL_RN, i = Math.min(SKULL_RN - 1, Math.floor(f));
+  return lerp(SKULL_RIM[i], SKULL_RIM[i + 1], f - i);
+}
+
+// the near ear or the far one; returns how much it faces us (below 0, we see its back)
 const EM = new Float64Array(6);
 function earMatrix(side, P) {
-  // the ears ride high on the skull, so they only follow half the nod
-  faceProj(side * 1.0, 0.7, FACE_R, P.yaw, P.pitch * 0.5);
+  // the ears ride high on the skull, so they only follow some of the nod
+  faceProj(side * 1.0, 0.7, FACE_R, P.yaw, P.pitch * 0.35);
   const fl = side < 0 ? P.earFL : P.earFR, sw = side < 0 ? P.earSL : P.earSR, tw = side < 0 ? P.earTL : P.earTR;
-  const ang = Math.atan2(FP.ny - 0.7, FP.nx) + side * (fl * 1.05 + sw * 0.22) + tw;
+  const a0 = Math.atan2(FP.y - EAR_O, FP.x), r = skullRim(a0) - EAR_SINK;
+  const ang = a0 + side * (fl * 1.05 + sw * 0.22) + tw;
   const ul = 0.9 - fl * 0.28;
   const ux = Math.cos(ang) * ul, uy = Math.sin(ang) * ul;
   const facing = Math.cos(P.yaw * 0.9 + side * (0.35 + sw * 1.5 + fl * 0.5)) * Math.cos(P.pitch * 0.6);
   const wl = Math.max(0.5, 0.35 + 0.65 * Math.abs(facing)) / ul;
   EM[0] = -uy * wl; EM[1] = ux * wl; EM[2] = -ux; EM[3] = -uy;
-  EM[4] = FP.x + P.yaw * 2.5; EM[5] = FP.y + P.pitch * 2;
-  return facing > 0;
+  EM[4] = Math.cos(a0) * r + P.yaw * 2.5; EM[5] = EAR_O + Math.sin(a0) * r + P.pitch * 2;
+  return facing;
 }
 
 // a point along a cubic, for the wet line under the eye
@@ -1314,30 +1545,39 @@ function eyeShape(g, xi, yi, xo, yo, c1x, c1y, c2x, c2y, c3x, c3y, c4x, c4y) {
   g.closePath();
 }
 
+// a soft warm flush under the eye when he's happy
+function blush(g, side, k) {
+  if (k <= 0.02) return;
+  dab(g, side * 1.5, EYE_H * 1.55, 9.5, BLUSH, 0.3 * k, 0.25);
+  dab(g, side * 3.5, EYE_H * 1.45, 5, [246, 150, 140], 0.18 * k, 0.4);
+}
 function drawEye(g, SP, P, side) {
-  const ew = EYE_W, eh = EYE_H, hp = P.happy;
-  // when he's content the outer corner eases down and the upper lid stays
-  // round, so a half-shut eye reads as a smile and not a glare
+  const ew = EYE_W, eh = EYE_H, hp = P.happy, jy = clamp(P.joy);
+  // when he's pleased the outer corner eases down and the upper lid stays
+  // round; the lower lid only lifts a little, so it never turns into a squint
   const xi = -side * ew, xo = side * ew, yi = 2, yo = -1.8 + 1.6 * hp;
   const lo = clamp(1 - P.lidL);
-  let up = clamp(1 - P.lidU);
+  // joy closes them right up, and early, so the way there never reads as a squint
+  let up = clamp(1 - Math.max(P.lidU, smooth(0, 0.4, jy)));
   if (up >= 0.07) up = lerp(up, Math.max(up, 0.72 * clamp((up - 0.07) / 0.4)), clamp(hp * 1.5));
-  const br = P.brow - 0.5 * hp;
+  const br = P.brow * (1 - jy) - 0.5 * hp;
   g.lineCap = 'round';
   g.strokeStyle = '#0c0d11';
   if (up < 0.07) {
-    // closed: a happy little arch, or a sleepy curve
-    const cy = lerp(eh * 0.5, -eh * 0.7, P.happy);
-    g.lineWidth = 2.1;
-    g.beginPath(); g.moveTo(xi, yi + 0.5); g.quadraticCurveTo(0, cy + 0.5, xo, yo + 0.5); g.stroke();
-    g.lineWidth = 1.1; g.beginPath(); g.moveTo(xi, yi + 0.5); g.lineTo(xi - side * 2.4, yi + 2.6); g.stroke();
+    // closed: a soft happy ^ (both corners level, so the two eyes match),
+    // or a sleepy curve
+    const k = clamp(Math.max(hp, jy * 1.6)), nw = 1 - 0.14 * k;
+    const y0 = lerp(yi, 1.6, k), y1 = lerp(yo, 1.6, k), cy = lerp(eh * 0.5, -eh * 0.9, k);
+    g.lineWidth = lerp(2.1, 2.7, k);
+    g.beginPath(); g.moveTo(xi * nw, y0 + 0.5); g.quadraticCurveTo(0, cy + 0.5, xo * nw, y1 + 0.5); g.stroke();
+    if (k < 0.5) { g.lineWidth = 1.1; g.beginPath(); g.moveTo(xi, yi + 0.5); g.lineTo(xi - side * 2.4, yi + 2.6); g.stroke(); }
     return;
   }
-  // a happy eye: the lower lid pushes up into a soft crescent
+  // a pleased eye: the lower lid pushes up a touch
   const c1x = xi * 0.4, c1y = yi - eh * 1.56 * up * (1 - 0.5 * Math.max(0, br));
   const c2x = xo * 0.45, c2y = yo - eh * 1.36 * up * (1 - 0.4 * Math.max(0, -br));
-  const c3x = xo * 0.5, c3y = Math.max(c2y + 2.5, yo + eh * (1.08 * lo - 2.3 * hp));
-  const c4x = xi * 0.4, c4y = Math.max(c1y + 2.5, yi + eh * (0.98 * lo - 2.2 * hp));
+  const c3x = xo * 0.5, c3y = Math.max(c2y + 2.5, yo + eh * (1.08 * lo - 0.9 * hp));
+  const c4x = xi * 0.4, c4y = Math.max(c1y + 2.5, yi + eh * (0.98 * lo - 0.85 * hp));
   // the dark rim round it
   g.save();
   g.scale(1.14, 1.2);
@@ -1465,8 +1705,9 @@ function drawMouth(g, SP, P) {
   blit(g, SP.nose);
   g.restore();
   // lips: the little line down from the nose and its two curls
-  const cy = 8.8 - P.grin * 1.4;
-  g.strokeStyle = 'rgba(10,10,13,.92)'; g.lineWidth = 1.05; g.lineCap = 'round';
+  // (a bit bolder when he's happy, so the little smile reads)
+  const cy = 8.8 - P.grin * 1.4, jy = clamp(P.joy);
+  g.strokeStyle = 'rgba(10,10,13,.92)'; g.lineWidth = 1.05 + 0.35 * jy; g.lineCap = 'round';
   g.beginPath();
   g.moveTo(0, 5 + P.noseTw); g.lineTo(0, 7.4);
   if (J <= 0.02) {
@@ -1476,7 +1717,7 @@ function drawMouth(g, SP, P) {
   g.stroke();
   // a little light catching the lower lip, so the mouth reads on such dark fur
   if (J <= 0.02) {
-    g.strokeStyle = 'rgba(150,158,180,.28)'; g.lineWidth = 0.8;
+    g.strokeStyle = rgba([150, 158, 180], 0.28 + 0.14 * jy); g.lineWidth = 0.8;
     g.beginPath();
     g.moveTo(-5.8, cy + 1.6); g.quadraticCurveTo(-2.4, 11.8 + P.grin * 0.6, 0, 9);
     g.quadraticCurveTo(2.4, 11.8 + P.grin * 0.6, 5.8, cy + 1.6);
@@ -1504,39 +1745,33 @@ function whiskers(g, P, side, M) {
   }
 }
 
+// his face only turns and nods so far; past that the whole head just shifts a little
+const FACE_YAW = 0.8, FACE_UP = -0.45, FACE_DOWN = 0.42;
 const MM = new Float64Array(6);
-function drawHead(g, SP, P) {
+function drawHead(g, SP, P, extra) {
   headMatrix(P);
   g.save();
   g.transform(HM[0], HM[1], HM[2], HM[3], HM[4], HM[5]);
-  // his face turns only so far; past that the whole head just shifts a little
-  const yaw0 = P.yaw, yw = clamp(yaw0, -0.8, 0.8), shift = (yaw0 - yw) * 9;
-  P.yaw = yw;
-  g.translate(shift, 0);
-  const ox = yw * 2.5, oy = P.pitch * 2;
-  // ears sit behind the skull, unless one has come round in front of it
-  let ahead = 0;
+  const yaw0 = P.yaw, yw = clamp(yaw0, -FACE_YAW, FACE_YAW);
+  const pitch0 = P.pitch, pc = clamp(pitch0, FACE_UP, FACE_DOWN);
+  P.yaw = yw; P.pitch = pc;
+  g.translate((yaw0 - yw) * 9, (pitch0 - pc) * 12);
+  const ox = yw * 2.5, oy = pc * 2;
+  // the ears sit behind the skull; turning away, the back of one fades in over its
+  // front (same outline, so it never pops)
   for (let side = -1; side <= 1; side += 2) {
-    const front = earMatrix(side, P);
-    if (front && FP.y > -22) { ahead = side; continue; }
+    const fa = smooth(-0.3, 0.3, earMatrix(side, P));
     g.save();
     g.transform(EM[0], EM[1], EM[2], EM[3], EM[4], EM[5]);
-    blit(g, front ? (side < 0 ? SP.earFL : SP.earFR) : (side < 0 ? SP.earBL : SP.earBR));
+    if (fa < 0.995) blit(g, side < 0 ? SP.earBL : SP.earBR);
+    if (fa > 0.005) { g.globalAlpha = fa; blit(g, side < 0 ? SP.earFL : SP.earFR); g.globalAlpha = 1; }
     g.restore();
   }
   blit(g, SP.skull, ox, oy);
-  if (ahead) {
-    earMatrix(ahead, P);
-    g.save();
-    g.transform(EM[0], EM[1], EM[2], EM[3], EM[4], EM[5]);
-    blit(g, ahead < 0 ? SP.earFLf : SP.earFRf);
-    g.restore();
-  }
   // the muzzle frame, used for whisker roots too
   faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
   MM[0] = FP.ex; MM[1] = FP.ey; MM[2] = FP.sx; MM[3] = FP.sy; MM[4] = FP.x + ox; MM[5] = FP.y + oy;
   const far = P.yaw >= 0 ? 1 : -1;
-  whiskers(g, P, far, MM);
   // the hollows round his eyes and the brows over them, then the eyes, far one first
   for (let pass = 0; pass < 2; pass++) {
     for (let i = 0; i < 2; i++) {
@@ -1547,7 +1782,7 @@ function drawHead(g, SP, P) {
       const k = Math.max(1, 0.45 / (Math.abs(FP.ex) || 1));
       g.save();
       g.transform(FP.ex * k, FP.ey * k, FP.sx, FP.sy, FP.x + ox, FP.y + oy);
-      if (pass === 0) blit(g, side < 0 ? SP.sockL : SP.sockR);
+      if (pass === 0) { blit(g, side < 0 ? SP.sockL : SP.sockR); blush(g, side, P.joy * clamp(FP.z * 1.6)); }
       else { drawEye(g, SP, P, side); browWhiskers(g, side, clamp(FP.z * 1.4)); }
       g.restore();
     }
@@ -1556,9 +1791,12 @@ function drawHead(g, SP, P) {
   g.transform(MM[0], MM[1], MM[2], MM[3], MM[4], MM[5]);
   drawMouth(g, SP, P);
   g.restore();
+  // both sets of whiskers over the muzzle, so neither jumps in front of it as he turns
+  whiskers(g, P, far, MM);
   whiskers(g, P, -far, MM);
+  if (extra) extra(g, ox, oy);
   g.restore();
-  P.yaw = yaw0;
+  P.yaw = yaw0; P.pitch = pitch0;
 }
 
 
@@ -1577,8 +1815,9 @@ function drawCat(g, SP, P, hk) {
   g.save();
   g.translate(0, 12); g.scale(1 + br * 0.004, 1 + br * 0.016); g.translate(0, -12);
   g.save();
-  g.translate(-40, 0); g.scale(1, 1 - P.lift / 260); g.translate(40, 0);
+  g.translate(-40, 0); g.scale(1, 1 - P.lift / 260 + 0.03 * (P.puff || 0)); g.translate(40, 0);
   blit(g, SP.torso);
+  if (P.puff > 0.02) drawPuff(g, P.puff);
   g.restore();
   g.save();
   g.translate(-92, 12 + P.rumpY); g.rotate(P.rumpA); g.translate(92, -12);
@@ -1613,13 +1852,13 @@ function drawCat(g, SP, P, hk) {
   g.restore();
   if (hk && hk.front) hk.front();
   if (P.nUp <= 0.15) blit(g, SP.tuckN, PAW_N[0] + P.bx, PAW_N[1] + P.by - P.lift);
-  drawHead(g, SP, P);
+  drawHead(g, SP, P, hk && hk.head);
   if (P.nUp > 0.15) nearLeg(g, SP, P);
 }
 function nearLeg(g, SP, P) {
   g.save();
   g.translate(P.bx, P.by - P.lift);
-  drawLeg(g, SP, SHOULDER_N[0], SHOULDER_N[1], P.nX, P.nY, P.nUp, P.nBeans, P.nRot);
+  drawLeg(g, SP, SHOULDER_N[0], SHOULDER_N[1], P.nX, P.nY, P.nUp, P.nBeans, P.nRot, P.ink || 0);
   g.restore();
 }
 
@@ -2146,28 +2385,454 @@ function paintPom(g) {
   }
 }
 
+// a little grooming brush (s units): a walnut back on a pad of fine silver pins,
+// the pins' tips at the origin, the handle angled up and back to the left
+const WALNUT = [112, 72, 44], WALNUT_L = [150, 104, 66];
+function paintBrushTool(g) {
+  const R = rng(171);
+  // the handle
+  g.save();
+  g.translate(-11, -6); g.rotate(-2.62);
+  let gr = g.createLinearGradient(0, -2.6, 0, 2.6);
+  gr.addColorStop(0, rgba(WALNUT_L, 1)); gr.addColorStop(1, rgba(WALNUT, 1));
+  g.fillStyle = gr;
+  g.beginPath();
+  g.moveTo(0, -2.4); g.quadraticCurveTo(12, -2.2, 20, -2.8); g.quadraticCurveTo(24, 0, 20, 2.8); g.quadraticCurveTo(12, 2.4, 0, 2.6); g.closePath();
+  g.fill();
+  g.strokeStyle = rgba(WOOD_INK, 0.6); g.lineWidth = 0.6; g.stroke();
+  g.fillStyle = 'rgba(40,24,14,.6)';
+  g.beginPath(); g.arc(18.5, 0, 1, 0, TAU); g.fill();
+  g.restore();
+  // the pins
+  g.lineCap = 'round';
+  for (let i = 0; i < 26; i++) {
+    const x = -12 + i * 0.95;
+    g.strokeStyle = rgba(R() < 0.5 ? [176, 180, 190] : [222, 224, 230], 0.95);
+    g.lineWidth = 0.45;
+    g.beginPath(); g.moveTo(x, -3.6); g.lineTo(x + (R() - 0.5) * 0.6, -0.2 + R() * 0.4); g.stroke();
+  }
+  // the dark pad and the wooden back
+  g.fillStyle = 'rgb(48,40,38)';
+  g.beginPath(); g.roundRect ? g.roundRect(-13, -5.6, 26, 2.4, 1.2) : g.rect(-13, -5.6, 26, 2.4); g.fill();
+  gr = g.createLinearGradient(0, -11, 0, -5);
+  gr.addColorStop(0, rgba(WALNUT_L, 1)); gr.addColorStop(1, rgba(WALNUT, 1));
+  g.fillStyle = gr;
+  g.beginPath(); g.roundRect ? g.roundRect(-14, -10.6, 28, 5.4, 2.6) : g.rect(-14, -10.6, 28, 5.4); g.fill();
+  g.strokeStyle = 'rgba(255,236,206,.35)'; g.lineWidth = 0.6;
+  g.beginPath(); g.moveTo(-11, -9.6); g.lineTo(10, -9.6); g.stroke();
+  g.strokeStyle = rgba(WOOD_INK, 0.7); g.lineWidth = 0.6;
+  g.beginPath(); g.roundRect ? g.roundRect(-14, -10.6, 28, 5.4, 2.6) : g.rect(-14, -10.6, 28, 5.4); g.stroke();
+}
+
+// a small saucer of ink for his paw (s units, origin at the middle of its top)
+function paintDish(g) {
+  stamp(g, 0, 4, 15, [70, 54, 40], 0.22, 0.3);
+  let gr = g.createLinearGradient(-12, 0, 12, 0);
+  gr.addColorStop(0, 'rgb(196,204,196)'); gr.addColorStop(0.45, 'rgb(240,242,236)'); gr.addColorStop(1, 'rgb(206,212,204)');
+  g.fillStyle = gr;
+  g.beginPath(); g.moveTo(-12.5, 0); g.quadraticCurveTo(-11.5, 4.6, 0, 4.8); g.quadraticCurveTo(11.5, 4.6, 12.5, 0); g.closePath(); g.fill();
+  g.fillStyle = 'rgb(236,240,232)';
+  g.beginPath(); g.ellipse(0, 0, 12.5, 4.2, 0, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(110,150,128,.75)'; g.lineWidth = 0.8;
+  g.beginPath(); g.ellipse(0, 0, 11.6, 3.7, 0, 0, TAU); g.stroke();
+  gr = g.createRadialGradient(-2, -0.5, 0.5, 0, 0.3, 9);
+  gr.addColorStop(0, 'rgb(40,40,46)'); gr.addColorStop(0.7, 'rgb(14,14,18)'); gr.addColorStop(1, 'rgb(8,8,10)');
+  g.fillStyle = gr;
+  g.beginPath(); g.ellipse(0, 0.3, 8.8, 2.8, 0, 0, TAU); g.fill();
+  g.fillStyle = 'rgba(255,255,255,.35)';
+  g.beginPath(); g.ellipse(-3.4, -0.5, 3.2, 0.55, -0.05, 0, TAU); g.fill();
+  stroke(g, { pts: [[-12.5, 0], [-11.6, 3.4], [-5, 4.8], [5, 4.8], [11.6, 3.4], [12.5, 0]], width: 1, dry: 0.5, tone: 0.5, rgb: [70, 70, 66], seed: 175, bristles: 4 });
+}
+
+// a sprig of catnip: soft grey-green heart-shaped leaves in pairs, a lilac tip
+function catnipLeaf(g, x, y, a, sz, R) {
+  g.save();
+  g.translate(x, y); g.rotate(a); g.scale(sz, sz);
+  g.beginPath();
+  g.moveTo(0, 0);
+  // serrated edges, wide near the stem, coming to a point
+  for (let i = 0; i <= 8; i++) { const u = i / 8, w = Math.sin(Math.PI * Math.pow(u, 0.75)) * 0.55 * (i % 2 ? 0.88 : 1); g.lineTo(u * 1.6, -w); }
+  for (let i = 8; i >= 0; i--) { const u = i / 8, w = Math.sin(Math.PI * Math.pow(u, 0.75)) * 0.55 * (i % 2 ? 0.88 : 1); g.lineTo(u * 1.6, w); }
+  g.closePath();
+  const gr = g.createLinearGradient(0, -0.6, 0, 0.6);
+  gr.addColorStop(0, 'rgb(150,176,128)'); gr.addColorStop(1, 'rgb(98,128,86)');
+  g.fillStyle = gr;
+  g.fill();
+  g.strokeStyle = 'rgba(52,76,44,.7)'; g.lineWidth = 0.08; g.stroke();
+  g.beginPath(); g.moveTo(0.05, 0); g.lineTo(1.4, 0); g.stroke();
+  g.fillStyle = 'rgba(236,240,226,.35)';
+  for (let i = 0; i < 6; i++) { g.beginPath(); g.arc(0.3 + R() * 1.1, (R() - 0.5) * 0.6, 0.05, 0, TAU); g.fill(); }
+  g.restore();
+}
+function paintSprig(g) {
+  const R = rng(181);
+  const pt = (u) => [lerp(-14, 13, u), 4 - 9 * u - 4 * Math.sin(Math.PI * u)];
+  g.strokeStyle = 'rgb(92,116,72)'; g.lineWidth = 1.1; g.lineCap = 'round';
+  g.beginPath();
+  for (let i = 0; i <= 12; i++) { const [x, y] = pt(i / 12); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke();
+  for (let i = 0; i < 3; i++) {
+    const u = 0.22 + i * 0.27, [x, y] = pt(u), sz = 6.2 - i * 1.2;
+    catnipLeaf(g, x, y, -2.1 + i * 0.15, sz, R);
+    catnipLeaf(g, x, y, 0.55 + i * 0.1, sz * 0.92, R);
+  }
+  const [tx, ty] = pt(1);
+  for (let i = 0; i < 9; i++) {
+    const k = i / 9;
+    g.fillStyle = rgba(i % 2 ? [190, 160, 214] : [214, 190, 230], 0.95);
+    g.beginPath(); g.arc(tx + 3 * k + (R() - 0.5), ty - 2 * k + (R() - 0.5) * 1.6, 1.1 - k * 0.4, 0, TAU); g.fill();
+  }
+}
+
+// a plum blossom, pale pink with a deep centre (for his crown)
+function paintBlossom(g) {
+  const R = rng(191);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * TAU - Math.PI / 2 + (R() - 0.5) * 0.15, x = Math.cos(a) * 2.7, y = Math.sin(a) * 2.7;
+    const gr = g.createRadialGradient(x * 0.4, y * 0.4, 0.3, x, y, 2.9);
+    gr.addColorStop(0, 'rgb(236,150,170)'); gr.addColorStop(0.5, 'rgb(250,222,228)'); gr.addColorStop(1, 'rgb(255,244,246)');
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, 2.8, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(176,80,104,.45)'; g.lineWidth = 0.22; g.stroke();
+  }
+  g.fillStyle = 'rgb(176,40,66)';
+  g.beginPath(); g.arc(0, 0, 1.2, 0, TAU); g.fill();
+  g.strokeStyle = 'rgba(90,40,30,.8)'; g.lineWidth = 0.18;
+  for (let i = 0; i < 9; i++) {
+    const a = R() * TAU, r = 1.8 + R() * 0.7;
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a) * r, Math.sin(a) * r); g.stroke();
+    g.fillStyle = 'rgb(236,190,80)';
+    g.beginPath(); g.arc(Math.cos(a) * r, Math.sin(a) * r, 0.3, 0, TAU); g.fill();
+  }
+}
+
+// his hats, drawn live so they turn with him (head units, origin where the
+// hat sits on top of his head; sq is how much of the top we see, yw his turn)
+function drawHat(g, SP, kind, sq, yw) {
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  if (kind === 1) {
+    // a French beret: a soft wool disc pulled over to one side, and its little stalk
+    const lean = 5 * Math.cos(yw) + 2, top = -6 - 4 * sq;
+    let gr = g.createRadialGradient(lean - 6, top - 5, 2, lean, top, 26);
+    gr.addColorStop(0, 'rgb(190,62,64)'); gr.addColorStop(0.6, 'rgb(150,38,46)'); gr.addColorStop(1, 'rgb(96,20,28)');
+    g.fillStyle = gr;
+    g.beginPath();
+    g.ellipse(lean, top, 23, 8 + 12 * sq, -0.1, 0, TAU);
+    g.fill();
+    // where it pulls in round his head
+    g.fillStyle = 'rgb(84,18,26)';
+    g.beginPath(); g.ellipse(0, 0, 15.5, 3 + 9 * sq, 0, 0, Math.PI); g.lineTo(-15.5, 0); g.fill();
+    g.fillStyle = 'rgba(255,220,214,.12)';
+    for (let i = 0; i < 18; i++) { const a = i * 2.39, r = 4 + (i * 7.3) % 17; g.beginPath(); g.arc(lean + Math.cos(a) * r, top + Math.sin(a) * r * (0.35 + sq), 0.7, 0, TAU); g.fill(); }
+    g.strokeStyle = 'rgba(40,8,12,.75)'; g.lineWidth = 0.8;
+    g.beginPath(); g.ellipse(lean, top, 23, 8 + 12 * sq, -0.1, 0, TAU); g.stroke();
+    const sx = lean + 3 * Math.sin(yw), sy = top - 8 - 10 * sq;
+    g.strokeStyle = 'rgb(70,14,22)'; g.lineWidth = 1.6;
+    g.beginPath(); g.moveTo(sx, sy + 2); g.quadraticCurveTo(sx + 1, sy - 1, sx + 2.4, sy - 3); g.stroke();
+    gr = null;
+  } else if (kind === 2) {
+    // a little gat: a see-through brim of black horsehair, a tall crown, a strap of amber beads
+    const br = 31, bry = 3 + 13 * sq;
+    for (const side of [-1, 1]) {
+      const th = side * 1.25 + yw, z = Math.cos(th);
+      if (z < -0.1) continue;
+      for (let k = 0; k < 6; k++) {
+        const x = Math.sin(th) * (br - 4) + side * k * 0.8, y = 1 + k * 3.4;
+        g.fillStyle = 'rgb(206,142,58)';
+        g.beginPath(); g.arc(x, y, 1.35, 0, TAU); g.fill();
+        g.fillStyle = 'rgba(255,236,190,.7)';
+        g.beginPath(); g.arc(x - 0.4, y - 0.4, 0.45, 0, TAU); g.fill();
+      }
+    }
+    g.fillStyle = 'rgba(14,14,18,.5)';
+    g.beginPath(); g.ellipse(0, 0, br, bry, 0, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(52,52,60,.55)'; g.lineWidth = 0.35;
+    for (let r = 12; r < br; r += 2.6) { g.beginPath(); g.ellipse(0, 0, r, r * bry / br, 0, 0, TAU); g.stroke(); }
+    g.strokeStyle = 'rgba(8,8,10,.9)'; g.lineWidth = 0.9;
+    g.beginPath(); g.ellipse(0, 0, br, bry, 0, 0, TAU); g.stroke();
+    const ch = 21, cw0 = 10.5, cw1 = 9.4;
+    g.fillStyle = 'rgba(10,10,14,.86)';
+    g.beginPath();
+    g.moveTo(-cw0, 0); g.lineTo(-cw1, -ch); g.ellipse(0, -ch, cw1, cw1 * (0.15 + 0.5 * sq), 0, Math.PI, 0); g.lineTo(cw0, 0);
+    g.ellipse(0, 0, cw0, cw0 * (0.15 + 0.5 * sq), 0, 0, Math.PI);
+    g.fill();
+    g.strokeStyle = 'rgba(80,80,92,.35)'; g.lineWidth = 0.3;
+    for (let i = -8; i <= 8; i++) { const x0 = i * 1.2, x1 = i * 1.08; g.beginPath(); g.moveTo(x0, 0); g.lineTo(x1, -ch); g.stroke(); }
+    g.fillStyle = 'rgb(26,26,32)';
+    g.beginPath(); g.ellipse(0, -ch, cw1, cw1 * (0.15 + 0.5 * sq), 0, 0, TAU); g.fill();
+    g.strokeStyle = 'rgb(36,36,42)'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(0, -2, cw0 - 0.2, (cw0 - 0.2) * (0.15 + 0.5 * sq), 0, 0, Math.PI); g.stroke();
+    g.strokeStyle = 'rgba(190,196,212,.35)'; g.lineWidth = 0.6;
+    g.beginPath(); g.moveTo(-cw1 + 2.4, -ch + 2); g.lineTo(-cw0 + 2.4, -3); g.stroke();
+  } else if (kind === 3) {
+    // a crown of plum blossoms: a twig ring with flowers all round it, the far ones dimmer
+    const rx = 23, ry = 2.5 + 11 * sq, n = 9;
+    const ring = (a0, a1) => { g.beginPath(); for (let i = 0; i <= 16; i++) { const a = lerp(a0, a1, i / 16); const x = Math.cos(a) * rx, y = Math.sin(a) * ry; i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); };
+    g.strokeStyle = 'rgb(66,44,34)'; g.lineWidth = 1.5;
+    ring(Math.PI, TAU);
+    const sp = SP.blossom;
+    const flowers = [];
+    for (let i = 0; i < n; i++) { const a = (i / n) * TAU + yw + 0.2; flowers.push([a, Math.sin(a)]); }
+    flowers.sort((p, q) => p[1] - q[1]);
+    for (const [a, z] of flowers) {
+      if (z >= 0) continue;
+      g.globalAlpha = 0.8;
+      g.save(); g.translate(Math.cos(a) * rx, Math.sin(a) * ry); g.scale(0.85, 0.85 * (0.6 + 0.4 * sq)); blit(g, sp); g.restore();
+    }
+    g.globalAlpha = 1;
+    ring(0, Math.PI);
+    for (const [a, z] of flowers) {
+      if (z < 0) continue;
+      g.save(); g.translate(Math.cos(a) * rx, Math.sin(a) * ry); g.rotate(Math.cos(a) * 0.4); g.scale(1.1, 1.1 * (0.7 + 0.3 * sq)); blit(g, sp); g.restore();
+    }
+    g.fillStyle = 'rgb(150,40,62)';
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI + 0.4 + yw; if (Math.sin(a) < 0) continue; g.beginPath(); g.ellipse(Math.cos(a) * rx * 1.04, Math.sin(a) * ry - 1.4, 1.4, 1.9, a, 0, TAU); g.fill(); }
+  }
+}
+
+// paper and ink for his paintings: a sheet of hanji with long fibres in it
+const ART_W = 100, ART_H = 70, ART_PX = 2.6;
+function makeHanji(seed) {
+  const c = document.createElement('canvas');
+  c.width = Math.round(ART_W * ART_PX); c.height = Math.round(ART_H * ART_PX);
+  const g = c.getContext('2d');
+  const R = rng(seed);
+  g.scale(ART_PX, ART_PX);
+  g.fillStyle = 'rgb(247,241,227)';
+  g.fillRect(0, 0, ART_W, ART_H);
+  for (let i = 0; i < 140; i++) {
+    const x = R() * ART_W, y = R() * ART_H, a = R() * TAU, L = 3 + R() * 12;
+    g.strokeStyle = R() < 0.6 ? rgba([214, 198, 166], 0.35) : rgba([255, 253, 246], 0.6);
+    g.lineWidth = 0.15 + R() * 0.2;
+    g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + Math.cos(a + 0.5) * L * 0.5, y + Math.sin(a + 0.5) * L * 0.5, x + Math.cos(a) * L, y + Math.sin(a) * L); g.stroke();
+  }
+  // soft, slightly darker deckled edges
+  const gr = g.createRadialGradient(ART_W / 2, ART_H / 2, ART_H * 0.3, ART_W / 2, ART_H / 2, ART_W * 0.62);
+  gr.addColorStop(0, 'rgba(200,180,140,0)'); gr.addColorStop(1, 'rgba(200,180,140,.22)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, ART_W, ART_H);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  return c;
+}
+// one paw print in ink (paper units): the big pad and four toes, drier as the ink runs out
+const INK_RGB = [20, 18, 22];
+function pawPrint(g, x, y, rot, sz, ink, R) {
+  const c = document.createElement('canvas'), px = ART_PX * 2;
+  c.width = c.height = Math.ceil(22 * sz * px);
+  const h = c.getContext('2d');
+  h.setTransform(px * sz, 0, 0, px * sz, c.width / 2, c.height / 2);
+  h.fillStyle = rgba(INK_RGB, 0.65 + 0.3 * ink);
+  h.beginPath();
+  h.moveTo(-4.6, 4.2); h.quadraticCurveTo(-6.2, 0.6, -3.2, -0.6); h.quadraticCurveTo(0, -2, 3.2, -0.6); h.quadraticCurveTo(6.2, 0.6, 4.6, 4.2);
+  h.quadraticCurveTo(2.4, 6.6, 0, 5.2); h.quadraticCurveTo(-2.4, 6.6, -4.6, 4.2);
+  h.fill();
+  for (const [tx, ty, a] of [[-5.6, -4, -0.4], [-2, -6.6, -0.12], [2, -6.6, 0.12], [5.6, -4, 0.4]]) { h.beginPath(); h.ellipse(tx, ty, 2, 2.6, a, 0, TAU); h.fill(); }
+  // dry brush: the less ink, the more paper shows through
+  h.globalCompositeOperation = 'destination-out';
+  const holes = Math.round(30 + (1 - ink) * 160);
+  for (let i = 0; i < holes; i++) {
+    h.globalAlpha = 0.3 + R() * 0.7;
+    h.beginPath(); h.arc((R() - 0.5) * 15, (R() - 0.55) * 15, 0.2 + R() * (0.3 + (1 - ink) * 0.6), 0, TAU); h.fill();
+  }
+  g.save();
+  g.translate(x, y); g.rotate(rot);
+  g.globalCompositeOperation = 'multiply';
+  g.drawImage(c, -c.width / (2 * ART_PX * 2), -c.height / (2 * ART_PX * 2), c.width / (ART_PX * 2), c.height / (ART_PX * 2));
+  g.restore();
+  // a little bleed into the paper round the edge
+  stamp(g, x, y, 6.5 * sz, INK_RGB, 0.05 * ink, 0.4);
+}
+
+// her books, each one lying flat with its spine to us
+const BOOKS = [
+  { title: '토지', col: [50, 58, 100], band: [214, 182, 110], w: 46, h: 7.2 },
+  { title: 'Le Rouge et le Noir', col: [146, 32, 38], col2: [28, 24, 26], band: [214, 182, 110], w: 42, h: 6 },
+  { title: '단원 화첩', col: [226, 212, 178], band: [184, 50, 42], w: 48, h: 5.2, ink: true },
+  { title: '孫子兵法', col: [44, 74, 58], band: [208, 176, 104], w: 38, h: 6.4 },
+  { title: 'Vom Kriege', col: [86, 58, 44], band: [212, 180, 112], w: 44, h: 7.6 },
+  // her favourite, on top: a fat hardback in lion gold, with a ribbon and a seal
+  { title: 'The Lion’s Snack', col: [204, 150, 64], band: [64, 38, 22], w: 72, h: 12, fav: true },
+];
+const FAV_BOOK = BOOKS.findIndex((b) => b.fav);
+const FAV_FONT = '700 20px "Gowun Batang"';
+function drawBookSpine(g, b, w, h) {
+  // the top cover, seen a little from above, then the spine
+  g.fillStyle = rgba(mix(b.col, [255, 250, 240], 0.18), 1);
+  g.beginPath(); g.moveTo(-w / 2, -h); g.lineTo(w / 2, -h); g.lineTo(w / 2 - 2.2, -h - 3.4); g.lineTo(-w / 2 + 2.6, -h - 3.4); g.closePath(); g.fill();
+  const gr = g.createLinearGradient(0, -h, 0, 0);
+  gr.addColorStop(0, rgba(mix(b.col, [255, 255, 255], 0.14), 1)); gr.addColorStop(1, rgba(mix(b.col, [0, 0, 0], 0.25), 1));
+  g.fillStyle = gr;
+  g.beginPath(); g.roundRect ? g.roundRect(-w / 2, -h, w, h, 1.2) : g.rect(-w / 2, -h, w, h); g.fill();
+  if (b.col2) { g.fillStyle = rgba(b.col2, 1); g.fillRect(w / 2 - w * 0.42, -h, w * 0.42 - 0.6, h); }
+  g.strokeStyle = rgba(b.band, 0.85); g.lineWidth = 0.55;
+  for (const x of [-w / 2 + 4, w / 2 - 4]) { g.beginPath(); g.moveTo(x, -h + 0.6); g.lineTo(x, -0.6); g.stroke(); }
+  g.fillStyle = rgba(b.ink ? [60, 44, 34] : b.band, 0.95);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (b.fav) {
+    // big dark letters, so the title reads even this small, and the seal at one end
+    g.font = `700 ${(h * 0.6).toFixed(2)}px "Gowun Batang", "Noto Serif KR", Georgia, serif`;
+    g.fillText(b.title, 3.2, -h / 2 + 0.5, w - 17);
+    const q = h - 4.4;
+    g.fillStyle = rgba(SEAL_RGB, 0.95); g.fillRect(-w / 2 + 3.4, -h + 2.2, q, q);
+    g.strokeStyle = 'rgba(250,236,220,.8)'; g.lineWidth = 0.45; g.strokeRect(-w / 2 + 4.3, -h + 3.1, q - 1.8, q - 1.8);
+    g.beginPath(); g.moveTo(-w / 2 + 5.6, -h + 2.2 + q / 2); g.lineTo(-w / 2 + 1.8 + q, -h + 2.2 + q / 2); g.moveTo(-w / 2 + 3.4 + q / 2, -h + 4.4); g.lineTo(-w / 2 + 3.4 + q / 2, -h + q); g.stroke();
+  } else {
+    g.font = `${(h * 0.62).toFixed(2)}px "Gowun Batang", "Noto Serif KR", Georgia, serif`;
+    g.fillText(b.title, -1, -h / 2 + 0.3, w - 11);
+  }
+  if (b.ink) { g.fillStyle = rgba(SEAL_RGB, 0.9); g.fillRect(w / 2 - 7.8, -h + 1.2, 2.4, 2.4); }
+  g.strokeStyle = 'rgba(40,28,22,.55)'; g.lineWidth = 0.5;
+  g.beginPath(); g.roundRect ? g.roundRect(-w / 2, -h, w, h, 1.2) : g.rect(-w / 2, -h, w, h); g.stroke();
+  if (b.fav) ribbon(g, w / 2 - 0.3, -h * 0.55, h * 0.55 + 6);
+}
+// a red ribbon bookmark slipping out of the end of the book and hanging down
+function ribbon(g, x, y, len) {
+  const mx = x + 4.6, my = y + 0.6, ex = x + 3.4, ey = y + len;
+  g.fillStyle = 'rgb(178,40,40)';
+  g.beginPath();
+  g.moveTo(x, y - 1.2);
+  g.quadraticCurveTo(mx + 1.3, my - 1.3, ex + 1.3, ey);
+  g.lineTo(ex, ey - 1.7); g.lineTo(ex - 1.3, ey);
+  g.quadraticCurveTo(mx - 1.3, my + 1.3, x, y + 1.2);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(90,16,20,.45)'; g.lineWidth = 0.35; g.stroke();
+}
+// her favourite's title page (on the left, where his paw won't be over it): the
+// title big and dark, a red rule, the first lines
+function favTitle(g, b, lines) {
+  const words = b.title.split(' '), last = words.pop();
+  g.save();
+  g.fillStyle = 'rgb(38,26,18)';
+  g.textAlign = 'center'; g.textBaseline = 'alphabetic';
+  g.font = '700 9.5px "Gowun Batang", "Noto Serif KR", Georgia, serif';
+  // stood a little taller than the page, so it still reads from where we are
+  g.translate(-22, -13); g.scale(1, 1.18);
+  g.fillText(words.join(' '), 0, 0, 39);
+  g.fillText(last, 0, 10.5, 39);
+  g.restore();
+  g.strokeStyle = rgba(SEAL_RGB, 0.85); g.lineWidth = 0.9;
+  g.beginPath(); g.moveTo(-29, 6.5); g.lineTo(-15, 6.5); g.stroke();
+  lines(-37, -7, 12, 26, 3.2);
+}
+// a lion's head in a few brushstrokes, for the page across from the title
+function inkLion(g, x, y) {
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * TAU, r1 = 12.5 + (k % 3) * 1.3;
+    stroke(g, { pts: [[x + Math.cos(a) * 6.5, y + Math.sin(a) * 6.5], [x + Math.cos(a + 0.2) * r1, y + Math.sin(a + 0.2) * r1]], width: 2.8, dry: 0.55, tone: 0.75, bleed: 0.05, rgb: INK_RGB, seed: 410 + k, bristles: 5 });
+  }
+  stamp(g, x, y + 0.6, 8.6, [214, 168, 86], 0.95, 0.7);
+  g.strokeStyle = rgba(INK_RGB, 0.85); g.lineCap = 'round'; g.lineWidth = 0.9;
+  g.beginPath();
+  // ears, eyes, nose and a pleased little mouth
+  g.arc(x - 5.4, y - 6.4, 1.8, Math.PI * 0.9, Math.PI * 1.9); g.moveTo(x + 7.2, y - 6.4); g.arc(x + 5.4, y - 6.4, 1.8, Math.PI * 1.1, Math.PI * 2.1);
+  g.moveTo(x - 3.6, y - 1); g.lineTo(x - 1.8, y - 1.2); g.moveTo(x + 1.8, y - 1.2); g.lineTo(x + 3.6, y - 1);
+  g.moveTo(x - 1.1, y + 2); g.lineTo(x + 1.1, y + 2); g.lineTo(x, y + 3.2); g.closePath();
+  g.moveTo(x, y + 3.2); g.quadraticCurveTo(x - 1, y + 5, x - 2.6, y + 4.4); g.moveTo(x, y + 3.2); g.quadraticCurveTo(x + 1, y + 5, x + 2.6, y + 4.4);
+  g.stroke();
+  g.fillStyle = rgba(SEAL_RGB, 0.88); g.fillRect(x + 12, y + 19, 4, 4);
+}
+// a book open on the cushion, in its own flat units (90 x 60), k from shut (0) to open (1)
+function drawOpenBook(g, b, k, i, R) {
+  const col = b.col;
+  // the cover, a touch bigger than the pages
+  g.fillStyle = rgba(mix(col, [0, 0, 0], 0.15), 1);
+  if (k > 0.5) { g.beginPath(); g.roundRect ? g.roundRect(-48, -33, 96, 66, 2.5) : g.rect(-48, -33, 96, 66); g.fill(); }
+  else { g.beginPath(); g.rect(-1, -33, 49, 66); g.fill(); }
+  // the right-hand pages
+  const page = (x0, x1, left) => {
+    const gr = g.createLinearGradient(x0, 0, x1, 0);
+    gr.addColorStop(0, left ? 'rgb(244,238,222)' : 'rgb(226,216,196)'); gr.addColorStop(0.12, 'rgb(250,246,234)'); gr.addColorStop(0.88, 'rgb(250,246,234)'); gr.addColorStop(1, left ? 'rgb(226,216,196)' : 'rgb(244,238,222)');
+    g.fillStyle = gr;
+    g.fillRect(Math.min(x0, x1), -29, Math.abs(x1 - x0), 58);
+  };
+  page(0, 44, false);
+  if (k > 0.5) page(-44, 0, true);
+  // what's printed on them
+  const lines = (x0, x1, y0, y1, step, rgb) => {
+    g.strokeStyle = rgba(rgb || [120, 112, 104], 0.6); g.lineWidth = 0.9;
+    for (let y = y0; y < y1; y += step) { const e = x1 - (R() < 0.18 ? (x1 - x0) * R() * 0.6 : 0); g.beginPath(); g.moveTo(x0, y); g.lineTo(e, y); g.stroke(); }
+  };
+  const right = () => {
+    if (b.fav) inkLion(g, 22, -3);
+    else if (i === 3) { g.strokeStyle = 'rgba(70,60,52,.6)'; g.lineWidth = 0.9; for (let x = 38; x > 6; x -= 4.2) for (let y = -24; y < 22; y += 3.2) if (R() < 0.85) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 1.8); g.stroke(); } }
+    else if (i === 2) {
+      // a little ink landscape: two peaks, a pine, a seal
+      stroke(g, { pts: [[8, 14], [16, -2], [22, 6], [30, -12], [40, 12]], width: 2.4, dry: 0.5, tone: 0.75, rgb: INK_RGB, seed: 200 + i, bristles: 6 });
+      stroke(g, { pts: [[14, 18], [14, 4]], width: 1.4, dry: 0.4, tone: 0.8, rgb: INK_RGB, seed: 210, bristles: 4 });
+      stamp(g, 14, 4, 4, [40, 60, 40], 0.5, 0.4);
+      g.fillStyle = rgba(SEAL_RGB, 0.85); g.fillRect(34, 18, 4, 4);
+    } else if (i === 4) {
+      // a little diagram: two fronts, arrows, a hill
+      lines(5, 39, -24, -6, 3.2);
+      g.strokeStyle = 'rgba(60,50,44,.75)'; g.lineWidth = 1;
+      g.strokeRect(9, 2, 8, 4); g.strokeRect(27, 12, 8, 4);
+      g.beginPath(); g.moveTo(18, 6); g.lineTo(26, 12); g.moveTo(26, 12); g.lineTo(23.5, 11.6); g.moveTo(26, 12); g.lineTo(25, 9.8); g.stroke();
+      g.beginPath(); g.moveTo(6, 22); g.quadraticCurveTo(14, 14, 22, 22); g.stroke();
+    } else lines(5, 39, -24, 25, 3.2);
+  };
+  right();
+  if (k > 0.5) {
+    if (i === 3) { g.strokeStyle = 'rgba(70,60,52,.6)'; g.lineWidth = 0.9; for (let x = -6; x > -40; x -= 4.2) for (let y = -24; y < 22; y += 3.2) if (R() < 0.85) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 1.8); g.stroke(); } }
+    else if (i === 1) { g.fillStyle = 'rgba(146,32,38,.85)'; g.font = '9px Georgia, serif'; g.fillText('L', -38, -19); lines(-31, -5, -24, -14, 3.2); lines(-39, -5, -12, 25, 3.2); }
+    else if (b.fav) favTitle(g, b, lines);
+    else lines(-39, -5, -24, 25, 3.2);
+    // the gutter
+    const gr = g.createLinearGradient(-6, 0, 6, 0);
+    gr.addColorStop(0, 'rgba(120,100,70,0)'); gr.addColorStop(0.5, 'rgba(120,100,70,.35)'); gr.addColorStop(1, 'rgba(120,100,70,0)');
+    g.fillStyle = gr; g.fillRect(-6, -29, 12, 58);
+    // her place, kept with the ribbon down the middle
+    if (b.fav) ribbon(g, 0.6, -29, 64);
+  }
+  // the cover swinging over, while it opens
+  if (k < 1) {
+    const x = 44 * Math.cos(Math.PI * k);
+    g.fillStyle = Math.abs(x) < 2 ? rgba(col, 1) : x > 0 ? rgba(mix(col, [255, 255, 255], 0.1), 1) : 'rgb(240,232,214)';
+    g.beginPath(); g.moveTo(0, -31); g.lineTo(x, -31 - Math.sin(Math.PI * k) * 6); g.lineTo(x, 31 - Math.sin(Math.PI * k) * 6); g.lineTo(0, 31); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(40,28,22,.45)'; g.lineWidth = 0.6; g.stroke();
+  }
+  g.strokeStyle = 'rgba(70,56,44,.5)'; g.lineWidth = 0.6;
+  g.strokeRect(k > 0.5 ? -44 : 0, -29, k > 0.5 ? 88 : 44, 58);
+}
+
 // how long each thing he does lasts, and what can interrupt what
-const PRI = { sleep: 0, groom: 1, yawn: 1, window: 1, tilt: 1, wake: 1, love: 1, glare: 1, pat: 2, boop: 2, eat: 3, bat: 3, pounce: 3, warn: 4, swat: 5, buck: 5, push: 5, bury: 5, sit: 5 };
-const DUR = { sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, glare: 1900, pat: 900, boop: 1500, eat: 4600, bat: 380, pounce: 2000, warn: 720, swat: 600, buck: 1300, push: 3500, bury: 2900, sit: 3800 };
-const DUR_RM = { pat: 800, boop: 1200, eat: 2600, bat: 600, pounce: 1400, warn: 900, swat: 1100, buck: 900, push: 2000, bury: 1700, sit: 2400, tilt: 900, wake: 400 };
+const PRI = {
+  sleep: 0, groom: 1, yawn: 1, window: 1, tilt: 1, wake: 1, love: 1, glare: 1, unimpressed: 1, bookrest: 1, nudge: 1,
+  pat: 2, boop: 2, brush: 2, huff: 2, psst: 2, ignore: 2, blinkback: 2, shake: 2,
+  eat: 3, bat: 3, pounce: 3, laser: 3, nip: 3, paint: 3, book: 3, warn: 4, swat: 5, buck: 5, push: 5, bury: 5, sit: 5,
+};
+const DUR = {
+  sleep: 1e12, groom: 3800, yawn: 2200, window: 5200, tilt: 1000, wake: 1300, love: 1700, glare: 1900, pat: 900, boop: 1500, eat: 4600, bat: 380, pounce: 2000, warn: 720, swat: 600, buck: 1300, push: 3500, bury: 2900, sit: 3800,
+  laser: 1e9, brush: 3600, huff: 1500, psst: 1500, ignore: 2600, blinkback: 2000, unimpressed: 1800, shake: 900, nip: 7600, paint: 1e9, book: 2700, bookrest: 12000, nudge: 3000,
+};
+const DUR_RM = {
+  pat: 800, boop: 1200, eat: 2600, bat: 600, pounce: 1400, warn: 900, swat: 1100, buck: 900, push: 2000, bury: 1700, sit: 2400, tilt: 900, wake: 400,
+  brush: 1800, huff: 1000, psst: 1100, ignore: 1600, blinkback: 1300, unimpressed: 1200, shake: 500, nip: 3400, book: 1400, bookrest: 8000, nudge: 1600,
+};
+// the less important things he does that a passing pointer shouldn't cut short
+const STICKY = new Set(['wake', 'tilt', 'unimpressed', 'bookrest', 'nudge']);
 const BULLY = ['swat', 'push', 'bury', 'sit'];
 
 export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = false, sound = {}, name = '' } = {}) {
   if (!root) return null;
-  if (!root.querySelector('.cat-btn--toy')) {
+  if (!root.querySelector('.cat-more-panel') || !root.querySelector('.cat-grab--dot')) {
     root.classList.add('cat');
     root.innerHTML = CAT_INNER;
   }
   const $ = (q) => root.querySelector(q);
   const stage = $('.cat-stage'), bgC = $('.cat-bg'), fgC = $('.cat-fg');
-  const grabEl = $('.cat-grab:not(.cat-grab--toy)'), toyEl = $('.cat-grab--toy');
+  const grabEl = $('.cat-grab:not(.cat-grab--toy):not(.cat-grab--dot)'), toyEl = $('.cat-grab--toy'), dotEl = $('.cat-grab--dot');
   const fg = fgC.getContext && fgC.getContext('2d');
   if (!fg || !bgC.getContext('2d')) return null;
   const capMain = $('.cat-caption-main'), capHint = $('.cat-caption-hint');
   const countN = $('.cat-count-n'), countNote = $('.cat-count-note');
   const btnRow = $('.cat-btns'), petText = $('.cat-btn-pet');
-  const btn = { poke: $('.cat-btn--poke'), swat: $('.cat-btn--swat'), pet: $('.cat-btn--pet'), boop: $('.cat-btn--boop'), treat: $('.cat-btn--treat'), toy: $('.cat-btn--toy') };
-  const tally = $('.cat-tally'), tallyPets = $('.cat-tally-pets'), tallyTreats = $('.cat-tally-treats');
+  const moreBtn = $('.cat-more'), morePanel = $('.cat-more-panel');
+  const btn = {
+    poke: $('.cat-btn--poke'), swat: $('.cat-btn--swat'), pet: $('.cat-btn--pet'), boop: $('.cat-btn--boop'), treat: $('.cat-btn--treat'), toy: $('.cat-btn--toy'),
+    laser: $('.cat-btn--laser'), brush: $('.cat-btn--brush'), nip: $('.cat-btn--nip'), psst: $('.cat-btn--psst'), blink: $('.cat-btn--blink'),
+    hat: $('.cat-btn--hat'), paint: $('.cat-btn--paint'), book: $('.cat-btn--book'),
+  };
+  const tally = $('.cat-tally'), tallyPets = $('.cat-tally-pets'), tallyTreats = $('.cat-tally-treats'), tallyArt = $('.cat-tally-art');
   const sayEl = $('.cat-say');
   const touchy = matchMedia('(hover: none)').matches;
   const hit = document.createElement('canvas').getContext('2d');
@@ -2209,6 +2874,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   for (const k of ['lidU', 'lidL', 'earFL', 'earFR', 'earSL', 'earSR']) RATE[k] = 13;
   for (const k of ['yaw', 'pitch', 'roll', 'hx', 'hy']) RATE[k] = 6.5;
   RATE.pupil = 3;
+  RATE.joy = 7;
+  RATE.puff = 12;
   const rate = { ...RATE };
   // the rest of him: moods, timers, what he's up to
   const C = {
@@ -2217,12 +2884,29 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     disgust: 0, blepAt: 0, blepUntil: 0, alert: 0, meowAt: -1e9, mrrpAt: -1e9, lastSwat: -1e9,
     lastUser: 0, idleAt: 0, zAt: 0, avoSeenAt: 0, toyT: -1e9, toyStill: 0, batAt: -1e9, pounceAt: -1e9, agit: 0, swishUntil: 0,
     boopSayT: -1e9, faceUntil: 0, batN: 0, autoN: 0,
+    // his tail when something bumps it: how far it's bent, how fast, where, and the flick back
+    tb: 0, tbv: 0, tbu: 0.6, tailTouch: -1e9, flickAt: -1e9, flickDir: 0, flickHit: true, flickHeld: false,
+    // still staring where the laser was, fur standing up, ink on his paw
+    stare: null, puffAt: -1e9, ink: 0,
   };
   const LK = { mode: 0, x: 0, y: 0, pupil: 0.3, flat: false };
-  const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0 };
+  const pom = { x: 0, y: 0, vx: 0, vy: 0, held: null, hx: 0, hy: 0, auto: null, pinned: null, still: 0, speed: 0, cap: 0 };
   const treat = { on: false, state: '', t0: 0, x: 0, y: 0, x0: 0, y0: 0, a: 0 };
   const win = { kind: '', t0: 0, x: 0, y: 0, px: 0, py: 0, fx: 0, fy: 0, flip: 1, dur: 0, perched: false };
-  const fx = { purrs: [], words: [], seals: [], rings: [], strokes: [], zs: [], scratches: [] };
+  const fx = { purrs: [], words: [], seals: [], rings: [], strokes: [], zs: [], scratches: [], calls: [] };
+  // the laser dot (stage px); with a mouse it follows the pointer, else it dances on its own
+  const laser = { on: false, x: 0, y: 0, until: 0, auto: null, user: false, drag: null, pend: null, lastMove: -1e9, t0: 0, caught: -1e9, said: false };
+  // the brush, and the fluff it pulls out: tufts in the air, and a little pile on the cushion
+  const brush = { on: false, until: 0, x: 0, y: 0, a: 0, lastX: null, lastT: -1e9, dist: 0, against: 0, sayT: -1e9 };
+  const tufts = [], pile = { n: 0 };
+  // hats: 0 none, 1 beret, 2 gat, 3 plum blossoms; and one flying off
+  const hat = { i: 0, t0: -1e9, off: null };
+  const nip = { at: -1e9, sprig: null };
+  // paintings: the one on the go, the one on the wall, how many so far
+  const art = { n: 0, cur: null, wall: null, fly: null };
+  // her books: which are on the stack (bottom first), the one open in front of him, one on the floor
+  const books = { stack: [0, 1, 2, 3, 4, 5], open: -1, k: 0, fly: null, fallen: null, next: 0, cache: new Map() };
+  const chat = { psst: [], you: null };
   const pointer = { x: 0, y: 0, t: -1e9 };
   const pet = { dist: 0, lastX: null, dir: 0, flips: 0, t: 0, spawnT: 0, sayT: -1e9, sayZone: '', zone: '' };
   let tapCat = null, jarT = -1e9, treatQ = 0;
@@ -2249,7 +2933,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const o = {
       W: w, H: h, s, narrow, floorY, topY, catX, plat, low, base, post, post2, win, sign,
       wallBase: floorY - 30 * s,
-      pom: { x: catX + 50 * s, y: topY + 40 * s, len: 74 * s, r: 14 * s },
+      // (far enough out from the post that a free swing never reaches it)
+      pom: { x: catX + 70 * s, y: topY + 39 * s, len: 74 * s, r: 14 * s },
       home: { x: narrow ? w - 32 * s : Math.min(w - 90 * s, catX + 330 * s) },
       jar: { x: narrow ? clamp((base.x - base.rx) * 0.5, 30 * s, base.x - base.rx - 24 * s) : Math.max(60 * s, base.x - base.rx - 70 * s), y: floorY + 4 * s },
       glass: { x0: win.x0 + f, y0: win.y0 + f, x1: win.x1 - f, y1: win.y1 - f * 0.8 },
@@ -2267,6 +2952,23 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       cap(base.x - base.rx + 8 * s, base.y + 6 * s, base.x + base.rx - 8 * s, base.y + 6 * s, 6 * s, { flat: true, e: 0.3 }),
       cap(win.x0 - 8 * s, win.y1 + 4 * s, win.x1 + 8 * s, win.y1 + 4 * s, 4 * s, { flat: true, e: 0.3, sill: true }),
     ];
+    // her books: on the sill right beside him if there's room, else on the middle platform
+    const fwE = narrow ? 14 : Math.min(160, w * 0.13);
+    const sillTop = win.y1 - 3 * s;
+    const onSill = !narrow && (win.x1 - catX) / s > 210 && (w - fwE - catX) / s > 212;
+    o.books = onSill ? { x: catX + 178 * s, y: sillTop, sill: true } : { x: low.x + low.rx * 0.6, y: low.y + 7 * s, sill: false };
+    const stackH = BOOKS.reduce((a, b) => a + b.h, 0) + 3.4;
+    o.cols.push(cap(o.books.x - 20 * s, o.books.y - stackH * s + 4 * s, o.books.x + 20 * s, o.books.y - stackH * s + 4 * s, 4 * s, { flat: true, e: 0.3, sill: onSill, books: true }));
+    // the ink dish sits on the sill just past his paws
+    o.dish = { x: catX + 132 * s, y: sillTop - 4.6 * s };
+    // a spot on the wall for his latest masterpiece, if there is one
+    const aw = 66 * s, ah = aw * (ART_H / ART_W);
+    o.wall = null;
+    if (!narrow) {
+      const rx0 = win.x1 + 18 * s, rx1 = w - fwE - 8 * s;
+      if (rx1 - rx0 > aw + 12 * s) o.wall = { x: (rx0 + rx1) / 2, y: win.y0 + 70 * s, w: aw, h: ah };
+      else if (sign && sign.y + 48 * s + 34 * s + ah < floorY - 120 * s && sign.x - aw / 2 > 10) o.wall = { x: sign.x + 4 * s, y: sign.y + 48 * s + 30 * s + ah / 2, w: aw, h: ah };
+    }
     o.chest = { x: catX + 86 * s, y: topY - 40 * s };
     o.bang = `italic ${30 * s}px "Instrument Serif", Georgia, serif`;
     return o;
@@ -2298,7 +3000,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   }
   function resetToy() {
     pom.x = L.pom.x; pom.y = L.pom.y + L.pom.len; pom.vx = pom.vy = 0;
-    pom.held = null; pom.pinned = null;
+    pom.held = null; pom.pinned = null; pom.cap = 0;
   }
 
   // painting
@@ -2341,6 +3043,12 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     SP.jar = makeSprite(-32, -60, 32, 8, s, dpr, paintJar);
     SP.treat = makeSprite(-9, -5, 7, 5, s, dpr, paintTreat);
     SP.pom = makeSprite(-20, -20, 20, 22, s, dpr, paintPom);
+    yield;
+    // the newer things: a brush, an ink dish, a sprig of catnip, a plum blossom for his crown
+    SP.brush = makeSprite(-34, -26, 16, 2, s * 1.3, dpr, paintBrushTool);
+    SP.dish = makeSprite(-16, -6, 16, 8, s, dpr, paintDish);
+    SP.sprig = makeSprite(-18, -18, 18, 9, s, dpr, paintSprig);
+    SP.blossom = makeSprite(-6.5, -6.5, 6.5, 6.5, s * HS * 1.3, dpr, paintBlossom);
     yield;
     // the front lip of the top platform, drawn over his belly so he sits in the plush
     SP.lip = makeSprite(-108, -36, 108, 64, s, dpr, (g) => {
@@ -2467,6 +3175,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     grabEl.style.marginLeft = grabEl.style.marginTop = `${-Math.round(39 * L.s)}px`;
     toyEl.style.width = toyEl.style.height = `${Math.round(52 * L.s)}px`;
     toyEl.style.marginLeft = toyEl.style.marginTop = `${-Math.round(26 * L.s)}px`;
+    dotEl.style.width = dotEl.style.height = `${Math.round(64 * L.s)}px`;
+    dotEl.style.marginLeft = dotEl.style.marginTop = `${-Math.round(32 * L.s)}px`;
+    // the newer things: anything in mid-air just gets where it was going
+    if (old) { laser.x = clamp(laser.x * (w / old.W), 6, w - 6); laser.y = clamp(laser.y * (h / old.H), 6, h - 6); }
+    laser.drag = laser.pend = null;
+    pile.n = Math.min(60, pile.n + tufts.length); tufts.length = 0;
+    if (books.fly) { if (books.fly.back && !books.stack.includes(books.fly.i)) books.stack.push(books.fly.i); books.fly = null; }
+    if (books.fallen) { const fb = books.fallen; if (!fb.landed) { fb.x = fb.x1; fb.rot = fb.r1; fb.landed = true; } fb.y = bookFloor(fb.x); }
+    books.cache.clear();
+    if (art.fly) { if (art.fly.wall && L.wall && !art.fly.quiet) art.wall = { c: art.fly.c }; art.fly = null; }
+    hat.off = null;
+    C.stare = null;
     // the avocado keeps its place in the room; if he had it in his paws, that's
     // over: the action just ends and it goes back to its spot on the floor
     if (A.hop) { A.hop = null; A.sleeping = true; }
@@ -2563,7 +3283,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         // catches it out of his reach (on a phone that's none of it)
         if (A.away && (c.cat || c === L.cols[0] || (c.sill && sillReach(A.x)))) continue;
         // pushed off the front: it drops past the middle platform and the post too
-        if (A.away === 2 && (c === L.cols[3] || c === L.cols[4])) continue;
+        if (A.away === 2 && (c === L.cols[3] || c === L.cols[4] || (c.books && !c.sill))) continue;
         // flat things only hold it up from above, and down on the cushion it's
         // in front of him, so he can't shove it down through it
         if (c.flat && A.y > c.ay) continue;
@@ -2619,47 +3339,211 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
 
   function setFace(f, ms) { A.face = f; A.faceUntil = now0() + ms; }
 
-  // the toy: an elastic cord from the platform, a pompom at the end
+  // the toy: a cord from under the top platform, a pompom at the end. On its own
+  // the cord hardly stretches, so it swings like a pendulum and settles (no
+  // slingshot when it's let go of far away); a hand can pull it out a good way.
+  // It never goes lower than the middle platform, and it can't go through his tail
   function stepToy(dt, now) {
     const { s } = L, o = L.pom;
     if (pom.pinned) {
       pom.x = L.catX + (pom.pinned.x + P.bx) * s;
       pom.y = L.topY + (pom.pinned.y + P.by - P.lift) * s;
       pom.vx = pom.vy = 0;
+      pom.cap = Math.hypot(pom.x - o.x, pom.y - o.y);
       return true;
     }
     if (pom.auto) autoHand(now);
-    if (pom.held) {
-      const kx = (pom.hx - pom.x) * 26, ky = (pom.hy - pom.y) * 26;
+    // where a hand can hold it, against the tail as it sways (its twitches and
+    // bumps would only shake the pompom about), then the tail as it really is
+    tailChain(P, true);
+    const ht = pom.held ? heldTarget() : null;
+    tailChain(P);
+    if (ht && !RM) {
+      const kx = (ht.x - pom.x) * 26, ky = (ht.y - pom.y) * 26;
       pom.vx = lerp(pom.vx, kx, 0.45); pom.vy = lerp(pom.vy, ky, 0.45);
-      if (RM) { pom.x = pom.hx; pom.y = pom.hy; } else { pom.x += pom.vx * dt; pom.y += pom.vy * dt; }
-    } else if (RM) {
-      pom.x = o.x; pom.y = o.y + o.len; pom.vx = pom.vy = 0;
-    } else {
-      const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n;
-      for (let i = 0; i < n; i++) {
+    }
+    // it's light and fluffy: the air never lets it go fast, so it never swings far
+    const n = Math.max(1, Math.ceil(dt * 240)), h = dt / n, vmax = 220 * s;
+    for (let i = 0; i < n; i++) {
+      if (ht) {
+        if (RM) { pom.x = ht.x; pom.y = ht.y; pom.vx = pom.vy = 0; } else { pom.x += pom.vx * h; pom.y += pom.vy * h; }
+      } else if (RM) {
+        pom.x = o.x; pom.y = o.y + o.len; pom.vx = pom.vy = 0;
+      } else {
         pom.vy += 1500 * s * h;
         const dx = pom.x - o.x, dy = pom.y - o.y, d = Math.hypot(dx, dy) || 1;
-        if (d > o.len) { const f = (d - o.len) * 150; pom.vx -= (dx / d) * f * h; pom.vy -= (dy / d) * f * h; }
-        pom.vx *= 1 - 1.6 * h; pom.vy *= 1 - 1.6 * h;
+        if (d > o.len) {
+          // stiff, and damped along its length
+          const nx = dx / d, ny = dy / d, f = (d - o.len) * 900 + (pom.vx * nx + pom.vy * ny) * 50;
+          pom.vx -= nx * f * h; pom.vy -= ny * f * h;
+        }
+        pom.vx *= 1 - 1.3 * h; pom.vy *= 1 - 1.3 * h;
+        const sp = Math.hypot(pom.vx, pom.vy);
+        if (sp > vmax) { pom.vx *= vmax / sp; pom.vy *= vmax / sp; }
         pom.x += pom.vx * h; pom.y += pom.vy * h;
       }
-      // a breath of air keeps it swaying a little
-      pom.vx += Math.sin(now / 1300) * 6 * s * dt;
+      toyLimits(now, h);
     }
-    const dx = pom.x - o.x, dy = pom.y - o.y, d = Math.hypot(dx, dy), max = o.len * 4.4;
-    if (d > max) { pom.x = o.x + (dx / d) * max; pom.y = o.y + (dy / d) * max; }
-    pom.x = clamp(pom.x, 10, L.W - 10); pom.y = clamp(pom.y, 10, L.floorY - 8 * s);
+    // a breath of air keeps it swaying a little
+    if (!pom.held && !RM) pom.vx += Math.sin(now / 1300) * 6 * s * dt;
     pom.speed = Math.hypot(pom.vx, pom.vy);
     return pom.held || pom.speed > 30 * s;
+  }
+  // where a hand holding it can actually take it: the pointer brought in to what
+  // the cord, the platform under it and the room allow. Pulled toward a spot it
+  // can't reach, it would slide past the closest one and back, every frame
+  const HELD = { x: 0, y: 0 };
+  function heldTarget() {
+    const { s } = L, o = L.pom, r = o.r, mx = o.len * 2.5, floor = L.low.y + 6 * s - r;
+    let x = pom.hx, y = pom.hy;
+    const reach = () => {
+      const dx = x - o.x, dy = y - o.y, d = Math.hypot(dx, dy);
+      if (d > mx) { x = o.x + (dx / d) * mx; y = o.y + (dy / d) * mx; }
+    };
+    reach();
+    // below the platform: along it instead, as far as the cord goes
+    if (y > floor) { const c = Math.sqrt(Math.max(0, mx * mx - (floor - o.y) ** 2)); x = clamp(pom.hx, o.x - c, o.x + c); y = floor; }
+    x = clamp(x, r, L.W - r); y = clamp(y, r, floor);
+    reach();
+    // and on this side of his tail, just clear of it rather than pushing into it
+    // (pushed, it would give, flick back and shove the pompom about)
+    for (let k = 0; k < 2; k++) {
+      const c = tailClear((x - L.catX) / s, (y - L.topY) / s, 4);
+      if (!c.hit) break;
+      x = L.catX + c.x * s; y = Math.min(L.topY + c.y * s, floor);
+      reach();
+    }
+    HELD.x = Number.isFinite(x) ? x : pom.x; HELD.y = Number.isFinite(y) ? y : pom.y;
+    return HELD;
+  }
+  // where the pompom is allowed to be: on its cord, above the middle platform, off his tail
+  function toyLimits(now, h) {
+    const { s } = L, o = L.pom, r = o.r;
+    let dx = pom.x - o.x, dy = pom.y - o.y, d = Math.hypot(dx, dy);
+    // a hand can pull it out further than it hangs; let go, the cord takes it back
+    // in over a moment instead of snapping it straight onto the short circle
+    const base = o.len * 1.7;
+    if (pom.held) pom.cap = Math.min(d, o.len * 2.5);
+    else if (pom.cap > base) pom.cap = Math.max(base, Math.min(pom.cap - o.len * 2.4 * h, d));
+    const mx = pom.held ? o.len * 2.5 : Math.max(base, pom.cap);
+    if (d > mx) {
+      dx /= d; dy /= d;
+      pom.x = o.x + dx * mx; pom.y = o.y + dy * mx;
+      const vr = pom.vx * dx + pom.vy * dy;
+      if (vr > 0) { pom.vx -= dx * vr; pom.vy -= dy * vr; }
+    }
+    const floor = L.low.y + 6 * s - r;
+    if (pom.y > floor) { pom.y = floor; if (pom.vy > 0) pom.vy *= -0.25; pom.vx *= 0.92; }
+    tailContact(now);
+    pom.x = clamp(pom.x, r, L.W - r); pom.y = clamp(pom.y, r, floor);
+  }
+  // the pompom against his tail (in cat units): it's pushed back out, and the
+  // tail gives a little where it was pushed. The cord must never cross the tail
+  // either, so if it does (the tail swept over it) the pompom goes back along
+  // the cord to the near side
+  function tailContact(now) {
+    const { s } = L;
+    const c = tailClear((pom.x - L.catX) / s, (pom.y - L.topY) / s);
+    if (!c.hit) return;
+    const { bx, by, bi, bu, best } = c;
+    // held in a hand, it gives only if it's well into the tail (dragged fast across
+    // it, or the cord's over it); a little brush of the tail just bends the tail
+    const k = !pom.held || c.cross ? 1 : clamp((best - 3) / best);
+    if (k > 0) {
+      pom.x += (L.catX + c.x * s - pom.x) * k; pom.y += (L.topY + c.y * s - pom.y) * k;
+      const vn = pom.vx * bx + pom.vy * by;
+      if (vn < 0) { pom.vx -= bx * vn * 1.3; pom.vy -= by * vn * 1.3; }
+    }
+    // the tail gives way: more the further down it was pushed (and only gently
+    // round one that's held, which stays where it is)
+    const a = tailA[bi], side = bx * Math.sin(a) - by * Math.cos(a);
+    C.tbv += side * Math.min(best, 6) * 7 * (0.4 + bu);
+    if (pom.held) C.tbv = clamp(C.tbv, -4, 4);
+    C.tbu = lerp(C.tbu, bu, 0.3);
+    C.tailTouch = now;
+    // and then flicks back at it, as tails do (only the once while it's held there:
+    // it can't knock it away, so it would just keep at it)
+    if (!RM && now - C.flickAt > 900 && !(pom.held && C.flickHeld)) {
+      C.flickAt = now + 140; C.flickDir = -Math.sign(side) || 1; C.flickHit = false;
+      C.flickHeld = !!pom.held;
+    }
+  }
+  // the pompom at (px, py), cat units, moved back to this side of the tail along its
+  // cord and then out of it (pad: how much room to leave); hit says whether it had
+  // to move, and which way it was pushed
+  const TC = { x: 0, y: 0, hit: false, cross: false, bx: 0, by: 0, bi: 0, bu: 0, best: 0 };
+  function tailClear(px, py, pad = 0) {
+    const { s } = L;
+    const rp = L.pom.r / s - 1 + pad, ox = (L.pom.x - L.catX) / s, oy = (L.pom.y - L.topY) / s;
+    const cdx = px - ox, cdy = py - oy;
+    let tMin = 1, ci = -1;
+    for (let i = 0; i < TAIL_M; i++) {
+      const ax = tailX[i], ay = tailY[i], ex = tailX[i + 1] - ax, ey = tailY[i + 1] - ay;
+      const den = cdx * ey - cdy * ex;
+      if (Math.abs(den) < 1e-6) continue;
+      const t = ((ax - ox) * ey - (ay - oy) * ex) / den, w = ((ax - ox) * cdy - (ay - oy) * cdx) / den;
+      if (t > 0 && t < tMin && w >= 0 && w <= 1) { tMin = t; ci = i; }
+    }
+    let bi = -1, bu = 0, bx = 0, by = 0, best = 0;
+    if (ci >= 0) {
+      const cl = Math.hypot(cdx, cdy) || 1, rr = tailR(ci / TAIL_M) + rp;
+      const t = Math.max(0, tMin - rr / cl);
+      const nx = ox + cdx * t - px, ny = oy + cdy * t - py, nl = Math.hypot(nx, ny) || 1;
+      px += nx; py += ny;
+      bi = ci; bu = ci / TAIL_M; bx = nx / nl; by = ny / nl; best = Math.min(8, nl);
+    }
+    // then out of the deepest overlap
+    let pen = 0, ox2 = 0, oy2 = 0, oi = -1, ou = 0;
+    for (let i = 0; i < TAIL_M; i++) {
+      const ax = tailX[i], ay = tailY[i], ex = tailX[i + 1] - ax, ey = tailY[i + 1] - ay;
+      const ll = ex * ex + ey * ey, k = ll ? clamp(((px - ax) * ex + (py - ay) * ey) / ll) : 0;
+      const qx = ax + ex * k, qy = ay + ey * k;
+      const u = (i + k) / TAIL_M, rr = tailR(u) + rp;
+      const nx = px - qx, ny = py - qy, dd = Math.hypot(nx, ny);
+      if (dd >= rr || dd < 1e-4 || rr - dd <= pen) continue;
+      pen = rr - dd; ox2 = nx / dd; oy2 = ny / dd; oi = i; ou = u;
+    }
+    if (oi >= 0) {
+      px += ox2 * pen; py += oy2 * pen;
+      if (pen >= best) { best = pen; bx = ox2; by = oy2; bi = oi; bu = ou; }
+    }
+    TC.x = px; TC.y = py; TC.hit = bi >= 0; TC.cross = ci >= 0;
+    TC.bx = bx; TC.by = by; TC.bi = bi; TC.bu = bu; TC.best = best;
+    return TC;
+  }
+  // the tail springing back after a bump, and its flick knocking the pompom away
+  function stepTail(dt, now) {
+    if (RM) { C.tb = C.tbv = 0; return false; }
+    let hot = false;
+    if (C.tb || C.tbv) {
+      C.tbv += (-55 * C.tb - 7 * C.tbv) * dt;
+      C.tb = clamp(C.tb + C.tbv * dt, -0.5, 0.5);
+      if (Math.abs(C.tb) === 0.5) C.tbv *= 0.5;
+      if (Math.abs(C.tb) < 0.002 && Math.abs(C.tbv) < 0.01) C.tb = C.tbv = 0;
+      hot = true;
+    }
+    const fe = now - C.flickAt;
+    if (fe > -200 && fe < 420) {
+      hot = true;
+      if (!C.flickHit && fe > 170) {
+        C.flickHit = true;
+        if (!pom.held && !pom.pinned && now - C.tailTouch < 400) { pom.vx -= C.flickDir * 260 * L.s; pom.vy -= 80 * L.s; }
+        play('swish', { gain: 0.05 });
+      }
+    }
+    return hot;
   }
   // the toy button: an invisible hand takes the pompom for a little dance
   function autoHand(now) {
     const { s } = L, e = now - pom.auto.t0, xMax = L.W - 40 * s;
-    const ax = Math.min(L.catX + 186 * s, xMax), ay = L.topY - 92 * s;
+    // beside his face if there's room for it there, else low in front of his paws
+    // (never right over his eyes)
+    const room = (xMax - L.catX) / s >= 186;
+    const ax = room ? L.catX + 186 * s : L.catX + Math.min(150, (L.W - 30 * s - L.catX) / s - 16) * s;
+    const ay = L.topY - (room ? 92 : 24) * s, wig = room ? 1 : 0.45;
     if (e < 700) { const k = easeInOut(e / 700); pom.hx = lerp(pom.auto.x0, ax, k); pom.hy = lerp(pom.auto.y0, ay, k); }
-    else if (e < 2300) { const k = (e - 700) / 1000; pom.hx = Math.min(ax + Math.sin(k * 5.2) * 46 * s, xMax); pom.hy = ay + Math.sin(k * 7.4) * 20 * s - 10 * s; }
-    else if (e < 4200) { pom.hx = Math.min(L.catX + 172 * s, xMax); pom.hy = L.topY - 66 * s + Math.sin(e / 300) * 2 * s; }
+    else if (e < 2300) { const k = (e - 700) / 1000; pom.hx = Math.min(ax + Math.sin(k * 5.2) * 46 * s * wig, xMax); pom.hy = ay + Math.sin(k * 7.4) * 20 * s * wig - 10 * s * wig; }
+    else if (e < 4200) { pom.hx = Math.min(room ? L.catX + 172 * s : ax, xMax); pom.hy = (room ? L.topY - 66 * s : ay) + Math.sin(e / 300) * 2 * s; }
     else { pom.held = null; pom.auto = null; }
   }
 
@@ -2803,9 +3687,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const ux = cx(x), uy = cy(y);
     headMatrix(P);
     const hp = catToHead(ux, uy);
-    const hx = hp.x - P.yaw * 2.5, hy = hp.y - P.pitch * 2;
+    const yw = clamp(P.yaw, -FACE_YAW, FACE_YAW), pc = clamp(P.pitch, FACE_UP, FACE_DOWN);
+    const hx = hp.x - yw * 2.5 - (P.yaw - yw) * 9, hy = hp.y - pc * 2 - (P.pitch - pc) * 12;
     if ((hx / 60) ** 2 + ((hy - 2) / 50) ** 2 < 1 || (hy < -20 && hy > -80 && Math.abs(hx) < 54)) {
-      faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
+      faceProj(0, NOSE_LAT, FACE_R * 1.1, yw, pc);
       if (Math.hypot(hx - FP.x, hy - FP.y + 1.3) < 11) return 'nose';
       if (hy < -15) return 'head';
       if (hy > 13 || Math.abs(hx - FP.x) > 30) return 'chin';
@@ -2883,6 +3768,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     pom.auto = null;
     pom.held = { id: e.pointerId, ox: pom.x - x, oy: pom.y - y };
     pom.hx = pom.x; pom.hy = pom.y;
+    C.flickHeld = false;
     stage.classList.add('is-grabbing');
     try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
     C.toyT = now0();
@@ -2904,6 +3790,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (pom.pinned) return;
     pom.held = { id: -1 };
     pom.auto = { t0: now, x0: pom.x, y0: pom.y };
+    C.flickHeld = false;
     pom.hx = pom.x; pom.hy = pom.y;
     C.toyT = now;
     if (!busy) say('cat.say.toy');
@@ -2962,7 +3849,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const now = now0();
     const zone = ['back', 'chin', 'head'][petIdx++ % 3];
     if (!petNow(zone, now, zone === 'head' ? 1300 : 2400, true)) return;
-    if (zone === 'head') start('pat');
+    if (zone === 'head') { start('pat'); maybeShake(0.45); }
     if (!RM) fx.strokes.push({ t0: now, zone });
   }
   function boop(fromButton) {
@@ -2972,8 +3859,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const a = start('boop');
     // busy with something more important: say so, rather than nothing at all
     if (!a) { if (fromButton) say('cat.say.busy'); return; }
-    headMatrix(P); faceProj(0, NOSE_LAT, FACE_R * 1.1, P.yaw, P.pitch);
-    const n = headToCat(FP.x + P.yaw * 2.5, FP.y + P.pitch * 2);
+    const n = facePoint(P, 0, NOSE_LAT, FACE_R * 1.1);
     fx.rings.push({ x: L.catX + n.x * L.s, y: L.topY + n.y * L.s, t0: now });
     if (fromButton || now - C.boopSayT > 4000) { C.boopSayT = now; say('cat.say.boop'); }
   }
@@ -2988,8 +3874,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     fx.words.push({ t0: now0(), text, size, side: Math.random() < 0.5 ? -1 : 1 });
   }
 
-  // someone's here: keep him awake, push the next idle thing back
-  function noteUser(now) {
+  // someone's here: keep him awake, push the next idle thing back. A passing
+  // pointer only stops the idle things; a press or a click also gets him off a book
+  function noteUser(now, strong) {
     C.lastUser = now;
     C.idleAt = Math.max(C.idleAt, now + 4500);
     const a = C.act;
@@ -2997,8 +3884,432 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       C.act = null;
       if (!RM) start('wake');
       if (a.asleep) say('cat.say.wake');
-    } else if (a && PRI[a.kind] === 1 && a.kind !== 'wake' && a.kind !== 'tilt') endAct(a, now);
+    } else if (a && PRI[a.kind] === 1 && (!STICKY.has(a.kind) || (strong && a.kind === 'bookrest'))) endAct(a, now);
   }
+  // is he in the middle of something that can't wait?
+  const busyWith = (p = 3) => C.act && PRI[C.act.kind] >= p;
+  // putting the laser or the brush away for something else
+  function toolsAway(now) { laserOff(now, true); brushOff(); }
+  // busy with something that isn't just chasing the dot
+  const tied = () => busyWith(3) && C.act.kind !== 'laser';
+  // a button that needs him: the laser and the brush are only games, so they give
+  // way (even mid-pounce); if he's really tied up they stay out and he says so
+  function takeOver(now) {
+    if (tied()) { say('cat.say.busy'); return false; }
+    toolsAway(now);
+    if (C.act && C.act.kind === 'laser') endAct(C.act, now);
+    return true;
+  }
+
+  // the laser pointer
+  function laserAt(x, y, now) {
+    x = clamp(x, 6, L.W - 6); y = clamp(y, 6, L.H - 6);
+    if (Math.hypot(x - laser.x, y - laser.y) > 1.5 * L.s) laser.lastMove = now;
+    laser.x = x; laser.y = y;
+  }
+  function steerDot(id, x, y, now) {
+    laser.drag = id; laser.user = true; laser.auto = null;
+    laserAt(x, y, now);
+    laser.until = Math.max(laser.until, Math.min(laser.t0 + 30000, now + 6000));
+    C.lastUser = now;
+    kick();
+  }
+  // a little dance for the dot when nobody's steering it (cat units: where, how long
+  // to get there, how long to stay); the last stop holds until he pounces on it
+  const DOT_PATH = [[-170, 250, 0, 500], [30, 196, 520, 260], [150, -2, 480, 1300], [236, -112, 300, 360], [-70, -176, 650, 650], [140, -6, 600, 2600]];
+  function laserToggle(byKeys) {
+    if (!L) return;
+    const now = now0();
+    if (laser.on) { laserOff(now); return; }
+    if (busyWith(4)) { say('cat.say.busy'); return; }
+    brushOff();
+    laser.on = true; laser.t0 = now; laser.until = now + 16000; laser.user = false; laser.drag = laser.pend = null; laser.said = false;
+    const p = DOT_PATH[0];
+    laserAt(L.catX + p[0] * L.s, L.topY + p[1] * L.s, now);
+    // from the keyboard (or a tap) it dances straight away; with a mouse it waits a moment to be picked up
+    laser.auto = { t0: now + (byKeys || touchy ? 250 : 1300), i: 0, x0: laser.x, y0: laser.y, at: 0 };
+    stage.classList.add('is-laser');
+    btn.laser.setAttribute('aria-pressed', 'true');
+    play('click', { gain: 0.1 });
+    say('cat.say.laser.on');
+    // (busy with something, he finishes that first and then he's on it)
+    if (!busyWith(3)) start('laser');
+    kick();
+  }
+  function laserOff(now, quiet) {
+    if (!laser.on) return;
+    laser.on = false; laser.auto = null; laser.drag = laser.pend = null;
+    C.stare = { x: laser.x, y: laser.y, until: now + 1800 };
+    stage.classList.remove('is-laser');
+    btn.laser.setAttribute('aria-pressed', 'false');
+    const a = C.act;
+    if (a && a.kind === 'laser' && (a.phase || 'watch') === 'watch') endAct(a, now);
+    if (!quiet) { play('click', { gain: 0.08 }); say('cat.say.laser.off'); }
+    kick();
+  }
+  function stepLaser(now) {
+    if (!laser.on) return false;
+    const { s } = L;
+    if (now > laser.until || (laser.user && now - laser.lastMove > 7000)) { laserOff(now); return true; }
+    const au = laser.auto;
+    if (au && now >= au.t0) {
+      const p = DOT_PATH[au.i], e = now - au.t0;
+      const tx = clamp(L.catX + p[0] * s, 10, L.W - 10), ty = clamp(L.topY + p[1] * s, 10, L.H - 10);
+      const k = RM ? 1 : p[2] ? easeInOut(e / p[2]) : 1;
+      laserAt(lerp(au.x0, tx, k), lerp(au.y0, ty, k), now);
+      // a little shiver while it sits still, like a hand holding it
+      if (!RM && e > p[2]) { laser.x += Math.sin(now / 90) * 0.6 * s; laser.y += Math.cos(now / 70) * 0.5 * s; }
+      const last = au.i === DOT_PATH.length - 1;
+      // the last stop: it stays until he lands on it, then it's gone from under his paws
+      if (last && laser.caught > au.t0 + p[2]) { if (now - laser.caught > 120) laserOff(now, true); }
+      else if (e > p[2] + p[3]) {
+        if (last) laserOff(now);
+        else {
+          // it waits for him to finish a pounce before it runs off again
+          const a = C.act;
+          if (!(a && a.kind === 'laser' && (a.phase === 'crouch' || a.phase === 'lunge'))) { au.i++; au.t0 = now; au.x0 = laser.x; au.y0 = laser.y; }
+        }
+      }
+    }
+    if (laser.on && (!C.act || PRI[C.act.kind] < 3)) start('laser');
+    return true;
+  }
+  // can he get his paws on it from where he is? (cat units)
+  function dotInReach() {
+    const ux = cx(laser.x), uy = cy(laser.y);
+    return laser.on && ux > 46 && ux < Math.min(245, (L.W - 24 * L.s - L.catX) / L.s) && uy > -140 && uy < 30 && Math.hypot(ux - SHOULDER_N[0], uy - SHOULDER_N[1]) < 175;
+  }
+
+  // the brush: a pass along his back, then it stays out a while for you to use
+  function brushGo() {
+    if (!L) return;
+    const now = now0();
+    if (tied()) { say('cat.say.busy'); return; }
+    if (now < C.grumpyUntil) { say('cat.say.grumpy'); return; }
+    takeOver(now);
+    brush.on = true; brush.until = now + 10000;
+    stage.classList.add('is-brush');
+    const a = start('brush');
+    if (a) say('cat.say.brush');
+    kick();
+  }
+  function brushOff() {
+    if (!brush.on) return;
+    brush.on = false; brush.lastX = null;
+    stage.classList.remove('is-brush');
+    if (C.act && C.act.kind === 'brush') endAct(C.act, now0());
+  }
+  // a stroke the right way (head to tail): a tuft comes away, he loves it
+  function brushed(x, y, now) {
+    spawnTuft(x, y, now);
+    noteUser(now);
+    if (now < C.grumpyUntil) return;
+    const fresh = now > C.petUntil + 600 || C.petZone !== 'brush';
+    C.petZone = 'brush';
+    C.petUntil = Math.max(C.petUntil, now + 1100);
+    if (fresh) { pets++; renderTally(); }
+    if (now - brush.sayT > 6000) { brush.sayT = now; say('cat.say.brush'); }
+    if (now - lastPurr > 1700) { lastPurr = now; play('purr', { gain: 0.24, seconds: 1.9 }); }
+    play('swish', { gain: 0.04 });
+  }
+  // the wrong way (tail to head): fur up, and a look
+  function brushedWrong(now) {
+    C.puffAt = now;
+    C.stim += 0.8;
+    C.petUntil = 0;
+    if (start('huff')) { say('cat.say.brush.wrong'); play('huff', { gain: 0.14 }); }
+  }
+  // the fluff pile lives on the cushion, in front of his belly (cat units)
+  const PILE = [-66, 15];
+  function spawnTuft(x, y, now) {
+    if (RM) { pile.n = Math.min(60, pile.n + 1); return; }
+    if (tufts.length > 26) return;
+    tufts.push({ x: cx(x), y: cy(y), vx: (Math.random() - 0.5) * 24, vy: -(18 + Math.random() * 20), t0: now, seed: Math.random() * 100, rot: Math.random() * TAU });
+  }
+  function stepTufts(dt, now) {
+    if (!tufts.length) return false;
+    for (let i = tufts.length - 1; i >= 0; i--) {
+      const f = tufts[i], e = now - f.t0;
+      if (e < 1100) {
+        // drifting up and away, slowing, on little eddies
+        f.x += (f.vx + Math.sin(e / 320 + f.seed) * 16) * dt; f.y += f.vy * dt;
+        f.vx *= 1 - 1.2 * dt; f.vy *= 1 - 1.4 * dt; f.rot += dt * 0.9;
+      } else {
+        // then settling down onto the pile
+        const k = 1 - Math.exp(-dt * 3.2);
+        f.x += (PILE[0] + Math.sin(f.seed) * 10 - f.x) * k; f.y += (PILE[1] - 2 - f.y) * k + Math.sin(e / 200 + f.seed) * 6 * dt; f.rot += dt * 0.8;
+        if (Math.hypot(PILE[0] + Math.sin(f.seed) * 10 - f.x, PILE[1] - 2 - f.y) < 3 || e > 4200) { tufts.splice(i, 1); pile.n = Math.min(60, pile.n + 1); }
+      }
+    }
+    return true;
+  }
+
+  // psst psst
+  function psst() {
+    if (!L) return;
+    const now = now0();
+    chat.psst = chat.psst.filter((t) => now - t < 12000);
+    chat.psst.push(now);
+    fx.calls.push({ t0: now, text: tt('cat.psst.word') });
+    play('psst', { gain: 0.14 });
+    if (busyWith(3)) { say('cat.say.busy'); kick(); return; }
+    // the third time in a row, he's decided you can wait
+    const tooMuch = chat.psst.length >= 3;
+    const a = start(tooMuch ? 'ignore' : 'psst');
+    say(a ? (tooMuch ? 'cat.say.ignore' : 'cat.say.psst') : 'cat.say.busy');
+    kick();
+  }
+  // you slow-blink at him, and he slow-blinks back
+  function slowBlink() {
+    if (!L) return;
+    const now = now0();
+    if (busyWith(2) && C.act.kind !== 'blinkback') { say('cat.say.busy'); return; }
+    chat.you = { t0: now };
+    say('cat.say.blink');
+    later(() => { if (L && !busyWith(2)) start('blinkback'); }, RM ? 300 : 1000);
+    kick();
+  }
+
+  // dressing up: the next hat, and he's not impressed
+  const HAT_SAY = ['cat.say.hat.none', 'cat.say.hat.beret', 'cat.say.hat.gat', 'cat.say.hat.crown'];
+  function nextHat() {
+    if (!L) return;
+    const now = now0();
+    if (C.act && C.act.kind === 'shake') return;
+    hat.off = null;
+    hat.i = (hat.i + 1) % 4;
+    hat.t0 = now;
+    play('swish', { gain: 0.05 });
+    say(HAT_SAY[hat.i]);
+    if (hat.i) start('unimpressed');
+    kick();
+  }
+  // now and then, a hat gets shaken off (after a pat on the head, say)
+  function maybeShake(p) {
+    // (once the pat itself is over)
+    if (hat.i && Math.random() < p) later(() => { if (hat.i && !busyWith(2)) start('shake'); }, RM ? 850 : 950);
+  }
+  // off it goes (cat units)
+  function hatFlies(now) {
+    const top = headPoint(P, 0, -44);
+    const side = Math.random() < 0.5 ? -1 : 1;
+    hat.off = { i: hat.i, x: top.x, y: top.y, vx: side * (120 + Math.random() * 60), vy: -260, rot: 0, vr: side * (5 + Math.random() * 4), t0: now };
+    hat.i = 0;
+    play('swish', { gain: 0.07 });
+  }
+
+  // catnip, once in a while
+  const NIP_WAIT = 45000, SPRIG_AT = [30, 15];
+  function giveNip() {
+    if (!L) return;
+    const now = now0();
+    if (now - nip.at < NIP_WAIT) { say('cat.say.nip.wait'); return; }
+    if (!takeOver(now)) return;
+    nip.at = now;
+    nip.sprig = { t0: now, x0: cx(L.jar.x), y0: cy(L.jar.y - 58 * L.s), fade: 0, crushed: 0 };
+    start('nip');
+    say('cat.say.nip');
+    kick();
+  }
+  // where the sprig is (cat units): tossed up from the floor by the jar, then on the cushion
+  function sprigPos(now) {
+    const sp = nip.sprig, e = RM ? 1 : clamp((now - sp.t0) / 700);
+    PT.x = lerp(sp.x0, SPRIG_AT[0], e); PT.y = lerp(sp.y0, SPRIG_AT[1], e) - Math.sin(Math.PI * e) * 140;
+    return PT;
+  }
+
+  // paw painting: the sheet of hanji on the cushion in front of him, in its own
+  // units (ART_W x ART_H) laid flat onto the cushion
+  const PAPER = { ox: 4, oy: 0, ux: 0.74, uy: -0.02, vx: -0.07, vy: 0.28 };
+  const paperPt = (u, v) => { PT.x = PAPER.ox + PAPER.ux * u + PAPER.vx * v; PT.y = PAPER.oy + PAPER.uy * u + PAPER.vy * v; return PT; };
+  function paintGo() {
+    if (!L) return;
+    const now = now0();
+    if (art.cur) { say('cat.say.busy'); return; }
+    if (!takeOver(now)) return;
+    const seed = (Math.random() * 1e9) | 0, R = rng(seed);
+    // each one different: how many prints, where, which way up, how much ink, any smudges
+    const n = 3 + Math.floor(R() * 4), st = [];
+    for (let i = 0; i < n; i++) {
+      let u = 16 + R() * 66, v = 12 + R() * 44;
+      if (u > 72 && v > 46) u -= 22;
+      st.push({ u, v, rot: (R() - 0.5) * 1.8 + (R() < 0.2 ? Math.PI : 0), sz: 1 + R() * 0.4, smudge: R() < 0.3 ? R() * TAU : null, dip: i === 0 || (i === 3 && R() < 0.8) || R() < 0.12 });
+    }
+    const tl = [];
+    let t = RM ? 300 : 1100, ink = 0;
+    for (const p of st) {
+      if (p.dip) { tl.push({ t, kind: 'dip', d: RM ? 300 : 700 }); t += RM ? 300 : 700; ink = 1; }
+      p.ink = ink; ink = Math.max(0.2, ink - 0.2 - R() * 0.12);
+      const d = RM ? 350 : p.smudge !== null ? 950 : 720;
+      tl.push({ t, kind: 'stamp', p, d }); t += d;
+    }
+    for (const [kind, d, dr] of [['sign', 1000, 500], ['admire', 1300, 700], ['hang', 1000, 400]]) { tl.push({ t, kind, d: RM ? dr : d }); t += RM ? dr : d; }
+    art.cur = { seed, R, c: makeHanji(seed), st, tl, end: t, t0: now, splat: R() < 0.6 };
+    start('paint');
+    say('cat.say.paint');
+    kick();
+  }
+  // a print lands on the paper
+  function inkPrint(p) {
+    const cur = art.cur;
+    if (!cur) return;
+    const g = cur.c.getContext('2d');
+    g.save();
+    g.scale(ART_PX, ART_PX);
+    pawPrint(g, p.u, p.v, p.rot, p.sz, p.ink, cur.R);
+    if (p.smudge !== null) {
+      const dx = Math.cos(p.smudge), dy = Math.sin(p.smudge);
+      stroke(g, { pts: [[p.u, p.v], [p.u + dx * 7, p.v + dy * 6], [p.u + dx * 15, p.v + dy * 11]], width: 7 * p.sz, dry: 0.75, tone: 0.55 * p.ink + 0.2, rgb: INK_RGB, seed: cur.seed % 997, bristles: 9 });
+    }
+    if (cur.splat && p.ink > 0.6) for (let i = 0; i < 4; i++) stamp(g, p.u + (cur.R() - 0.5) * 22, p.v + (cur.R() - 0.5) * 18, 0.5 + cur.R() * 1.1, INK_RGB, 0.7, 0.7);
+    g.restore();
+  }
+  function signArt() {
+    const cur = art.cur;
+    if (!cur) return;
+    const g = cur.c.getContext('2d');
+    sealStamp(g, (ART_W - 11) * ART_PX, (ART_H - 11) * ART_PX, 10 * ART_PX, '猫', { seed: cur.seed % 89, alpha: 0.9 });
+  }
+  function artDone(now) {
+    const cur = art.cur;
+    if (!cur) return;
+    art.n++;
+    renderTally();
+    // up onto the wall, if there's a bit of wall for it
+    art.fly = { c: cur.c, t0: now, wall: !!L.wall };
+    art.cur = null;
+    say(L.wall ? 'cat.say.paint.wall' : 'cat.say.paint.done');
+  }
+
+  // books: tap one (or the button) and it comes over and falls open in front of him
+  const BOOK_SAY = BOOKS.map((b, i) => `cat.say.book.${i}`);
+  // the button: her favourite first, then the rest in turn
+  const BOOK_ORDER = [FAV_BOOK, ...BOOKS.keys()].filter((v, j, a) => a.indexOf(v) === j);
+  const BOOK_AT = [54, 13];
+  // where a book in the stack sits (cat units, its spine's bottom middle)
+  function stackPos(j) {
+    const b = L.books, list = books.stack;
+    let y = cy(b.y);
+    for (let k = 0; k < j; k++) y -= BOOKS[list[k]].h;
+    PT.x = cx(b.x) + Math.sin(list[j] * 2.3) * 2.6; PT.y = y;
+    return PT;
+  }
+  function openBook(i) {
+    if (!L) return;
+    const now = now0();
+    // one at a time: the open one goes back first, and one still on its way back
+    // goes straight onto the pile
+    if (books.open >= 0 && C.act && (C.act.kind === 'book' || C.act.kind === 'bookrest')) endAct(C.act, now);
+    if (books.open >= 0) bookBack(now);
+    if (books.fly && books.fly.back) { if (!books.stack.includes(books.fly.i)) books.stack.push(books.fly.i); books.fly = null; }
+    if (!takeOver(now)) return;
+    if (i === undefined) {
+      // the button goes through them in turn (off the floor first, if one's there)
+      if (books.fallen) i = books.fallen.i;
+      else {
+        for (let n = 0; n < BOOK_ORDER.length && i === undefined; n++) {
+          const c = BOOK_ORDER[(books.next++) % BOOK_ORDER.length];
+          if (books.stack.includes(c)) i = c;
+        }
+        if (i === undefined) return;
+      }
+    }
+    let from;
+    if (books.fallen && books.fallen.i === i) { from = { x: books.fallen.x, y: books.fallen.y, rot: books.fallen.rot }; books.fallen = null; }
+    else {
+      const j = books.stack.indexOf(i);
+      if (j < 0) return;
+      const p = stackPos(j);
+      from = { x: p.x, y: p.y - BOOKS[i].h / 2, rot: 0 };
+      books.stack.splice(j, 1);
+    }
+    books.open = i; books.k = 0;
+    books.fly = { i, t0: now, from, back: false };
+    const a = start('book', { i });
+    if (!a) { bookBack(now); say('cat.say.busy'); return; }
+    play('swish', { gain: 0.05 });
+    kick();
+  }
+  function bookBack(now) {
+    const i = books.open;
+    if (i < 0) return;
+    books.open = -1;
+    books.fly = { i, t0: now, back: true, k0: books.k };
+    books.k = 0;
+  }
+  function stepBooks(dt, now) {
+    let hot = false;
+    const f = books.fly;
+    if (f) {
+      hot = true;
+      const dur = RM ? 1 : f.back ? 650 : 620;
+      if (now - f.t0 >= dur) {
+        books.fly = null;
+        if (f.back && !books.stack.includes(f.i)) books.stack.push(f.i);
+      }
+    }
+    if (books.open >= 0 && !books.fly) {
+      const a = C.act, opening = a && a.kind === 'book' && now - a.t0 > (RM ? 0 : 640);
+      if (opening || (a && a.kind === 'bookrest')) books.k = RM ? 1 : Math.min(1, books.k + dt / 0.38);
+      if (books.k < 1) hot = true;
+    }
+    const fb = books.fallen;
+    if (fb && !fb.landed) {
+      hot = true;
+      if (RM) { fb.x = fb.x1; fb.y = fb.y1; fb.rot = fb.r1; fb.landed = true; }
+      else {
+        fb.vy += 1500 * dt; fb.x += fb.vx * dt; fb.y += fb.vy * dt; fb.rot += fb.vr * dt;
+        if (fb.y >= fb.y1) { fb.y = fb.y1; fb.landed = true; fb.rot = fb.r1; play('thump', { gain: 0.16 }); fx.rings.push({ x: L.catX + fb.x * L.s, y: L.topY + fb.y * L.s, t0: now }); }
+      }
+    }
+    return hot;
+  }
+  // where a book falling off at x (cat units) comes to rest: the middle platform or the floor
+  function bookFloor(x) {
+    const lo = L.low, X = L.catX + x * L.s;
+    if (Math.abs(X - lo.x) < lo.rx * 0.9) return cy(lo.y + 6 * L.s);
+    return cy(groundAt(X) - 1 * L.s);
+  }
+  // is there a book under (x, y)? the fallen one first (it's in front), then the stack, top down
+  function bookAt(x, y) {
+    if (!L) return -1;
+    const ux = cx(x), uy = cy(y), pad = 4;
+    const fb = books.fallen;
+    if (fb && fb.landed && Math.abs(ux - fb.x) < BOOKS[fb.i].w / 2 + pad && uy > fb.y - BOOKS[fb.i].h - 4 - pad && uy < fb.y + pad) return fb.i;
+    for (let j = books.stack.length - 1; j >= 0; j--) {
+      const i = books.stack[j], p = stackPos(j);
+      if (Math.abs(ux - p.x) < BOOKS[i].w / 2 + pad && uy > p.y - BOOKS[i].h - (j === books.stack.length - 1 ? 4 : 0) - pad && uy < p.y + pad * 0.5) return i;
+    }
+    return -1;
+  }
+
+  // a hat dropping on, or flying off (cat units)
+  function stepHat(dt, now) {
+    let hot = !RM && hat.i && now - hat.t0 < 450;
+    const h = hat.off;
+    if (h) {
+      if (RM || now - h.t0 > 1500) hat.off = null;
+      else { h.vy += 900 * dt; h.x += h.vx * dt; h.y += h.vy * dt; h.rot += h.vr * dt; hot = true; }
+    }
+    return hot;
+  }
+  function stepNip(now) {
+    const sp = nip.sprig;
+    if (!sp) return false;
+    if (sp.fade && now - sp.fade > 1200) { nip.sprig = null; return true; }
+    return now - sp.t0 < 760 || !!sp.fade;
+  }
+  // a finished painting on its way up to the wall (or fading, if there's no wall for it)
+  function stepArt(now) {
+    const f = art.fly;
+    if (!f) return false;
+    const end = f.quiet ? 700 : RM ? ART_HOLD + 200 : f.wall && L.wall ? ART_WALL : ART_FADE;
+    if (now - f.t0 >= end) { if (f.wall && L.wall && !f.quiet) art.wall = { c: f.c }; art.fly = null; }
+    return true;
+  }
+
+  // the visitor's side of things, drawn small at the bottom of the room
+  const youAt = () => { PT.x = clamp(L.catX + (L.narrow ? 120 : 210) * L.s, 60, L.W - 60); PT.y = L.H - 26 * L.s; return PT; };
 
   // pointer events
   stage.addEventListener('pointerdown', (e) => {
@@ -3006,16 +4317,40 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const [x, y] = local(e);
     const now = now0();
     pointer.x = x; pointer.y = y; pointer.t = now;
-    noteUser(now);
+    noteUser(now, true);
     C.autoN = 0;
     const pad = e.pointerType === 'touch' ? 14 : 6;
+    // the dot is drawn over everything, so pressing right on it takes the dot
+    if (laser.on && (e.target === dotEl || Math.hypot(x - laser.x, y - laser.y) < 12 * L.s)) {
+      e.preventDefault();
+      steerDot(e.pointerId, x, y, now);
+      try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
+      return;
+    }
     // the avocado is drawn over the pompom, so right on it, it wins
     if (onAvocado(x, y, 0)) { e.preventDefault(); startGrab(e, x, y); return; }
     if (e.target === toyEl || onToy(x, y, pad)) { e.preventDefault(); grabToy(e, x, y); return; }
     if (e.target === grabEl || onAvocado(x, y, pad)) { e.preventDefault(); startGrab(e, x, y); return; }
+    // with the laser on, a press puts the dot right there and drags it about. A
+    // finger does that on the dot itself; anywhere else it waits to see if it's a
+    // tap or a sideways drag, so the page can still be scrolled
+    if (laser.on) {
+      if (e.pointerType !== 'mouse' && e.target !== dotEl) { laser.pend = { id: e.pointerId, x, y, t0: now }; return; }
+      e.preventDefault();
+      steerDot(e.pointerId, x, y, now);
+      try { stage.setPointerCapture(e.pointerId); } catch { /* fine */ }
+      return;
+    }
     if (onJar(x, y)) { tossTreat(); return; }
+    // he's drawn over the books, so he comes first
     const z = zoneAt(x, y);
-    if (z) tapCat = { id: e.pointerId, x, y, t0: now, moved: 0, zone: z };
+    if (z) {
+      tapCat = { id: e.pointerId, x, y, t0: now, moved: 0, zone: z };
+      if (brush.on) { brush.lastX = x; brush.x = x; brush.y = y; brush.lastT = now; }
+      return;
+    }
+    const b = bookAt(x, y);
+    if (b >= 0) openBook(b);
   }, opt);
   stage.addEventListener('pointermove', (e) => {
     if (!L) return;
@@ -3023,10 +4358,45 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     const now = now0();
     if (A.grab && e.pointerId === A.grab.id) { moveGrab(x, y); return; }
     if (pom.held && pom.held.id === e.pointerId) { pom.hx = x + pom.held.ox; pom.hy = y + pom.held.oy; pointer.x = x; pointer.y = y; pointer.t = now; kick(); return; }
+    const pd = laser.pend;
+    if (laser.on && pd && pd.id === e.pointerId) {
+      const dx = Math.abs(x - pd.x), dy = Math.abs(y - pd.y);
+      if (dx > 8 && dx > dy * 1.2) { laser.pend = null; steerDot(e.pointerId, x, y, now); }
+      else if (dy > 10) laser.pend = null;
+      return;
+    }
+    // steering the dot: a mouse just moves it, a finger drags it
+    if (laser.on && (laser.drag === e.pointerId || (e.pointerType === 'mouse' && laser.drag === null))) {
+      laser.user = true; laser.auto = null;
+      laserAt(x, y, now);
+      laser.until = Math.max(laser.until, Math.min(laser.t0 + 30000, now + 6000));
+      C.lastUser = now;
+      kick();
+      return;
+    }
     if (e.pointerType === 'mouse' || e.buttons) { pointer.x = x; pointer.y = y; pointer.t = now; noteUser(now); }
     if (tapCat && tapCat.id === e.pointerId) { tapCat.moved += Math.hypot(x - tapCat.x, y - tapCat.y); tapCat.x = x; tapCat.y = y; }
     const z = zoneAt(x, y);
-    if (e.pointerType === 'mouse') stage.style.cursor = onToy(x, y, 6) || onAvocado(x, y, 6) ? 'grab' : z || onJar(x, y) ? 'pointer' : '';
+    if (e.pointerType === 'mouse') stage.style.cursor = onToy(x, y, 6) || onAvocado(x, y, 6) ? 'grab' : z || onJar(x, y) || bookAt(x, y) >= 0 ? 'pointer' : '';
+    // brushing: along his back, head to tail is the right way
+    if (brush.on && (e.pointerType === 'mouse' || e.buttons)) {
+      const onBack = z === 'back' || z === 'body';
+      if (now - brush.lastT > 400 || brush.lastX === null) { brush.lastX = x; brush.dist = 0; brush.against = 0; }
+      brush.x = x; brush.y = y; brush.lastT = now;
+      if (onBack) {
+        const dx = x - brush.lastX;
+        if (C.act && C.act.kind === 'brush') endAct(C.act, now);
+        brush.until = now + 8000;
+        brush.a = lerp(brush.a, clamp(dx * 0.05, -0.4, 0.4), 0.3);
+        if (dx < 0) { brush.dist -= dx; brush.against = Math.max(0, brush.against + dx * 0.5); }
+        else { brush.against += dx; brush.dist = Math.max(0, brush.dist - dx * 0.5); }
+        if (brush.dist > 24 * L.s) { brush.dist = 0; brushed(x, y + 6 * L.s, now); }
+        if (brush.against > 80 * L.s) { brush.against = 0; brush.dist = 0; brushedWrong(now); }
+      }
+      brush.lastX = x;
+      kick();
+      return;
+    }
     // stroking him: back and forth over his fur
     if (z && z !== 'nose' && (e.pointerType === 'mouse' || e.buttons)) {
       if (now - pet.t > 650) { pet.dist = 0; pet.flips = 0; pet.lastX = x; pet.dir = 0; }
@@ -3047,12 +4417,19 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   const up = (e) => {
     if (A.grab && e.pointerId === A.grab.id) endGrab(e.type === 'pointerup' ? e : null);
     if (pom.held && pom.held.id === e.pointerId) dropToy();
+    if (laser.drag === e.pointerId) laser.drag = null;
+    // a quick tap away from the dot puts it there
+    const pd = laser.pend;
+    if (pd && pd.id === e.pointerId) {
+      laser.pend = null;
+      if (laser.on && e.type === 'pointerup' && now0() - pd.t0 < 450) { const [x, y] = local(e); if (Math.hypot(x - pd.x, y - pd.y) < 12) steerDot(null, x, y, now0()); }
+    }
     if (tapCat && tapCat.id === e.pointerId) {
       const now = now0();
       if (e.type === 'pointerup' && tapCat.moved < 10 && now - tapCat.t0 < 450) {
         const z = tapCat.zone;
         if (z === 'nose') boop(false);
-        else if (z === 'head') { if (petNow('head', now, 900, false)) start('pat'); }
+        else if (z === 'head') { if (petNow('head', now, 900, false)) { start('pat'); maybeShake(0.45); } }
         else if (z === 'chin') petNow('chin', now, 1500, false);
         else meow(now);
       }
@@ -3061,18 +4438,44 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   };
   stage.addEventListener('pointerup', up, opt);
   stage.addEventListener('pointercancel', up, opt);
-  stage.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') pointer.t = -1e9; }, opt);
-  grabEl.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
-  toyEl.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
+  stage.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') { pointer.t = -1e9; brush.lastT = -1e9; } }, opt);
+  for (const el of [grabEl, toyEl, dotEl]) el.addEventListener('contextmenu', (e) => e.preventDefault(), opt);
+  // Escape puts the laser away
+  root.addEventListener('keydown', (e) => { if (e.key === 'Escape' && laser.on && L) { laserOff(now0()); e.preventDefault(); } }, opt);
 
   // a button press is someone doing something (capture: before the button's own handler)
-  btnRow.addEventListener('click', () => { C.autoN = 0; }, { capture: true, signal: ac.signal });
+  root.querySelector('.cat-bar').addEventListener('click', (e) => {
+    if (!e.target.closest('.cat-btn')) return;
+    C.autoN = 0;
+    noteUser(now0(), true);
+  }, { capture: true, signal: ac.signal });
   btn.poke.addEventListener('click', () => { if (!L || A.grab || A.carry) return; noteUser(now0()); poke(null, null); }, opt);
   btn.swat.addEventListener('click', () => handleIt(), opt);
   btn.pet.addEventListener('click', () => petButton(), opt);
   btn.boop.addEventListener('click', () => boop(true), opt);
   btn.treat.addEventListener('click', () => tossTreat(), opt);
   btn.toy.addEventListener('click', () => autoDangle(), opt);
+  // a click with detail 0 came from the keyboard
+  btn.laser.addEventListener('click', (e) => laserToggle(e.detail === 0), opt);
+  btn.brush.addEventListener('click', () => brushGo(), opt);
+  btn.nip.addEventListener('click', () => giveNip(), opt);
+  btn.psst.addEventListener('click', () => psst(), opt);
+  btn.blink.addEventListener('click', () => slowBlink(), opt);
+  btn.hat.addEventListener('click', () => nextHat(), opt);
+  btn.paint.addEventListener('click', () => paintGo(), opt);
+  btn.book.addEventListener('click', () => openBook(), opt);
+  // more things to do, tucked away until asked for (remembered for next time)
+  const setMore = (open) => {
+    moreBtn.setAttribute('aria-expanded', String(open));
+    morePanel.hidden = !open;
+    root.classList.toggle('is-more', open);
+  };
+  moreBtn.addEventListener('click', () => {
+    const open = moreBtn.getAttribute('aria-expanded') !== 'true';
+    setMore(open);
+    try { localStorage.setItem('cat-more', open ? '1' : '0'); } catch { /* private mode */ }
+  }, opt);
+  try { if (localStorage.getItem('cat-more') === '1') setMore(true); } catch { /* fine */ }
 
   // the things he does: one at a time, the more important ones win
   function start(kind, data) {
@@ -3101,6 +4504,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       seal(A.x, A.y - 12 * L.s, now);
     }
     if (a.kind === 'pounce') pom.pinned = null;
+    // a painting cut short is kept if it was signed, else it just fades away
+    if (a.kind === 'paint' && art.cur) {
+      if (a.signed) artDone(now);
+      else { art.fly = { c: art.cur.c, t0: now, wall: false, quiet: true }; art.cur = null; }
+    }
+    if (a.kind === 'nip' && nip.sprig && !nip.sprig.fade) nip.sprig.fade = now;
+    if (a.kind === 'nudge') books.push = 0;
+    if (a.kind === 'book' || a.kind === 'bookrest') {
+      // the flop onto the pages, done: he stays there a while, the book stays open
+      if (a.kind === 'book' && a.done && start('bookrest', { i: a.i })) return;
+      if (books.open === a.i) bookBack(now);
+    }
     if (a.kind === 'eat') {
       // keep looking at you for a moment after a treat
       if (a.hit) C.faceUntil = now + 600;
@@ -3147,7 +4562,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       case 'sit': if (e < (RM ? 500 : 1000)) { LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; } else LK.mode = 2; break;
       case 'push': if (e < 450 && !a.hit) { LK.mode = 1; LK.x = A.x; LK.y = A.y - 20 * s; LK.pupil = 0.5; } else LK.mode = 2; break;
       case 'buck': case 'glare': LK.mode = 1; LK.x = A.x; LK.y = A.y - 10 * s; LK.pupil = a.kind === 'buck' ? 0.8 : 0.35; LK.flat = true; break;
-      case 'boop': case 'love': case 'tilt': case 'wake': case 'yawn': LK.mode = 2; break;
+      case 'boop': case 'love': case 'tilt': case 'wake': case 'yawn': case 'pat': LK.mode = 2; break;
       case 'warn': LK.mode = 1; LK.x = a.lx ?? pointer.x; LK.y = a.ly ?? pointer.y; LK.pupil = 0.8; break;
       case 'bat': case 'pounce': LK.mode = 1; LK.x = pom.x; LK.y = pom.y; LK.pupil = 1; break;
       case 'window': if (win.kind) { LK.mode = 1; LK.x = win.x; LK.y = win.y; LK.pupil = 1; } break;
@@ -3157,8 +4572,56 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         else if (e > (RM ? 1700 : 2900)) LK.mode = 2;
         LK.pupil = 0.7;
         break;
+      case 'laser': {
+        const ph = a.phase || 'watch';
+        if (ph === 'peek' && a.pk) { LK.mode = 1; LK.x = a.pk.x; LK.y = a.pk.y; LK.pupil = 0.8; }
+        else if (laser.on) { LK.mode = 1; LK.x = laser.x; LK.y = laser.y; LK.pupil = 1; }
+        else if (a.tx !== undefined) { LK.mode = 1; LK.x = L.catX + a.tx * s; LK.y = L.topY + a.ty * s; LK.pupil = 1; }
+        break;
+      }
+      case 'brush': case 'blinkback': case 'psst': case 'shake': LK.mode = 2; break;
+      case 'huff': case 'unimpressed': LK.mode = 2; LK.flat = true; break;
+      // pointedly looking anywhere but at you
+      case 'ignore': LK.mode = 1; LK.x = L.catX + 400 * s; LK.y = L.topY - 190 * s; LK.pupil = 0.3; LK.flat = true; break;
+      case 'nip':
+        if (nip.sprig && e < (RM ? 600 : 2100)) { const p = sprigPos(now); LK.mode = 1; LK.x = L.catX + p.x * s; LK.y = L.topY + p.y * s; LK.pupil = 0.9; }
+        else LK.mode = 2;
+        break;
+      case 'paint':
+        if (a.look) { LK.mode = 1; LK.x = L.catX + a.look.x * s; LK.y = L.topY + a.look.y * s; LK.pupil = 0.6; } else LK.mode = 2;
+        break;
+      case 'book': case 'bookrest': {
+        const at = openAt(a.i), fav = BOOKS[a.i].fav;
+        if (fav || (a.kind === 'book' && e < (RM ? 400 : 1300))) { LK.mode = 1; LK.x = L.catX + at[0] * s; LK.y = L.topY + at[1] * s; LK.pupil = 0.55; }
+        else LK.mode = 2;
+        break;
+      }
+      case 'nudge':
+        if (e < (RM ? 600 : 1300) && books.stack.length) { const p = stackPos(books.stack.length - 1); LK.mode = 1; LK.x = L.catX + p.x * s; LK.y = L.topY + p.y * s; }
+        else LK.mode = 2;
+        break;
       default: break;
     }
+  }
+  // lying down across an open book, k from 0 to 1
+  // (his paws are already on it: it's under him, in front of his chest)
+  function bookFlop(k) {
+    T.hx -= 22 * k; T.hy += 44 * k; T.pitch = lerp(T.pitch, 0.3, k); T.roll += 0.16 * k; T.yaw = lerp(T.yaw, 0.12, k);
+    contentFace(k); T.tCurl += 0.3 * k; T.tAmp = 0.06;
+    rate.hx = rate.hy = rate.pitch = 4;
+  }
+  // her favourite he reads instead: head bent over it, eyes going along the
+  // lines, and a paw on it to keep it open
+  function bookRead(k, now) {
+    T.hx -= 6 * k; T.hy += 12 * k; T.pitch = Math.max(T.pitch, 0.4 * k);
+    T.lidU = Math.max(T.lidU, 0.2 * k); T.whisk = lerp(T.whisk, 0.25, k); T.grin = lerp(T.grin, 0.25, k);
+    T.gy = lerp(T.gy, 0.7, k);
+    if (!RM) T.gx += Math.sin(now / 650) * 0.35 * k;
+    T.tCurl += 0.3 * k; T.tAmp = 0.06;
+    rate.hx = rate.hy = rate.pitch = 4;
+    // (on the edge of the cover, well clear of the title)
+    const M = FAV_MAP, u = 49, v = 20;
+    if (k > 0.05) paw('n', FAV_AT[0] + M[0] * u + M[2] * v, FAV_AT[1] + M[1] * u + M[3] * v, k, 0, -0.3, RM ? 1e3 : 10);
   }
 
   function actPose(a, e, now) {
@@ -3314,7 +4777,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           T.lift = 9; rate.lift = 8;
         }
         if (e >= tB && e < tC) {
-          T.lidU = 1; T.happy = 1; T.grin = 0.5; T.tCurl = 1.2; T.tAmp = 0.05;
+          contentFace(1); T.tCurl = 1.2; T.tAmp = 0.05;
           if (!a.purr && e > tB + 200) { a.purr = true; play('purr', { gain: 0.2, seconds: 1.6 }); }
         }
         if (!a.hit && e >= tC) {
@@ -3343,7 +4806,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         }
         // wound up low and out to the side, well clear of his own face
         strike(k, a.tx, a.ty, [52, -14], 1);
-        T.earSL = T.earSR = 0.95; T.earFL = T.earFR = 0.45; T.brow = 1; T.lidU = 0.25; T.happy = 0; T.whisk = -0.9; T.grin = -0.4;
+        T.earSL = T.earSR = 0.95; T.earFL = T.earFR = 0.45; T.brow = 0.7; T.lidU = 0.12; T.happy = 0; T.joy = 0; T.whisk = -0.9; T.grin = -0.6;
         rate.lidU = rate.happy = rate.earSL = rate.earSR = 30;
         T.tAmp = 0.6;
         if (!a.hit && k >= 0.5) { a.hit = true; fx.rings.push({ x: L.catX + a.tx * s, y: L.topY + a.ty * s, t0: now }); play('pluck', 3, { gain: 0.08 }); }
@@ -3355,20 +4818,21 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         T.noseTw = RM ? 0 : e < 700 ? Math.sin(e / 36) * (1 - e / 700) : 0;
         const b0 = RM ? 150 : 240, b1 = RM ? 600 : 720, b2 = RM ? 800 : 920, b3 = RM ? 1100 : 1320;
         const lid = e < b0 ? 0 : e < b1 ? easeInOut((e - b0) / (b1 - b0)) : e < b2 ? 1 : 1 - easeInOut((e - b2) / (b3 - b2));
-        T.lidU = Math.max(T.lidU * (1 - pull), lid); T.happy = 0.7; T.whisk = 0.4; T.grin = 0.3; T.brow = 0;
+        T.lidU *= 1 - pull; contentFace(lid); T.whisk = 0.4;
         if (!a.hit && e >= (RM ? 300 : 430)) { a.hit = true; C.mrrpAt = now; word('냥?', 26); play('mrrp', { gain: 0.16 }); }
         break;
       }
       case 'love': {
         const lid = e < 300 ? 0 : e < 800 ? easeInOut((e - 300) / 500) : e < 1050 ? 1 : 1 - easeInOut((e - 1050) / 500);
-        T.lidU = Math.max(T.lidU, lid); T.happy = 0.6; T.grin = 0.25;
+        contentFace(lid);
         break;
       }
       case 'pat': {
         const f = e < 140 ? e / 140 : e < 420 ? 1 : 1 - (e - 420) / 480;
-        T.earFL = T.earFR = 0.92 * f; T.earSL = T.earSR = 0.25 * f;
-        T.lidU = lerp(T.lidU, 0.92, f); T.hy += 3.5 * f; T.pitch += 0.1 * f;
-        rate.earFL = rate.earFR = 30;
+        // ears pressed down under the hand, eyes squeezed happily shut
+        T.earFL = T.earFR = Math.max(T.earFL, 0.6 * f); T.earSL = T.earSR = Math.max(T.earSL, 0.2 * f);
+        contentFace(f); T.hy += 2.5 * f; T.pitch += 0.06 * f;
+        rate.earFL = rate.earFR = 24;
         break;
       }
       case 'eat': {
@@ -3387,12 +4851,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
           T.jaw = RM ? 0.15 : 0.1 + 0.16 * (0.5 - 0.5 * Math.cos(c * TAU));
           T.chew = RM ? 0 : Math.sin(c * TAU);
           T.roll += RM ? 0 : 0.05 * Math.sin(c * TAU);
-          T.lidU = 0.5; T.happy = 0.55;
+          // eyes shut with how good it is
+          T.joy = 0.95; T.grin = 0.3;
           rate.jaw = 30;
         }
-        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; T.lidU = 0.4; T.happy = 0.5; }
+        if (e >= tC && e < tK) { const v = (e - tC) / (tK - tC); T.tongue = 1; T.lick = RM ? 0.5 : hump((v * 2) % 1); T.jaw = 0; T.joy = 0.95; }
         if (e >= tK) {
-          T.lidU = 1; T.happy = 1; T.grin = 0.5; T.tCurl = 1.2;
+          contentFace(1); T.tCurl = 1.2;
           if (!a.m) {
             a.m = true; C.mrrpAt = now; play('mrrp', { gain: 0.12 });
             // a heart and a purr or two over his head
@@ -3494,7 +4959,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         T.earSL = T.earSR = 0.22; T.tAmp = 0.02; T.tCurl = 0.95; T.whisk = -0.2; T.grin = 0.2;
         rate.hy = rate.pitch = 1.2;
         if (!a.asleep && e > 2600) { a.asleep = true; say('cat.say.sleep'); }
-        if (a.asleep && now - C.zAt > 1800) {
+        if (!RM && a.asleep && now - C.zAt > 1800) {
           C.zAt = now;
           headMatrix(P);
           const z = headToCat(34, -52);
@@ -3508,9 +4973,271 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         T.jaw = J; T.fangs = J; T.pitch = -0.2 * hump(clamp((k - 0.2) / 0.6));
         break;
       }
+      case 'laser': {
+        // eyes locked on the dot, pupils huge, tail tip going; in reach and still, the
+        // butt wiggle, the pounce, and a look under his paws for what he caught
+        const ph = a.phase || 'watch';
+        T.pupil = 1; T.whisk = 0.8; T.lidU = 0; T.happy = 0; T.joy = 0; T.earSL = T.earSR = 0; T.earFL = T.earFR = 0;
+        T.tAmp = 0.3;
+        if (!RM) T.tFlick = Math.sin(now / 55) * 0.35;
+        const reach = dotInReach();
+        if (ph === 'watch') {
+          if (!laser.on) { a.dur = 0; break; }
+          const still = now - laser.lastMove;
+          if (reach && !RM) {
+            const w = smooth(100, 500, still);
+            T.rumpY = -4 * w + Math.sin(now / 32) * 1.6 * w; T.rumpA = Math.sin(now / 46) * 0.03 * w; T.hy += 4 * w; T.pitch += 0.08 * w;
+            rate.rumpY = rate.rumpA = 30;
+          }
+          if (reach && still > 450 && now - (a.lastP || -1e9) > 1500) { a.phase = 'crouch'; a.p0 = now; a.tx = cx(laser.x); a.ty = cy(laser.y); }
+        } else if (ph === 'crouch') {
+          const ec = now - a.p0, tW = RM ? 250 : 650, w = smooth(0, tW, ec);
+          if (!RM) { T.rumpY = -7 + Math.sin(ec / 30) * (2.4 + 2 * w); T.rumpA = Math.sin(ec / 44) * (0.04 + 0.04 * w); T.tFlick = Math.sin(ec / 42) * 0.6; }
+          T.by = 3; T.lift = -3; T.hy += 6 + 5 * w; T.pitch += 0.15 * w; rate.rumpY = rate.rumpA = 30;
+          // it can still creep a little before he goes
+          if (reach) { a.tx = lerp(a.tx, cx(laser.x), 0.2); a.ty = lerp(a.ty, cy(laser.y), 0.2); }
+          if (ec >= tW) { a.phase = 'lunge'; a.p0 = now; a.hit = false; }
+        } else if (ph === 'lunge') {
+          const el = now - a.p0, v = RM ? 1 : easeOut(el / 260);
+          const room = clamp((L.W - 6 * s - L.catX) / s - HEAD_RIGHT, 0, 30), fwd = clamp((a.tx - 60) / 80) * (room / 30);
+          T.bx = 24 * v * fwd; T.by = -8 * v; T.hx += 6 * v * fwd; T.hy += 4;
+          const tx = clamp(a.tx, 50, Math.min(235, (L.W - 40 * s - L.catX) / s)), ty = clamp(a.ty, -130, 10);
+          paw('n', tx, ty, 1, 0, 0, 40); paw('f', tx - 14, ty + 8, 1, 0, 0, 40);
+          rate.bx = rate.by = 25;
+          a.pawOver = true;
+          if (!a.hit && el > (RM ? 0 : 200)) { a.hit = true; a.lastP = now; laser.caught = now; a.ptx = tx; a.pty = ty; play('pluck', 5, { gain: 0.1 }); }
+          if (el > (RM ? 300 : 520)) { a.phase = 'peek'; a.p0 = now; a.q = false; a.tdir = Math.random() < 0.5 ? -1 : 1; }
+        } else if (ph === 'peek') {
+          // paws stay down a moment, then one comes up, beans to his face: empty
+          const ep = now - a.p0, up1 = RM ? (ep > 200 ? 1 : 0) : smooth(250, 650, ep), back = RM ? (ep > 900 ? 1 : 0) : smooth(1500, 1900, ep);
+          const px = lerp(a.ptx, 132, up1), py = lerp(a.pty, -40, up1);
+          paw('n', lerp(px, PAW_N[0], back), lerp(py, PAW_N[1], back), 1 - back, up1 > 0.5 && back < 0.5 ? 1 : 0, -0.9 * up1 * (1 - back), 16);
+          paw('f', a.ptx - 14, a.pty + 8, 1 - (RM ? up1 : smooth(200, 650, ep)), 0, 0, 16);
+          a.pk = { x: L.catX + (P.nX + P.bx) * s, y: L.topY + (P.nY + P.by - P.lift) * s };
+          const tilt = RM ? 1 : hump(clamp(ep / 1900));
+          T.roll += 0.3 * tilt * a.tdir; T.earSL += 0.3 * tilt; T.earSR += 0.3 * tilt; T.pupil = 0.75; T.whisk = 0.2;
+          a.pawOver = up1 < 0.3;
+          if (!a.q && ep > (RM ? 200 : 650)) { a.q = true; word('?', 34); if (!laser.said) { laser.said = true; say('cat.say.laser.pounce'); } }
+          if (ep > (RM ? 1100 : 1900)) { a.phase = 'watch'; a.pk = null; if (!laser.on) a.dur = 0; }
+        }
+        break;
+      }
+      case 'brush': {
+        // three strokes down his back, neck to hips, a tuft or two coming away each time
+        const n = RM ? 1 : 3, seg = a.dur / n, i = Math.min(n - 1, Math.floor(e / seg)), u = (e - i * seg) / seg;
+        const lift = u < 0.14 ? 1 - u / 0.14 : u > 0.86 ? (u - 0.86) / 0.14 : 0, kk = clamp((u - 0.14) / 0.72);
+        // along the top of his back, from behind his head to his hips
+        const bx = lerp(30, -110, RM ? 0.5 : easeInOut(kk)), by = BACK_Y(bx) + 4;
+        brush.x = L.catX + (bx + P.bx) * s; brush.y = L.topY + (by + P.by - lift * 16) * s; brush.lastT = now;
+        brush.a = Math.atan2(BACK_Y(bx - 4) - BACK_Y(bx + 4), -8) + Math.PI;
+        if (!RM && lift === 0 && now - (a.tf || 0) > 170) { a.tf = now; spawnTuft(brush.x, brush.y + 5 * s, now); }
+        if (RM && !a.r) { a.r = true; for (let j = 0; j < 3; j++) spawnTuft(0, 0, now); }
+        C.petZone = 'brush'; C.petUntil = Math.max(C.petUntil, now + 300);
+        if (!a.init) { a.init = true; pets++; renderTally(); }
+        if (a.sw !== i) { a.sw = i; play('swish', { gain: 0.045 }); }
+        if (!a.purr) { a.purr = true; lastPurr = now; play('purr', { gain: 0.24, seconds: 2.6 }); }
+        break;
+      }
+      case 'huff': {
+        // fur up, ears out sideways, a pout and a look
+        T.earSL += 0.55; T.earSR += 0.55; T.brow = 0.45; T.lidU = 0.16; T.grin = -0.7; T.whisk = -0.5; T.joy = 0; T.happy = 0;
+        T.hx -= 3; T.pitch -= 0.05;
+        if (!a.w && e > (RM ? 0 : 250)) { a.w = true; word('흥!', 28); }
+        C.swishUntil = Math.max(C.swishUntil, now + 600);
+        break;
+      }
+      case 'psst': {
+        // his ears swivel round to the sound, his head comes round, and a little mrrp?
+        const kk = smooth(0, 200, e) * (1 - smooth(a.dur - 300, a.dur, e));
+        T.earSL = T.earSR = 0; T.earFL = T.earFR = 0; T.earTL = 0.28 * kk; T.earTR = -0.28 * kk;
+        T.pupil = 0.75; T.lidU = 0; T.roll += 0.1 * kk; T.whisk = 0.4;
+        rate.earTL = rate.earTR = 14;
+        if (!a.hit && e > (RM ? 150 : 380)) { a.hit = true; C.mrrpAt = now; word('냥?', 26); play('mrrp', { gain: 0.15 }); }
+        break;
+      }
+      case 'ignore': {
+        // ears turned out sideways, chin up, looking anywhere else
+        T.earSL += 0.6; T.earSR += 0.6; T.lidU = 0.3; T.grin = -0.2; T.whisk = -0.2; T.pitch -= 0.12; T.joy = 0; T.happy = 0;
+        C.swishUntil = Math.max(C.swishUntil, now + 400);
+        break;
+      }
+      case 'blinkback': {
+        const lid = RM ? (e < 900 ? 1 : 0) : e < 250 ? 0 : e < 800 ? easeInOut((e - 250) / 550) : e < 1250 ? 1 : 1 - easeInOut((e - 1250) / 650);
+        contentFace(lid); T.lidU = Math.max(T.lidU, lid);
+        rate.lidU = rate.joy = 30;
+        if (!a.hit && e > (RM ? 100 : 900)) {
+          a.hit = true;
+          const q = headPoint(P, 30, -60);
+          fx.purrs.push({ t0: now, x: q.x, y: q.y, seed: 0 });
+          play('purr', { gain: 0.16, seconds: 1.4 });
+        }
+        break;
+      }
+      case 'unimpressed': {
+        // a long flat look from under the hat, then a slow blink: fine, he'll allow it
+        const kk = smooth(0, 300, e);
+        T.lidU = lerp(T.lidU, 0.18, kk); T.earSL += 0.3 * kk; T.earSR += 0.3 * kk; T.grin = -0.35 * kk; T.whisk = -0.2 * kk; T.roll += 0.06 * kk; T.joy = 0;
+        if (e > 1100) { const b = RM ? 0 : hump(clamp((e - 1100) / 650)); T.lidU = Math.max(T.lidU, b); T.joy = b; }
+        break;
+      }
+      case 'shake': {
+        const v = RM ? 0 : Math.sin(e / 36) * (1 - clamp(e / a.dur));
+        T.roll += 0.42 * v; T.hx += 4 * v; T.earSL = T.earSR = 0.5 + 0.4 * Math.abs(v); T.lidU = 0.85; T.joy = 0;
+        rate.roll = rate.hx = 40; rate.earSL = rate.earSR = 30;
+        if (!a.hit && e > (RM ? 100 : 160)) { a.hit = true; if (hat.i) { hatFlies(now); say('cat.say.hat.shake'); } }
+        break;
+      }
+      case 'nip': {
+        const sp = nip.sprig;
+        const tF = RM ? 0 : 700, tS = RM ? 600 : 1500, tN = RM ? 900 : 2100, tSilly = RM ? 2600 : 5600;
+        if (e < tF) { T.pupil = 0.8; T.whisk = 0.6; }
+        else if (e < tS) {
+          // a good long sniff
+          T.pitch = 0.5; T.hx = -44; T.hy = 42; T.yaw = -0.05; T.gx = -0.2; T.gy = 0.7; T.noseTw = RM ? 0.5 : Math.sin(e / 34) * 0.9; T.whisk = 0.7;
+          rate.hx = rate.hy = rate.pitch = 5;
+        } else if (e < tN) {
+          // a nibble
+          T.pitch = 0.55; T.hx = -48; T.hy = 48; T.jaw = RM ? 0.15 : 0.08 + 0.12 * hump(((e - tS) / 220) % 1); rate.jaw = 30;
+          if (sp) sp.crushed = smooth(tS, tN, e);
+          if (!a.purr) { a.purr = true; play('purr', { gain: 0.3, seconds: 3.6 }); }
+        } else if (e < tSilly) {
+          // silly: rubbing his cheek all over the cushion, eyes squeezed shut, and now and then a wide-eyed blep
+          const c = (e - tN) / 260, ph = ((e - tN) % 1500) / 1500;
+          const derp = RM ? 0 : smooth(0.5, 0.62, ph) * (1 - smooth(0.85, 0.97, ph));
+          T.hx = -34 + (RM ? 0 : Math.sin(c * 1.6) * 9); T.hy = 44; T.pitch = 0.3; T.roll = 0.45 + (RM ? 0 : Math.sin(c * 1.6) * 0.14); T.yaw = 0.2;
+          rate.hx = rate.roll = 12;
+          contentFace(1 - derp); T.pupil = 1;
+          if (derp > 0.3) { T.tongue = 1; T.lick = 0; }
+          T.tAmp = 0.5;
+          if (!RM) { T.tFlick = Math.sin(e / 48) * 0.5; T.rumpA = Math.sin(e / 140) * 0.04; }
+          if (!a.w && e > tN + 300) { a.w = true; word('냥~', 28); }
+        } else {
+          // and over he goes, into a catnip nap
+          // (eyes stay shut the whole way: the happy arcs just soften into sleepy ones)
+          const kk = smooth(tSilly, a.dur, e);
+          T.lidU = 1; T.hy += lerp(44, 16, kk); T.pitch = lerp(0.3, 0.4, kk); T.roll = lerp(0.45, -0.08, kk); T.hx = lerp(-34, 0, kk); T.yaw = 0.1; T.joy = 1 - kk;
+          T.tAmp = 0.05; T.tCurl = 0.95; T.whisk = -0.2;
+          if (sp && !sp.fade) sp.fade = now;
+        }
+        if (e >= a.dur) {
+          a.done = true;
+          endAct(a, now);
+          const z = start('sleep');
+          if (z) { z.asleep = true; z.nip = true; }
+          say('cat.say.nip.nap');
+          return;
+        }
+        break;
+      }
+      case 'paint': {
+        const cur = art.cur;
+        if (!cur) { a.dur = 0; break; }
+        a.dur = cur.end;
+        let st = null;
+        for (const q of cur.tl) if (e >= q.t) st = q;
+        // each step starts from wherever his paw is
+        if (st !== a.st) { a.st = st; a.lx = P.nUp > 0.5 ? P.nX + P.bx : PAW_N[0]; a.ly = P.nUp > 0.5 ? P.nY + P.by - P.lift : PAW_N[1]; }
+        const u = st ? clamp((e - st.t) / st.d) : 0;
+        T.pitch = 0.2; T.hy += 6; T.yaw = 0.08; T.whisk = 0.5; T.pupil = 0.6;
+        let px = 0, py = 0, up = 0, rot = 0;
+        a.look = null;
+        if (!st) {
+          // the sheet slides in, and he looks it over
+          T.pitch = 0.3; T.noseTw = e > 500 && !RM ? Math.sin(e / 36) * 0.6 : 0;
+          a.look = paperPt(ART_W / 2, ART_H / 2); a.look = { x: a.look.x, y: a.look.y };
+        } else if (st.kind === 'dip') {
+          // down into the ink and back up, wet
+          const dx = cx(L.dish.x), dy = cy(L.dish.y) + 1;
+          const kk = u < 0.45 ? easeOut(u / 0.45) : u < 0.6 ? 1 : 1 - easeInOut((u - 0.6) / 0.4);
+          px = lerp(a.lx, dx, kk); py = lerp(a.ly, dy, kk) - (u < 0.45 ? 16 * hump(u / 0.45) : 0); up = 1; rot = 0.3;
+          if (u > 0.42 && !st.done) { st.done = true; C.ink = 1; play('dab', { gain: 0.08 }); }
+          a.look = { x: dx, y: dy };
+        } else if (st.kind === 'stamp') {
+          const p = st.p, q = paperPt(p.u, p.v), tx = q.x, ty = q.y;
+          // over, down, maybe a smear, and up
+          const kk = u < 0.4 ? easeInOut(u / 0.4) : 1;
+          const lift = u < 0.4 ? 12 * hump(kk) + 4 * (1 - kk) : u < 0.55 ? 4 * (1 - (u - 0.4) / 0.15) : u > 0.86 ? 10 * (u - 0.86) / 0.14 : 0;
+          px = lerp(a.lx, tx, kk); py = lerp(a.ly, ty, kk) - lift; up = 1; rot = p.rot * 0.25;
+          if (u >= 0.55 && !st.done) { st.done = true; inkPrint(p); C.ink = Math.max(0.2, p.ink - 0.25); play('dab', { gain: 0.1 }); }
+          if (st.done && p.smudge !== null && u > 0.6) { const sm = smooth(0.6, 0.85, u); px += Math.cos(p.smudge) * 15 * PAPER.ux * sm; py += Math.sin(p.smudge) * 11 * PAPER.vy * sm; }
+          a.look = { x: tx, y: ty };
+        } else if (st.kind === 'sign') {
+          // and a press of the little red seal in the corner
+          const q = paperPt(ART_W - 11, ART_H - 11), qx = q.x, qy = q.y;
+          const kk = u < 0.45 ? easeInOut(u / 0.45) : u < 0.7 ? 1 : 1 - easeInOut((u - 0.7) / 0.3);
+          px = lerp(a.lx, qx, kk); py = lerp(a.ly, qy, kk) - (u < 0.45 ? 10 * hump(u / 0.45) : 0); up = kk > 0.05 ? 1 : 0;
+          if (u > 0.45 && !st.done) { st.done = true; a.signed = true; signArt(); play('pluck', 1, { gain: 0.14 }); fx.rings.push({ x: L.catX + qx * s, y: L.topY + qy * s, t0: now }); }
+          a.look = { x: qx, y: qy };
+        } else if (st.kind === 'admire') {
+          contentFace(0.7); T.pitch = 0.12;
+          if (!st.done) { st.done = true; word('냥!', 28); C.mrrpAt = now; play('mrrp', { gain: 0.12 }); }
+        } else if (st.kind === 'hang') {
+          if (!st.done) { st.done = true; artDone(now); }
+        }
+        if (up) paw('n', px, py, up, 0, rot, RM ? 1e3 : 22);
+        break;
+      }
+      case 'book': {
+        // it comes over and falls open; he has a look, then lies right down across it
+        const tO = RM ? 200 : 640, tL = RM ? 400 : 1300, tF = RM ? 700 : 2100;
+        if (e < tL) {
+          T.pitch = 0.25; T.pupil = 0.6;
+          if (e > tO && !RM) T.noseTw = Math.sin(e / 36) * 0.5;
+          if (e > tO && !a.pg) { a.pg = true; play('page', { gain: 0.14 }); }
+        } else {
+          const kk = RM ? 1 : smooth(tL, tF, e);
+          if (BOOKS[a.i].fav) bookRead(kk, now); else bookFlop(kk);
+          if (!a.said && e > tL + 200) { a.said = true; say(BOOK_SAY[a.i]); }
+        }
+        if (e >= a.dur) a.done = true;
+        break;
+      }
+      case 'bookrest': {
+        if (BOOKS[a.i].fav) bookRead(1, now); else bookFlop(1);
+        if (!a.purr && e > 400) { a.purr = true; play('purr', { gain: 0.18, seconds: 2.2 }); }
+        break;
+      }
+      case 'nudge': {
+        // a paw on the top book, eased over the edge of the sill, slowly, eyes on you
+        const list = books.stack;
+        if (!a.i && a.i !== 0) { if (!list.length || !L.books.sill || books.fallen) { a.dur = 0; break; } a.i = list[list.length - 1]; }
+        const j = list.indexOf(a.i);
+        if (j < 0 && !a.hit) { a.dur = 0; break; }
+        const tR = RM ? 300 : 800, tP = RM ? 1000 : 2300;
+        const b = BOOKS[a.i];
+        if (!a.hit) {
+          const p = stackPos(j), hx0 = p.x - b.w / 2 + 3, hy0 = p.y - b.h * 0.6;
+          let px, py;
+          if (e < tR) { const kk = easeOut(e / tR); px = lerp(PAW_N[0], hx0, kk); py = lerp(PAW_N[1], hy0, kk) - 12 * hump(kk); }
+          else {
+            const kk = (e - tR) / (tP - tR);
+            books.push = 18 * (RM ? (kk > 0.5 ? 1 : 0) : smooth(0, 1, kk) * (1 + 0.05 * Math.sin(kk * 20)));
+            px = hx0 + books.push; py = hy0;
+          }
+          a.px = px; a.py = py;
+          paw('n', px, py, 1, 0, 0, 25);
+          if (e >= tP) { a.hit = true; a.ht = now; dropBook(a.i, now); say('cat.say.nudge', { book: tt(`cat.book.${a.i}`) }); }
+        } else {
+          const kk = easeInOut(clamp((now - a.ht) / 600));
+          paw('n', lerp(a.px, PAW_N[0], kk), lerp(a.py, PAW_N[1], kk), 1 - kk, 0, 0, 25);
+          T.grin = 0.35;
+        }
+        T.lidU = 0.3; T.whisk = -0.1;
+        break;
+      }
       default: break;
     }
     if (e >= a.dur) endAct(a, now);
+  }
+  // the top book goes over the edge
+  function dropBook(i, now) {
+    const j = books.stack.indexOf(i);
+    if (j < 0) return;
+    const p = stackPos(j), x = p.x + books.push, y = p.y;
+    books.stack.splice(j, 1);
+    books.push = 0;
+    const x1 = x + 46;
+    books.fallen = { i, x, y, vx: 60, vy: -30, rot: 0, vr: 2.4, x1, y1: bookFloor(x1), r1: (Math.random() - 0.5) * 0.12, landed: false, t0: now };
   }
 
   // drop effects that have run their course; true if any are left
@@ -3583,8 +5310,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!inZone()) A.touchedCat = false;
     if (A.carry || A.under) hot = true;
 
-    // the pompom
+    // the pompom, and his tail if it got bumped
     if (stepToy(dt, now)) hot = true;
+    if (stepTail(dt, now)) hot = true;
     const toyHot = !!(pom.held || pom.pinned || pom.speed > 160 * s);
     if (toyHot) C.toyT = now;
     if (pom.speed > 260 * s || !pom.held) C.toyStill = now;
@@ -3618,6 +5346,24 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // out of the window
     if (stepWindowLife(now)) hot = true;
 
+    // the laser, fluff in the air, books, hats, catnip, paintings
+    if (stepLaser(now)) hot = true;
+    if (stepTufts(dt, now)) hot = true;
+    if (stepBooks(dt, now)) hot = true;
+    if (stepHat(dt, now)) hot = true;
+    if (stepNip(now)) hot = true;
+    if (stepArt(now)) hot = true;
+    if (brush.on) {
+      if (now > brush.until && !(C.act && C.act.kind === 'brush')) brushOff();
+      else if (now - brush.lastT < 1500) hot = true;
+    }
+    // he licks the ink off his paw, more or less
+    if (C.ink > 0 && !(C.act && C.act.kind === 'paint')) { C.ink = Math.max(0, C.ink - dt * 0.35); hot = true; }
+    if (chat.you && now - chat.you.t0 > 2400) chat.you = null;
+    if (chat.you) hot = true;
+    if (life(fx.calls, 1600, now)) hot = true;
+    if (now - C.puffAt < 2500 || (C.stare && now < C.stare.until)) hot = true;
+
     // too much petting (it wears off by the clock, so also while nothing's running)
     const petting = now < C.petUntil;
     const sdt = clamp((now - C.stimAt) / 1000, 0, 60);
@@ -3634,12 +5380,15 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       if (now - C.lastUser > 42000) start('sleep');
       else {
         const r = Math.random();
-        if (r < 0.22) start('groom');
+        // a hat that's been on a while, or a book that's just asking to be pushed off the sill
+        if (hat.i && now - hat.t0 > 20000 && r < 0.3) start('shake');
+        else if (r < 0.22) start('groom');
         else if (r < 0.34) start('yawn');
         else if (r < 0.6) { if (spawnWindow(now)) start('window', { dur: 1e9 }); }
         else if (r < 0.72) start('love');
         else if (r < 0.8) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 });
         else if (r < 0.9 && A.alpha > 0.5 && A.sleeping) start('glare');
+        else if (r < 0.97 && L.books.sill && !books.fallen && books.open < 0 && !books.fly && books.stack.length > 2) start('nudge');
         else C.swishUntil = now + 2600;
       }
       C.idleAt = now + 6500 + Math.random() * 6500;
@@ -3651,7 +5400,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (petting && !RM && now - pet.spawnT > 320) {
       pet.spawnT = now;
       let px = -100 + Math.random() * 140, py = -112 - Math.random() * 10;
-      if (C.petZone !== 'back') { headMatrix(P); const q = headToCat(C.petZone === 'chin' ? 30 + Math.random() * 20 : -10 + Math.random() * 30, C.petZone === 'chin' ? 40 : -66); px = q.x; py = q.y; }
+      if (C.petZone === 'chin' || C.petZone === 'head') { headMatrix(P); const q = headToCat(C.petZone === 'chin' ? 30 + Math.random() * 20 : -10 + Math.random() * 30, C.petZone === 'chin' ? 40 : -66); px = q.x; py = q.y; }
       fx.purrs.push({ t0: now, x: px, y: py, seed: Math.random() * 100 });
     } else if (petting && RM && fx.purrs.length < 3) fx.purrs.push({ t0: now, x: -90 + fx.purrs.length * 55, y: -120 - (fx.purrs.length % 2) * 14, seed: fx.purrs.length * 7 });
     if (life(fx.purrs, 1500, now)) hot = true;
@@ -3661,7 +5410,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (life(fx.strokes, 2300, now)) hot = true;
     if (life(fx.zs, 2600, now)) hot = true;
     if (life(fx.scratches, 1800, now)) hot = true;
-    if (C.act || C.happy > 0.01 || petting || now - A.worriedAt < 1800 || A.face !== 'smug' || A.grab) hot = true;
+    // (with reduced motion, a nap or lying on a book is a still picture: nothing to run for)
+    const resting = RM && C.act && (C.act.kind === 'sleep' || (C.act.kind === 'bookrest' && !books.fly && books.k >= 1));
+    if ((C.act && !resting) || C.happy > 0.01 || petting || now - A.worriedAt < 1800 || A.face !== 'smug' || A.grab) hot = true;
     if (now - C.meowAt < 700 || now - C.mrrpAt < 400 || now < C.grumpyUntil) hot = true;
     if (C.stim > 0.01) {
       if (!RM) hot = true;
@@ -3669,6 +5420,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       else if (!petting && !C.stimKick && C.stim > C.stimMax * 0.6) C.stimKick = later(() => { C.stimKick = 0; kick(); }, ((C.stim - C.stimMax * 0.6) / 0.28) * 1000 + 50);
     }
     return hot;
+  }
+
+  // his content face, k from 0 to 1: eyes closed in soft ^ ^ arcs, a little closed
+  // smile, whiskers and ears relaxed, looking your way
+  function contentFace(k) {
+    if (k <= 0) return;
+    T.joy = Math.max(T.joy, k);
+    T.grin = lerp(T.grin, 0.6, k); T.brow = lerp(T.brow, 0, k); T.happy *= 1 - k;
+    T.whisk = lerp(T.whisk, -0.15, k);
+    T.earSL += 0.14 * k; T.earSR += 0.14 * k;
+    T.yaw = lerp(T.yaw, 0.12, k); T.gx *= 1 - k; T.gy *= 1 - k;
+    T.jaw *= 1 - k; T.fangs *= 1 - k;
   }
 
   // settle the pose: rest, where he's looking, his moods, what he's doing, then ease toward it
@@ -3691,7 +5454,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
       else if (mode === 1) LK.mode = 2;
       else { LK.mode = 1; LK.x = A.x; LK.y = A.y; }
     }
-    if (now < C.faceUntil) LK.mode = 2;
+    if (now < C.faceUntil || C.happy > 0.25) LK.mode = 2;
+    // the laser's gone, but he's still staring at where it was
+    if (C.stare && now < C.stare.until) { LK.mode = 1; LK.x = C.stare.x; LK.y = C.stare.y; LK.pupil = 0.85; }
     if (a) actLook(a, e, now);
     headMatrix(P);
     const hx = L.catX + HM[4] * s, hy = L.topY + HM[5] * s;
@@ -3707,8 +5472,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     T.pupil = LK.pupil;
     T.roll = P.yaw * 0.05 - P.pitch * 0.04 + (RM ? 0 : Math.sin(now / 3700) * 0.03);
     // tail
+    // always a little hook at the end, never hanging dead straight
     C.curlPh += dt * 0.55;
-    T.tCurl = RM ? 0.7 : 0.55 + 0.45 * Math.sin(C.curlPh);
+    T.tCurl = RM ? 0.8 : 0.82 + 0.2 * Math.sin(C.curlPh);
     const agitT = A.grab || A.place || A.carry || now - A.lastMove < 900 ? 1 : 0;
     C.agit = RM ? 0 : C.agit + (agitT - C.agit) * (1 - Math.exp(-dt * (agitT ? 4 : 0.8)));
     let tAmp = 0.12 + 0.3 * C.agit, tSpd = 1.05 + 2.6 * C.agit;
@@ -3717,24 +5483,23 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // moods
     const petting = now < C.petUntil && now >= C.grumpyUntil;
     C.happy = RM ? (petting ? 1 : 0) : C.happy + ((petting ? 1 : 0) - C.happy) * (1 - Math.exp(-dt * (petting ? 6 : 2.2)));
+    // being petted: eyes shut into happy little arcs, a closed smile, ears
+    // relaxed and eased back a touch, and his head leaning into the hand
     if (C.happy > 0.01) {
       const hh = C.happy, z = C.petZone;
-      if (z === 'chin') {
-        T.lidU = lerp(T.lidU, 1, hh); T.happy = hh; T.pitch = lerp(T.pitch, -0.42, hh); T.roll += 0.18 * hh; T.hx += 5 * hh;
-        T.yaw = lerp(T.yaw, 0.3, hh); T.gx *= 1 - hh; T.gy *= 1 - hh; T.grin = 0.5 * hh; T.earSL += 0.15 * hh; T.earSR += 0.15 * hh; T.whisk = 0.3 * hh;
-      } else if (z === 'head') {
-        T.lidU = lerp(T.lidU, 0.7, hh); T.happy = 0.45 * hh; T.earFL += 0.4 * hh; T.earFR += 0.4 * hh; T.hy += 2.5 * hh; T.pitch += 0.12 * hh;
-      } else {
-        T.lidU = lerp(T.lidU, 0.42, hh); T.happy = 0.65 * hh; T.grin = 0.3 * hh; T.earSL += 0.12 * hh; T.earSR += 0.12 * hh;
-      }
-      T.tCurl += 0.6 * hh; tAmp -= 0.06 * hh;
+      contentFace(hh);
+      if (z === 'chin') { T.pitch = lerp(T.pitch, -0.24, hh); T.roll += 0.16 * hh; T.hx += 4 * hh; }
+      else if (z === 'head') { T.pitch = lerp(T.pitch, 0.12, hh); T.earFL += 0.3 * hh; T.earFR += 0.3 * hh; T.hy += 2 * hh; T.roll -= 0.05 * hh; }
+      else { T.pitch = lerp(T.pitch, 0.04, hh); T.roll += 0.1 * hh; }
+      T.tCurl += 0.4 * hh; tAmp -= 0.06 * hh;
     }
     const sig = smooth(C.stimMax * 0.6, C.stimMax, C.stim);
     const grumpy = now < C.grumpyUntil ? clamp((C.grumpyUntil - now) / 1200) : 0;
     const cross = Math.max(sig, grumpy);
     if (cross > 0) {
-      T.earSL += 0.7 * cross; T.earSR += 0.7 * cross; T.lidU = lerp(T.lidU, 0.3, cross); T.happy *= 1 - cross;
-      T.brow = Math.max(T.brow, 0.6 * cross); T.whisk = lerp(T.whisk, -0.5, cross); T.hx -= 3 * grumpy;
+      // airplane ears and a pout: cross, but more grumpy than glaring
+      T.earSL += 0.7 * cross; T.earSR += 0.7 * cross; T.lidU = lerp(T.lidU, 0.16, cross); T.happy *= 1 - cross; T.joy *= 1 - cross;
+      T.brow = Math.max(T.brow, 0.4 * cross); T.whisk = lerp(T.whisk, -0.5, cross); T.grin = lerp(T.grin, -0.6, cross); T.hx -= 3 * grumpy;
       tAmp += 0.45 * cross; tSpd += 5 * cross;
     }
     // that avocado is far too close
@@ -3745,7 +5510,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (dg > 0.01) {
       T.hx -= 6 * dg; T.pitch -= 0.06 * dg; T.lidU = lerp(T.lidU, 0.48, dg); T.lidL = lerp(T.lidL, 0.45, dg); T.brow = lerp(T.brow, 0.9, dg);
       T.earSL += 0.45 * dg; T.earSR += 0.45 * dg; T.earFL += 0.15 * dg; T.earFR += 0.15 * dg;
-      T.whisk = lerp(T.whisk, -0.7, dg); T.grin = lerp(T.grin, -0.9, dg); T.happy *= 1 - dg; T.wrinkle = dg;
+      T.whisk = lerp(T.whisk, -0.7, dg); T.grin = lerp(T.grin, -0.9, dg); T.happy *= 1 - dg; T.joy *= 1 - dg; T.wrinkle = dg;
       if (!RM && dg > 0.6 && now > C.blepAt) { C.blepUntil = now + 750; C.blepAt = now + 2600 + Math.random() * 2400; }
       if (now < C.blepUntil) T.tongue = 1;
     }
@@ -3755,9 +5520,16 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // sleepy when nobody's around
     const drowsy = RM || (a && a.kind !== 'sleep' && a.kind !== 'love') ? 0 : smooth(26000, 40000, now - C.lastUser);
     T.lidU = Math.max(T.lidU, 0.6 * drowsy);
+    // fur up after a brush the wrong way, the tail gone bottle-brush and lashing
+    const pe = now - C.puffAt;
+    T.puff = pe < 2400 ? 1 - smooth(1400, 2400, pe) : 0;
+    if (T.puff > 0) { tAmp += 0.35 * T.puff; tSpd += 3 * T.puff; }
 
     T.tAmp = tAmp;
     if (a) actPose(a, e, now);
+    // the flick back at whatever bumped his tail
+    const fe = now - C.flickAt;
+    if (!RM && fe > 0 && fe < 420) { T.tFlick += C.flickDir * 0.85 * hump(fe / 420); rate.tFlick = 30; }
     if (C.act && C.act.kind === 'sleep') tSpd = 0.3;
 
     // little sounds with an open mouth
@@ -3769,12 +5541,18 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     if (!RM) {
       const intent = a && PRI[a.kind] >= 3 && a.kind !== 'eat';
       if (intent) { C.blink = null; C.blinkAt = Math.max(C.blinkAt, now + 600); }
-      if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: Math.random() < 0.4 };
+      // the slow, blissful kind only when he's at ease, never mid-hunt or on watch
+      const keen = al || pom.speed > 60 * s || laser.on || T.puff > 0 || cross > 0.1 || dg > 0.2 || LK.pupil > 0.6 || (C.stare && now < C.stare.until);
+      if (!C.blink && now > C.blinkAt) C.blink = { t0: now, slow: !keen && Math.random() < 0.4 };
+      // one already under way turns into a quick one
+      if (C.blink && C.blink.slow && keen) { C.blink.slow = false; C.blink.t0 = now - Math.min(80, now - C.blink.t0); }
       if (C.blink) {
         const d = C.blink.slow ? [300, 420, 380] : [80, 50, 110];
         const be = now - C.blink.t0;
         const lid = be < d[0] ? easeInOut(be / d[0]) : be < d[0] + d[1] ? 1 : 1 - easeInOut((be - d[0] - d[1]) / d[2]);
         T.lidU = Math.max(T.lidU, lid); rate.lidU = 40;
+        // a slow one closes into the same soft arcs as a happy face
+        if (C.blink.slow) { T.joy = Math.max(T.joy, lid); rate.joy = 40; }
         if (be > d[0] + d[1] + d[2]) { C.blink = null; C.blinkAt = now + 2200 + Math.random() * 4200; }
       }
       // ear twitches
@@ -3791,12 +5569,13 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     // ease toward it all
     for (let i = 0; i < KEYS.length; i++) {
       const k = KEYS[i];
-      const r = k === 'pupil' ? (T.pupil > P.pupil ? 6 : 1.4) : rate[k];
+      const r = k === 'pupil' ? (T.pupil > P.pupil ? 6 : 1.4) : k === 'joy' && T.joy > P.joy ? Math.max(rate.joy, 15) : rate[k];
       const v = RM ? T[k] : P[k] + (T[k] - P[k]) * (1 - Math.exp(-dt * r));
       // one bad number must never stick
       P[k] = Number.isFinite(v) ? v : Number.isFinite(T[k]) ? T[k] : REST[k];
     }
     if (!RM) P.tPh += dt * tSpd;
+    P.tBend = C.tb; P.tBendU = C.tbu; P.ink = C.ink;
     const sleeping = C.act && C.act.kind === 'sleep';
     C.bph += dt * TAU / (sleeping ? 4.4 : C.happy > 0.5 ? 2.6 : 3.4);
     P.breath = RM ? 0 : (Math.sin(C.bph) * 0.5 + 0.5) * (sleeping ? 1.5 : 1);
@@ -3850,11 +5629,20 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   const toStage = (g) => { g.save(); g.scale(1 / L.s, 1 / L.s); g.translate(-L.catX, -L.topY); };
   const HOOKS = {
     lip: () => blit(fg, SP.lip),
-    under: () => drawScratches(fg, nowDraw),
+    // things lying on the cushion in front of him: under his chest and paws, over the plush
+    under: () => {
+      drawScratches(fg, nowDraw);
+      drawPile(fg);
+      drawSheet(fg, nowDraw);
+      drawBookOpen(fg, false);
+      if (nip.sprig) drawSprig(fg, nowDraw, true);
+    },
     front: () => {
+      drawBookOpen(fg, true);
       if (A.under) { toStage(fg); drawAvocado(fg, nowDraw); fg.restore(); }
       if (treat.on && treat.state === 'rest') { toStage(fg); drawTreat(fg); fg.restore(); }
     },
+    head: (g, ox, oy) => drawHatOn(g, ox, oy),
   };
 
   function draw(now) {
@@ -3866,10 +5654,16 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const { s } = L;
     drawWindowLife(g, now);
+    // on the wall, on the sill (or the middle platform), all behind him
+    drawWallArt(g);
+    g.save(); g.translate(L.catX, L.topY); g.scale(s, s);
+    drawStack(g);
+    drawDish(g, now);
+    g.restore();
     drawAvoShadow(g);
     drawJar(g, now);
-    // the string always goes behind him (held up in front of his face, it would
-    // cut across it), the pompom in front unless it's under his paws
+    // the string goes behind him (held up in front of his face, it would cut
+    // across it), the pompom in front unless it's under his paws
     drawString(g);
     if (pom.pinned) drawPom(g);
     g.save();
@@ -3881,7 +5675,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     drawZs(g, now);
     drawWords(g, now);
     g.restore();
-    if (!pom.pinned) drawPom(g);
+    if (!pom.pinned) { drawString(g, true); drawPom(g); }
     drawRings(g, now);
     if (!A.under) drawAvocado(g, now);
     // the paw lands on top of the avocado
@@ -3892,13 +5686,330 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     }
     if (treat.on && treat.state === 'fly') drawTreat(g);
     drawSeals(g, now);
-    // the grab handles follow the avocado and the pompom
-    handle(grabEl, HA, A.x, A.y - 14 * s, A.alpha > 0.5 && !A.carry);
-    handle(toyEl, HT, pom.x, pom.y, !pom.pinned);
+    // things in the air: fluff, the brush, a book, a hat, the catnip, a painting
+    g.save(); g.translate(L.catX, L.topY); g.scale(s, s);
+    drawTufts(g, now);
+    drawBookFly(g, now);
+    drawHatOff(g, now);
+    if (nip.sprig) drawSprig(g, now, false);
+    g.restore();
+    drawBrush(g, now);
+    drawArtFly(g, now);
+    // the laser dot lands on whatever's there, so it's on top of everything
+    drawLaser(g, now);
+    drawYou(g, now);
+    // the grab handles follow the avocado, the pompom and the dot
+    handle(grabEl, HA, A.x, A.y - 14 * s, A.alpha > 0.5 && !A.carry && !laser.on);
+    handle(toyEl, HT, pom.x, pom.y, !pom.pinned && !laser.on);
+    handle(dotEl, HD, laser.x, laser.y, laser.on);
     lastDraw = now;
   }
 
-  const HA = { x: -1e9, y: -1e9, on: null }, HT = { x: -1e9, y: -1e9, on: null };
+  // the new things' drawing
+  function drawPile(g) {
+    if (pile.n < 1) return;
+    // a little dust bunny of his fur on the cushion, a few wisps heaped together
+    const r = Math.min(15, 4 + 1.8 * Math.sqrt(pile.n)), [px, py] = PILE;
+    dab(g, px, py + 2, r * 1.4, SHADOW, 0.12, 0.3);
+    const n = Math.min(9, 2 + Math.floor(pile.n / 2));
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.4, rr = r * 0.55 * (((i * 7) % 5) / 5);
+      wisp(g, px + Math.cos(a) * rr, py - r * 0.3 + Math.sin(a) * rr * 0.4, r * 0.55, i * 3.1, 1);
+    }
+  }
+  // a tuft of his fur: a hazy grey wisp with a tangle of fine curly hairs, the
+  // tips catching the light so it still shows when it drifts over him
+  function wisp(g, x, y, r, seed, a) {
+    dab(g, x, y, r * 1.3, [96, 102, 120], 0.26 * a, 0.15);
+    dab(g, x, y, r * 0.7, [46, 50, 62], 0.32 * a, 0.25);
+    g.lineCap = 'round';
+    // fine hairs, every which way, a little wavy
+    for (let i = 0; i < 14; i++) {
+      const an = i * 2.39996 + seed, L2 = r * (0.9 + ((i * 7 + seed) % 5) * 0.18), w = (((i * 3 + seed) % 3) - 1) * r * 0.35;
+      const ca = Math.cos(an), sa = Math.sin(an), x0 = x - ca * L2 * 0.5, y0 = y - sa * L2 * 0.5;
+      g.strokeStyle = i % 4 ? rgba([36, 40, 50], 0.7 * a) : rgba([182, 194, 218], 0.6 * a);
+      g.lineWidth = 0.4;
+      g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x - sa * w, y + ca * w, x0 + ca * L2, y0 + sa * L2); g.stroke();
+    }
+  }
+  // one in the air: a soft puff of his undercoat, pale blue-grey like the sheen
+  // on his coat, a few short curls round the edge and nothing dark in the middle
+  function puff(g, x, y, r, seed, a) {
+    dab(g, x, y, r * 1.5, [120, 128, 150], 0.25 * a, 0.08);
+    dab(g, x + r * 0.15, y - r * 0.1, r * 0.95, [150, 160, 185], 0.2 * a, 0.12);
+    g.lineCap = 'round';
+    g.lineWidth = 0.45;
+    for (let i = 0; i < 7; i++) {
+      const an = i * 2.39996 + seed, ro = r * (0.35 + ((i * 5 + seed) % 4) * 0.12);
+      const x0 = x + Math.cos(an) * ro, y0 = y + Math.sin(an) * ro;
+      const ta = an + 1.1 + (i % 3) * 0.5, l = r * (0.45 + ((i * 3 + seed) % 3) * 0.15), cu = (i % 2 ? 1 : -1) * l * 0.7;
+      const ex = x0 + Math.cos(ta) * l, ey = y0 + Math.sin(ta) * l;
+      g.strokeStyle = i % 3 ? rgba([158, 168, 192], 0.6 * a) : rgba([104, 112, 134], 0.45 * a);
+      g.beginPath(); g.moveTo(x0, y0);
+      g.quadraticCurveTo((x0 + ex) / 2 - Math.sin(ta) * cu, (y0 + ey) / 2 + Math.cos(ta) * cu, ex, ey);
+      g.stroke();
+    }
+  }
+  function drawTufts(g, now) {
+    for (const f of tufts) {
+      const e = now - f.t0, a = clamp(clamp(e / 200) * (e > 3800 ? 1 - (e - 3800) / 400 : 1));
+      g.save();
+      g.translate(f.x, f.y); g.rotate(f.rot);
+      puff(g, 0, 0, 7.5, f.seed, a);
+      g.restore();
+    }
+  }
+  function drawBrush(g, now) {
+    const auto = C.act && C.act.kind === 'brush';
+    if (!SP.brush || !(auto || (brush.on && now - brush.lastT < 1500))) return;
+    const a = auto ? 1 : clamp(1 - (now - brush.lastT - 1000) / 500);
+    g.save();
+    g.globalAlpha = a;
+    g.translate(brush.x, brush.y);
+    g.rotate(brush.a);
+    blit2(g, SP.brush, 0, 0, L.s * 1.3);
+    g.restore();
+  }
+  function drawLaser(g, now) {
+    if (!laser.on) return;
+    const { s } = L, fl = RM ? 1 : 0.86 + 0.14 * Math.sin(now / 37) * Math.sin(now / 53);
+    dab(g, laser.x, laser.y, 15 * s, [255, 50, 40], 0.2 * fl, 0.2);
+    dab(g, laser.x, laser.y, 6 * s, [255, 30, 30], 0.8, 0.5);
+    dab(g, laser.x, laser.y, 2.6 * s, [255, 214, 204], 0.95, 0.6);
+  }
+  // the ink dish on the sill while he paints (cat units)
+  function drawDish(g, now) {
+    const a = C.act && C.act.kind === 'paint' ? clamp((now - C.act.t0) / 300) : art.cur ? 1 : 0;
+    if (a <= 0 || !SP.dish) return;
+    g.globalAlpha = a;
+    blit(g, SP.dish, cx(L.dish.x), cy(L.dish.y));
+    g.globalAlpha = 1;
+  }
+  // the sheet of hanji on the cushion (cat units), sliding in at the start
+  function drawSheet(g, now) {
+    const cur = art.cur;
+    if (!cur) return;
+    const k = RM ? 1 : easeOut(clamp((now - cur.t0) / 500));
+    g.save();
+    g.globalAlpha = k;
+    g.translate(0, (1 - k) * 12);
+    g.transform(PAPER.ux, PAPER.uy, PAPER.vx, PAPER.vy, PAPER.ox, PAPER.oy);
+    dab(g, ART_W / 2 + 2, ART_H / 2 + 6, ART_W * 0.6, SHADOW, 0.22, 0.4);
+    g.drawImage(cur.c, 0, 0, ART_W, ART_H);
+    g.strokeStyle = 'rgba(140,118,90,.55)'; g.lineWidth = 1;
+    g.strokeRect(0, 0, ART_W, ART_H);
+    g.restore();
+  }
+  // the latest masterpiece, taped up on the wall
+  function drawWallArt(g) {
+    const w = L.wall;
+    if (!w || !art.wall) return;
+    drawFramed(g, art.wall.c, w.x, w.y, w.w, w.h, -0.035, 1);
+  }
+  function drawFramed(g, c, x, y, w, h, rot, a) {
+    const { s } = L, fw = Math.min(160, L.W * 0.13);
+    g.save();
+    g.globalAlpha = a * clamp(Math.min(x, L.W - x) / fw, 0.45, 1);
+    g.translate(x, y); g.rotate(rot);
+    dab(g, 2 * s, 5 * s, Math.max(w, h) * 0.62, SHADOW, 0.16, 0.3);
+    g.drawImage(c, -w / 2, -h / 2, w, h);
+    g.strokeStyle = 'rgba(150,130,100,.35)'; g.lineWidth = 0.6;
+    g.strokeRect(-w / 2, -h / 2, w, h);
+    // two bits of tape
+    g.fillStyle = 'rgba(232,220,190,.78)';
+    for (const sx of [-1, 1]) { g.save(); g.translate(sx * (w / 2 - 4 * s), -h / 2); g.rotate(sx * 0.6); g.fillRect(-7 * s, -2.6 * s, 14 * s, 5.2 * s); g.restore(); }
+    g.restore();
+  }
+  // a finished painting: it stands up off the cushion so you can see it properly,
+  // then goes up onto the wall (or, with no wall for it, fades; it still counts)
+  const ART_SHOW = 550, ART_HOLD = 1650, ART_WALL = 2650, ART_FADE = 2350;
+  function artMats() {
+    const { s } = L, sw = (L.narrow ? 74 : 84) * s, sh = sw * (ART_H / ART_W);
+    const sx = clamp(L.catX + 20 * s, sw / 2 + 8, L.W - sw / 2 - 8), sy = L.topY - 26 * s;
+    const lying = [PAPER.ux * s, PAPER.uy * s, PAPER.vx * s, PAPER.vy * s, L.catX + PAPER.ox * s, L.topY + PAPER.oy * s];
+    const shown = [sw / ART_W, 0, 0, sh / ART_H, sx - sw / 2, sy - sh / 2];
+    const w = L.wall;
+    const hung = w ? [w.w / ART_W, 0, 0, w.h / ART_H, w.x - w.w / 2, w.y - w.h / 2] : shown;
+    return [lying, shown, hung];
+  }
+  function drawArtFly(g, now) {
+    const f = art.fly;
+    if (!f) return;
+    const { s } = L, e = now - f.t0, [M0, M1, M2] = artMats();
+    let M, a = 1;
+    if (f.quiet) { M = M0; a = 1 - clamp(e / 700); }
+    else if (RM) M = e < ART_HOLD ? M1 : M2;
+    else if (e < ART_SHOW) { const k = easeInOut(e / ART_SHOW); M = M0.map((v, i) => lerp(v, M1[i], k)); M[5] -= Math.sin(Math.PI * k) * 24 * s; }
+    else if (e < ART_HOLD) { M = M1.slice(); M[5] += Math.sin((e - ART_SHOW) / 260) * 1.5 * s; }
+    else if (f.wall && L.wall) { const k = easeInOut(clamp((e - ART_HOLD) / (ART_WALL - ART_HOLD))); M = M1.map((v, i) => lerp(v, M2[i], k)); M[5] -= Math.sin(Math.PI * k) * 50 * s; }
+    else { const k = clamp((e - ART_HOLD) / (ART_FADE - ART_HOLD)); M = M1.slice(); M[5] -= 20 * s * easeOut(k); a = 1 - easeIn(k); }
+    g.save();
+    g.globalAlpha = clamp(a);
+    g.transform(M[0], M[1], M[2], M[3], M[4], M[5]);
+    if (!f.quiet && e > ART_SHOW * 0.6) dab(g, ART_W / 2 + 3, ART_H / 2 + 5, ART_W * 0.6, SHADOW, 0.18, 0.3);
+    g.drawImage(f.c, 0, 0, ART_W, ART_H);
+    g.strokeStyle = 'rgba(150,130,100,.4)'; g.lineWidth = 0.4;
+    g.strokeRect(0, 0, ART_W, ART_H);
+    g.restore();
+  }
+  // the stack of books, and one that's been pushed off onto the floor (cat units)
+  function drawStack(g) {
+    const list = books.stack;
+    for (let j = 0; j < list.length; j++) {
+      const i = list[j], p = stackPos(j), b = BOOKS[i];
+      g.save();
+      g.translate(p.x + (j === list.length - 1 ? books.push || 0 : 0), p.y);
+      g.rotate(Math.sin(i * 1.7) * 0.015);
+      if (j === 0) dab(g, 0, 1, b.w * 0.6, SHADOW, 0.14, 0.3);
+      drawBookSpine(g, b, b.w, b.h);
+      g.restore();
+    }
+    const fb = books.fallen;
+    if (fb) {
+      const b = BOOKS[fb.i];
+      g.save();
+      g.translate(fb.x, fb.y); g.rotate(fb.rot);
+      if (fb.landed) dab(g, 0, 1, b.w * 0.6, SHADOW, 0.16, 0.3);
+      drawBookSpine(g, b, b.w, b.h);
+      g.restore();
+    }
+  }
+  // the open book lying in front of him (cat units), drawn from a picture of its pages.
+  // Her favourite is propped up open in front of his paws instead, big enough to read
+  const BOOK_MAP = [0.74, -0.02, -0.07, 0.28], FAV_MAP = [1.05, -0.03, -0.1, 0.8], FAV_AT = [36, -5];
+  const openMap = (i) => (BOOKS[i].fav ? FAV_MAP : BOOK_MAP);
+  const openAt = (i) => (BOOKS[i].fav ? FAV_AT : BOOK_AT);
+  const favFontOk = () => { try { return !document.fonts || document.fonts.check(FAV_FONT, BOOKS[FAV_BOOK].title); } catch { return true; } };
+  function bookPages(i) {
+    const key = `${i}|${L.s.toFixed(3)}|${dpr}|${BOOKS[i].fav && favFontOk()}`;
+    let c = books.cache.get(key);
+    if (c) return c;
+    if (books.cache.size > 10) books.cache.clear();
+    const k = 1.6 * L.s * dpr;
+    c = document.createElement('canvas');
+    c.width = Math.ceil(96 * k); c.height = Math.ceil(66 * k);
+    const g = c.getContext('2d');
+    g.setTransform(k, 0, 0, k, 48 * k, 33 * k);
+    drawOpenBook(g, BOOKS[i], 1, i, rng(300 + i));
+    books.cache.set(key, c);
+    return c;
+  }
+  function drawBookOpen(g, front) {
+    const i = books.open;
+    if (i < 0 || books.fly || !!BOOKS[i].fav !== front) return;
+    const M = openMap(i), at = openAt(i);
+    g.save();
+    g.transform(M[0], M[1], M[2], M[3], at[0], at[1]);
+    if (front) dab(g, 0, 34, 52, SHADOW, 0.12, 0.3);
+    else dab(g, 2, 6, 60, SHADOW, 0.16, 0.3);
+    if (books.k >= 1) g.drawImage(bookPages(i), -48, -33, 96, 66);
+    else drawOpenBook(g, BOOKS[i], books.k, i, rng(300 + i));
+    g.restore();
+  }
+  // a book on its way over to him, or back to the pile (cat units)
+  function drawBookFly(g, now) {
+    const f = books.fly;
+    if (!f) return;
+    const b = BOOKS[f.i], e = RM ? 1 : clamp((now - f.t0) / (f.back ? 650 : 620));
+    const k = easeInOut(e);
+    let x0, y0, r0, x1, y1;
+    const at = openAt(f.i), to = { x: at[0], y: at[1] + 4 };
+    if (!f.back) { x0 = f.from.x; y0 = f.from.y; r0 = f.from.rot; x1 = to.x; y1 = to.y; }
+    else {
+      // back onto the top of the pile
+      const n = books.stack.length;
+      let tx = cx(L.books.x), ty = cy(L.books.y);
+      if (n) { const p = stackPos(n - 1); tx = p.x; ty = p.y - BOOKS[books.stack[n - 1]].h; }
+      x0 = to.x; y0 = to.y; r0 = 0; x1 = tx; y1 = ty - b.h / 2;
+    }
+    const x = lerp(x0, x1, k), y = lerp(y0, y1, k) - Math.sin(Math.PI * k) * 46;
+    // it turns over in the air: spine first, cover down by the time it lands (and the other way back)
+    const flat = f.back ? 1 - smooth(0, 0.35, e) : smooth(0.65, 1, e);
+    g.save();
+    g.translate(x, y);
+    if (flat < 1) {
+      g.save(); g.globalAlpha = 1 - flat; g.rotate(lerp(r0, 0, k) + Math.sin(Math.PI * k) * 0.5 * (f.back ? -1 : 1)); g.translate(0, b.h / 2); drawBookSpine(g, b, b.w, b.h); g.restore();
+    }
+    if (flat > 0) {
+      g.globalAlpha = flat;
+      const M = openMap(f.i);
+      g.transform(M[0], M[1], M[2], M[3], 0, 0);
+      drawOpenBook(g, b, 0, f.i, rng(300 + f.i));
+    }
+    g.restore();
+  }
+  function drawSprig(g, now, resting) {
+    const sp = nip.sprig;
+    const flying = !RM && now - sp.t0 < 700;
+    if (flying === resting || !SP.sprig) return;
+    const p = sprigPos(now), fade = sp.fade ? clamp(1 - (now - sp.fade) / 1200) : 1;
+    g.save();
+    g.globalAlpha = fade * (1 - 0.5 * sp.crushed);
+    g.translate(p.x, p.y);
+    g.rotate(flying ? (now - sp.t0) / 90 : -0.2 + 0.3 * sp.crushed);
+    g.scale(1, 1 - 0.35 * sp.crushed);
+    blit(g, SP.sprig);
+    g.restore();
+  }
+  // his hat (head units, drawn by drawHead on top of his head)
+  function drawHatOn(g, ox, oy) {
+    if (!hat.i || !SP.blossom) return;
+    const k = RM ? 1 : easeOut(clamp((nowDraw - hat.t0) / 380));
+    faceProj(0, 1.08, FACE_R, P.yaw, P.pitch);
+    const sq = clamp(0.34 + 0.55 * P.pitch, 0.12, 0.6);
+    g.save();
+    g.translate(FP.x + ox, FP.y + oy - (1 - k) * 34);
+    g.globalAlpha = k;
+    drawHat(g, SP, hat.i, sq, P.yaw);
+    g.restore();
+  }
+  function drawHatOff(g, now) {
+    const h = hat.off;
+    if (!h || !SP.blossom) return;
+    g.save();
+    g.globalAlpha = clamp(1 - (now - h.t0 - 900) / 600);
+    g.translate(h.x, h.y); g.rotate(h.rot); g.scale(HS, HS);
+    drawHat(g, SP, h.i, 0.4, 0);
+    g.restore();
+  }
+  // you, slow-blinking at him, and you, calling him (bottom of the room)
+  function drawYou(g, now) {
+    const { s } = L, p = youAt(), px = p.x, py = p.y;
+    if (chat.you) {
+      const e = now - chat.you.t0;
+      const shut = RM ? (e < 1200 ? 1 : 0) : e < 300 ? 0 : e < 900 ? easeInOut((e - 300) / 600) : e < 1300 ? 1 : 1 - easeInOut((e - 1300) / 700);
+      const a = clamp(e / 200) * clamp((2400 - e) / 400);
+      g.save();
+      g.globalAlpha = a * 0.85;
+      g.strokeStyle = 'rgb(40,30,26)'; g.fillStyle = 'rgb(40,30,26)'; g.lineCap = 'round';
+      g.lineWidth = 1.5 * s;
+      for (const sx of [-1, 1]) {
+        const ex = px + sx * 11 * s, w = 7 * s, top = lerp(-4.2, 0.8, shut) * s, bot = lerp(3.6, 0.8, shut) * s;
+        g.beginPath(); g.moveTo(ex - w, py); g.quadraticCurveTo(ex, py + top * 1.6 - (shut > 0.9 ? 3 * s : 0), ex + w, py); g.stroke();
+        if (shut < 0.9) {
+          g.beginPath(); g.moveTo(ex - w, py); g.quadraticCurveTo(ex, py + bot * 1.4, ex + w, py); g.stroke();
+          g.globalAlpha = a * 0.85 * (1 - shut);
+          g.beginPath(); g.arc(ex, py + 0.3 * s, 2.1 * s * (1 - shut * 0.6), 0, TAU); g.fill();
+          g.globalAlpha = a * 0.85;
+        }
+      }
+      g.restore();
+    }
+    for (const m of fx.calls) {
+      const e = (now - m.t0) / 1600;
+      g.save();
+      g.globalAlpha = clamp(e < 0.15 ? e / 0.15 : 1 - (e - 0.6) / 0.4) * 0.9;
+      g.translate(px + 26 * s, py - 14 * s - (RM ? 0 : e * 16 * s));
+      g.rotate(-0.08);
+      g.font = `${Math.round(24 * s)}px "Nanum Pen Script", "Gowun Batang", cursive`;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillStyle = 'rgba(22,17,15,.92)';
+      g.fillText(m.text, 0, 0);
+      g.restore();
+    }
+  }
+
+  const HA = { x: -1e9, y: -1e9, on: null }, HT = { x: -1e9, y: -1e9, on: null }, HD = { x: -1e9, y: -1e9, on: null };
   function handle(el, h, x, y, on) {
     if (Math.abs(x - h.x) > 0.25 || Math.abs(y - h.y) > 0.25) { h.x = x; h.y = y; el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; }
     if (on !== h.on) { h.on = on; el.style.visibility = on ? 'visible' : 'hidden'; }
@@ -3932,17 +6043,38 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     blit2(g, SP.treat, 0, 0, L.s * 1.45);
     g.restore();
   }
-  function drawString(g) {
+  // front: held up low in front of his chest, the end of it shows over him too
+  // (fading off towards where it goes behind), so the pompom isn't just floating
+  function drawString(g, front) {
     const { s } = L, o = L.pom;
-    const d = Math.hypot(pom.x - o.x, pom.y - o.y);
-    const sag = Math.max(0, o.len * 1.1 - d) * 0.5;
-    g.strokeStyle = 'rgba(176,160,132,.95)';
+    let fk = 0;
+    if (front) {
+      const uy = cy(pom.y);
+      fk = pom.pinned ? 0 : smooth(-72, -54, uy) * smooth(0, 14, cy(o.y) - uy);
+      if (fk < 0.01) return;
+    }
+    // tied on at the side of the pompom that faces the anchor
+    let dx = o.x - pom.x, dy = o.y - pom.y;
+    const d = Math.hypot(dx, dy) || 1;
+    dx /= d; dy /= d;
+    const ex = pom.x + dx * 10 * s, ey = pom.y + dy * 10 * s;
+    // taut it's straight, slack it droops (more the slacker it is), and it trails a swing a little
+    const sag = Math.sqrt(Math.max(0, o.len * o.len - d * d)) * 0.42;
+    if (front) {
+      const gr = g.createLinearGradient(ex, ey, lerp(ex, o.x, 0.6), lerp(ey, o.y, 0.6));
+      gr.addColorStop(0, `rgba(176,160,132,${(0.95 * fk).toFixed(3)})`);
+      gr.addColorStop(1, 'rgba(176,160,132,0)');
+      g.strokeStyle = gr;
+    } else g.strokeStyle = 'rgba(176,160,132,.95)';
     g.lineWidth = 1.1 * s;
     g.lineCap = 'round';
     g.beginPath();
     g.moveTo(o.x, o.y);
-    g.quadraticCurveTo((o.x + pom.x) / 2 - pom.vx * 0.012, (o.y + pom.y) / 2 + sag, pom.x, pom.y - 10 * s);
+    g.quadraticCurveTo((o.x + ex) / 2 - clamp(pom.vx * 0.01, -8 * s, 8 * s), (o.y + ey) / 2 + sag, ex, ey);
     g.stroke();
+    if (front) return;
+    g.fillStyle = 'rgba(120,104,82,.8)';
+    g.beginPath(); g.arc(o.x, o.y, 1.6 * s, 0, TAU); g.fill();
   }
   function drawPom(g) {
     const { s } = L;
@@ -4316,8 +6448,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
 
   // text
   let sayT = 0, wokeAt = -1e9;
-  function say(key) {
-    let text = tt(key), wait = 60;
+  function say(key, vars) {
+    let text = vars ? fmt(tt(key), vars) : tt(key), wait = 60;
     const now = now0();
     // just woken up by this: that line mustn't get lost under this one (both
     // together if it isn't out yet, else this one a moment after it)
@@ -4355,9 +6487,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     lastMilestone = m;
   }
   function renderTally() {
-    tally.hidden = !(pets || treats);
+    tally.hidden = !(pets || treats || art.n);
     tallyPets.textContent = fmt(tt('cat.tally.pets'), { n: pets });
     tallyTreats.textContent = fmt(tt('cat.tally.treats'), { n: treats });
+    tallyArt.textContent = art.n ? fmt(tt('cat.tally.art'), { n: art.n }) : '';
   }
   let lang = document.documentElement.lang;
   function relabel() {
@@ -4369,9 +6502,10 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     stage.setAttribute('aria-label', nm ? fmt(tt('cat.label.named'), { name: nm }) : tt('cat.label'));
     renderCount(false);
     renderTally();
-    // a new language: he tilts his head at the strange new words
-    const lg = document.documentElement.lang;
-    if (lg !== lang) { lang = lg; if (ready && L) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 }); }
+    // a new language: he tilts his head at the strange new words (unless he's
+    // asleep or settled on something, then he lets it go)
+    const lg = document.documentElement.lang, cur = C.act;
+    if (lg !== lang) { lang = lg; if (ready && L && !(cur && (cur.kind === 'sleep' || STICKY.has(cur.kind)))) start('tilt', { dir: Math.random() < 0.5 ? -1 : 1 }); }
   }
 
   // sizing
@@ -4390,6 +6524,8 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
   if (document.fonts) {
     document.fonts.load('20px "Nanum Brush Script"', SIGN_TEXT).then(onFonts, () => {});
     document.fonts.load('20px "Nanum Pen Script"', '야옹냥냠?').catch(() => {});
+    // her favourite's title is in bold Gowun Batang: one more frame once that's here
+    document.fonts.load(FAV_FONT, BOOKS[FAV_BOOK].title).then(() => { if (!destroyed) kick(); }, () => {});
     document.fonts.addEventListener('loadingdone', onFonts, opt);
   }
 
@@ -4438,6 +6574,7 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
         if (A.grab) endGrab(null);
         dropToy();
         tapCat = null;
+        laser.drag = laser.pend = null;
       } else kick();
     },
     relabel,
@@ -4453,8 +6590,9 @@ export function createCat(root, { t = (k) => k, reduceMotion = false, mobile = f
     },
     // for tests and the curious
     _debug: {
-      A, C, P, pom, treat, win, fx,
+      A, C, P, pom, treat, win, fx, laser, brush, books, art, hat, nip, pile, tufts,
       get L() { return L; },
+      laserOn: (keys) => laserToggle(keys), brushGo, giveNip, psst, slowBlink, nextHat, paintGo, openBook, inkPrint,
       poke: () => poke(null, null), handleIt, pet: () => btn.pet.click(), meow: () => meow(now0()),
       boop: () => boop(false), toss: () => tossTreat(), toy: autoDangle, start, zoneAt,
       bully: (k) => { C.nextBully = k; handleIt(); },

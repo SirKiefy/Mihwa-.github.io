@@ -1,5 +1,5 @@
 // tileable noise all the shaders share. r: fbm period 4, g: fbm period 8, b: fine period 16, a: broad period 2
-import { rng } from '../ink/brush.js?v=a165dbb92e';
+import { rng } from '../ink/brush.js?v=67efe0b23a';
 
 function tileFbm(size, period, octaves, seed) {
   const out = new Float32Array(size * size);

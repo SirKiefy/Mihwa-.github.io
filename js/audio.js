@@ -316,3 +316,77 @@ export function chatter({ gain = 0.12 } = {}) {
     o.start(t); o.stop(t + 0.06);
   }
 }
+
+// a burst of filtered noise with an envelope, for the little sounds below
+function puffOf({ at = 0, dur = 0.2, freq = 2000, q = 1, type = 'bandpass', gain = 0.1, attack = 0.02, shape = 1.5, sweep = 0 } = {}) {
+  const now = ctx.currentTime + at;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(dur + 0.05, 0.3);
+  const f = ctx.createBiquadFilter(); f.type = type; f.Q.value = q;
+  f.frequency.setValueAtTime(freq, now);
+  if (sweep) f.frequency.exponentialRampToValueAtTime(freq * sweep, now + dur);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(gain, now + attack);
+  g.gain.setTargetAtTime(0.0001, now + attack, dur / (2 + shape));
+  src.connect(f).connect(g).connect(master);
+  src.start(now); src.stop(now + dur + 0.05);
+}
+
+/** Someone going "psst psst" (twice, a hiss with a little p in front). */
+export function psst({ gain = 0.14 } = {}) {
+  if (!enabled || !ctx) return;
+  for (const at of [0, 0.32]) {
+    puffOf({ at, dur: 0.04, freq: 900, q: 0.8, gain: gain * 0.5, attack: 0.004 });
+    puffOf({ at: at + 0.03, dur: 0.2, freq: 5200, q: 1.4, gain, attack: 0.03, type: 'bandpass' });
+  }
+}
+
+/** A soft whoosh: a brush stroke, a hat flying, a tail. */
+export function swish({ gain = 0.06 } = {}) {
+  if (!enabled || !ctx) return;
+  puffOf({ dur: 0.22, freq: 900, q: 0.9, gain, attack: 0.06, sweep: 2.6 });
+}
+
+/** A short indignant huff through the nose. */
+export function huff({ gain = 0.12 } = {}) {
+  if (!enabled || !ctx) return;
+  puffOf({ dur: 0.16, freq: 1300, q: 1.2, gain, attack: 0.01, sweep: 0.6 });
+}
+
+/** The little click of the laser pointer. */
+export function click({ gain = 0.1 } = {}) {
+  if (!enabled || !ctx) return;
+  puffOf({ dur: 0.012, freq: 3400, q: 3, gain, attack: 0.001 });
+  puffOf({ at: 0.05, dur: 0.012, freq: 2600, q: 3, gain: gain * 0.6, attack: 0.001 });
+}
+
+/** A page turning over. */
+export function page({ gain = 0.12 } = {}) {
+  if (!enabled || !ctx) return;
+  puffOf({ dur: 0.32, freq: 2400, q: 0.7, gain, attack: 0.09, sweep: 0.5, type: 'highpass' });
+  puffOf({ at: 0.26, dur: 0.05, freq: 900, q: 1, gain: gain * 0.6, attack: 0.004 });
+}
+
+/** Something soft landing: a book on the floor. */
+export function thump({ gain = 0.16 } = {}) {
+  if (!enabled || !ctx) return;
+  const now = ctx.currentTime;
+  const o = ctx.createOscillator();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(150, now);
+  o.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(gain, now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+  o.connect(g).connect(master);
+  o.start(now); o.stop(now + 0.2);
+  puffOf({ dur: 0.06, freq: 700, q: 1, gain: gain * 0.5, attack: 0.003 });
+}
+
+/** A wet little pat: a paw into ink, a paw onto paper. */
+export function dab({ gain = 0.1 } = {}) {
+  if (!enabled || !ctx) return;
+  puffOf({ dur: 0.07, freq: 500, q: 1.6, gain, attack: 0.004, sweep: 0.7, type: 'lowpass' });
+  puffOf({ at: 0.01, dur: 0.05, freq: 1800, q: 2, gain: gain * 0.4, attack: 0.003 });
+}
