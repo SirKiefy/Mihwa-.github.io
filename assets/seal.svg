@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect x="4" y="4" width="56" height="56" rx="6" fill="#b8322a"/>
+  <rect x="9" y="9" width="46" height="46" rx="3" fill="none" stroke="#f8f3e8" stroke-opacity=".5" stroke-width="1.5"/>
+  <text x="32" y="44" text-anchor="middle" font-family="'Noto Serif KR','Songti SC',serif" font-weight="900" font-size="34" fill="#f8f3e8">美</text>
+</svg>
